@@ -1,0 +1,47 @@
+{
+	"$schema": "https://schema.tauri.app/config/2",
+	"productName": "Cortex",
+	"version": "0.1.0",
+	"identifier": "com.cortex.app",
+	"build": {
+		"beforeDevCommand": "bun run dev",
+		"devUrl": "http://localhost:1420",
+		"beforeBuildCommand": "bun run build",
+		"frontendDist": "../dist"
+	},
+	"app": {
+		"macOSPrivateApi": true,
+		"windows": [
+			{
+				"title": "Cortex",
+				"width": 1200,
+				"height": 800,
+				"minWidth": 800,
+				"minHeight": 600,
+				"titleBarStyle": "Overlay",
+				"hiddenTitle": true,
+				"transparent": true,
+				"shadow": true,
+				"trafficLightPosition": {
+					"x": 14.5,
+					"y": 20.5
+				},
+				"decorations": true
+			}
+		],
+		"security": {
+			"csp": null
+		}
+	},
+	"bundle": {
+		"active": true,
+		"targets": "all",
+		"icon": [
+			"icons/32x32.png",
+			"icons/128x128.png",
+			"icons/128x128@2x.png",
+			"icons/icon.icns",
+			"icons/icon.ico"
+		]
+	}
+}

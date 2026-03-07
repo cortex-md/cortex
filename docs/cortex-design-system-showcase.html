@@ -1,0 +1,2478 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cortex — Design System Showcase</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+
+/* ══════════════════════════════════════════════════
+   PRIMITIVOS GLOBAIS
+══════════════════════════════════════════════════ */
+:root {
+  --stone-50:   #FAFAF8;
+  --stone-100:  #F5F4F0;
+  --stone-150:  #EDECEA;
+  --stone-200:  #E4E3DF;
+  --stone-300:  #D0CFC8;
+  --stone-400:  #B3B2A8;
+  --stone-500:  #8A8980;
+  --stone-600:  #6B6A62;
+  --stone-700:  #4E4D47;
+  --stone-800:  #332F28;
+  --stone-900:  #201D18;
+  --stone-950:  #120F0B;
+
+  /* Ink v2: preto/cinza quase neutro, toque quente mínimo (hue ~25°, sat ~3%) */
+  --ink-50:   #F2F2F1;
+  --ink-100:  #D4D3D1;
+  --ink-200:  #9E9C99;
+  --ink-300:  #6A6866;
+  --ink-400:  #414040;
+  --ink-500:  #2C2B2A;
+  --ink-600:  #222120;
+  --ink-700:  #1A1918;
+  --ink-800:  #111110;
+  --ink-900:  #0A0A09;
+
+  --amber-100:  #FEF3E2;
+  --amber-200:  #FDE3B8;
+  --amber-300:  #F9C46A;
+  --amber-400:  #E8A83C;
+  --amber-500:  #C98A20;
+  --amber-600:  #A06A10;
+
+  --amber-d-900: #241800;
+  --amber-d-800: #332200;
+  --amber-d-400: #E8A83C;
+  --amber-d-300: #F5C265;
+  --amber-d-200: #FADA9A;
+
+  --red-100:    #FDEAEA;
+  --red-400:    #E05252;
+  --red-600:    #B83535;
+  --red-d-900:  #2A0A0A;
+  --green-100:  #E8F5EE;
+  --green-400:  #4A9B6F;
+  --green-d-900:#0A2015;
+  --yellow-100: #FDF6E3;
+  --yellow-400: #D4A017;
+  --yellow-d-900:#1E1500;
+
+  --font-ui:     'DM Sans', system-ui, sans-serif;
+  --font-editor: 'Lora', Georgia, serif;
+  --font-mono:   'DM Mono', monospace;
+
+  --radius-sm:   3px;
+  --radius-md:   6px;
+  --radius-lg:   10px;
+  --radius-xl:   14px;
+  --radius-full: 9999px;
+
+  --shadow-sm:  0 1px 3px rgba(32,29,24,.08), 0 1px 2px rgba(32,29,24,.06);
+  --shadow-md:  0 4px 6px rgba(32,29,24,.07), 0 2px 4px rgba(32,29,24,.06);
+  --shadow-lg:  0 10px 15px rgba(32,29,24,.08), 0 4px 6px rgba(32,29,24,.05);
+  --shadow-xl:  0 20px 25px rgba(32,29,24,.08), 0 10px 10px rgba(32,29,24,.04);
+
+  --shadow-sm-dark: 0 1px 3px rgba(0,0,0,.28), 0 1px 2px rgba(0,0,0,.20);
+  --shadow-md-dark: 0 4px 6px rgba(0,0,0,.30), 0 2px 4px rgba(0,0,0,.22);
+  --shadow-lg-dark: 0 10px 15px rgba(0,0,0,.35), 0 4px 6px rgba(0,0,0,.24);
+  --shadow-xl-dark: 0 20px 25px rgba(0,0,0,.40), 0 10px 10px rgba(0,0,0,.28);
+
+  --ease-default: cubic-bezier(0.16,1,0.3,1);
+  --ease-spring:  cubic-bezier(0.34,1.56,0.64,1);
+  --ease-out:     cubic-bezier(0,0,0.2,1);
+}
+
+/* ══════════════════════════════════════════════════
+   TEMA PAPER (LIGHT)
+══════════════════════════════════════════════════ */
+.theme-paper {
+  --bg-primary:   var(--stone-50);
+  --bg-secondary: var(--stone-100);
+  --bg-tertiary:  var(--stone-150);
+  --bg-elevated:  #FFFFFF;
+  --bg-hover:     var(--stone-150);
+  --bg-active:    var(--stone-200);
+  --bg-selected:  var(--amber-100);
+  --bg-code:      var(--stone-100);
+  --bg-tag:       var(--stone-150);
+
+  --text-primary:   var(--stone-800);
+  --text-secondary: var(--stone-600);
+  --text-muted:     var(--stone-500);
+  --text-disabled:  var(--stone-400);
+  --text-placeholder: var(--stone-400);
+  --text-on-accent: #FFFFFF;
+
+  --accent:        var(--amber-400);
+  --accent-hover:  var(--amber-500);
+  --accent-active: var(--amber-600);
+  --accent-subtle: var(--amber-100);
+  --accent-border: var(--amber-300);
+  --accent-text:   var(--amber-600);
+
+  --link:         var(--amber-500);
+  --link-hover:   var(--amber-600);
+  --link-broken:  var(--red-400);
+
+  --border:        var(--stone-300);
+  --border-subtle: var(--stone-200);
+  --border-strong: var(--stone-400);
+  --border-focus:  var(--amber-400);
+
+  --color-error:   var(--red-400);
+  --error-bg:      var(--red-100);
+  --color-success: var(--green-400);
+  --success-bg:    var(--green-100);
+  --color-warning: var(--yellow-400);
+  --warning-bg:    var(--yellow-100);
+
+  --btn-primary-bg:   var(--stone-800);
+  --btn-primary-text: var(--stone-50);
+  --btn-primary-hover: var(--stone-900);
+
+  --input-bg:     var(--bg-elevated);
+  --input-border: var(--stone-300);
+  --input-focus-ring: rgba(232,168,60,.15);
+
+  --menu-bg:    #FFFFFF;
+  --menu-border: var(--stone-200);
+  --menu-shadow: var(--shadow-lg);
+  --menu-hover: var(--stone-100);
+
+  --modal-bg:   #FFFFFF;
+  --modal-border: var(--stone-200);
+  --modal-shadow: var(--shadow-xl);
+
+  --tooltip-bg:   var(--stone-900);
+  --tooltip-text: var(--stone-100);
+
+  --sidebar-bg:   var(--stone-100);
+  --sidebar-border: var(--stone-200);
+  --tab-bg:       var(--stone-100);
+  --tab-active-bg: var(--stone-50);
+  --tab-accent:   var(--amber-400);
+
+  --statusbar-bg:   var(--stone-100);
+  --statusbar-border: var(--stone-200);
+
+  --scrollbar-thumb: var(--stone-300);
+  --scrollbar-hover: var(--stone-400);
+
+  --syntax-keyword:  #A06A10;
+  --syntax-string:   #4A9B6F;
+  --syntax-comment:  var(--stone-400);
+  --syntax-number:   #B83535;
+  --syntax-function: #6B4E8A;
+
+  --shadow-raised:   var(--shadow-sm);
+  --shadow-floating: var(--shadow-lg);
+  --shadow-overlay:  var(--shadow-xl);
+
+  color-scheme: light;
+}
+
+/* ══════════════════════════════════════════════════
+   TEMA INK (DARK)
+══════════════════════════════════════════════════ */
+.theme-ink {
+  --bg-primary:   var(--ink-800);
+  --bg-secondary: var(--ink-700);
+  --bg-tertiary:  var(--ink-600);
+  --bg-elevated:  var(--ink-600);
+  --bg-hover:     var(--ink-500);
+  --bg-active:    var(--ink-400);
+  --bg-selected:  var(--amber-d-900);
+  --bg-code:      var(--ink-700);
+  --bg-tag:       var(--ink-600);
+
+  --text-primary:   var(--ink-50);
+  --text-secondary: var(--ink-100);
+  --text-muted:     var(--ink-200);
+  --text-disabled:  var(--ink-300);
+  --text-placeholder: var(--ink-300);
+  --text-on-accent: var(--ink-900);
+
+  --accent:        var(--amber-d-400);
+  --accent-hover:  var(--amber-d-300);
+  --accent-active: var(--amber-d-200);
+  --accent-subtle: var(--amber-d-900);
+  --accent-border: var(--amber-d-400);
+  --accent-text:   var(--amber-d-300);
+
+  --link:       var(--amber-d-300);
+  --link-hover: var(--amber-d-200);
+  --link-broken: var(--red-400);
+
+  --border:        var(--ink-400);
+  --border-subtle: var(--ink-500);
+  --border-strong: var(--ink-300);
+  --border-focus:  var(--amber-d-400);
+
+  --color-error:   var(--red-400);
+  --error-bg:      var(--red-d-900);
+  --color-success: var(--green-400);
+  --success-bg:    var(--green-d-900);
+  --color-warning: var(--yellow-400);
+  --warning-bg:    var(--yellow-d-900);
+
+  --btn-primary-bg:   var(--ink-100);
+  --btn-primary-text: var(--ink-900);
+  --btn-primary-hover: var(--ink-50);
+
+  --input-bg:     var(--ink-700);
+  --input-border: var(--ink-400);
+  --input-focus-ring: rgba(232,168,60,.18);
+
+  --menu-bg:     var(--ink-700);
+  --menu-border: var(--ink-400);
+  --menu-shadow: var(--shadow-lg-dark);
+  --menu-hover:  var(--ink-500);
+
+  --modal-bg:     var(--ink-700);
+  --modal-border: var(--ink-400);
+  --modal-shadow: var(--shadow-xl-dark);
+
+  --tooltip-bg:   var(--ink-500);
+  --tooltip-text: var(--ink-50);
+
+  --sidebar-bg:    var(--ink-700);
+  --sidebar-border: var(--ink-500);
+  --tab-bg:        var(--ink-700);
+  --tab-active-bg: var(--ink-800);
+  --tab-accent:    var(--amber-d-400);
+
+  --statusbar-bg:    var(--ink-700);
+  --statusbar-border: var(--ink-500);
+
+  --scrollbar-thumb: var(--ink-400);
+  --scrollbar-hover: var(--ink-300);
+
+  --syntax-keyword:  var(--amber-d-300);
+  --syntax-string:   #7EC89A;
+  --syntax-comment:  var(--ink-300);
+  --syntax-number:   #E08080;
+  --syntax-function: #B0A0E0;
+
+  --shadow-raised:   var(--shadow-sm-dark);
+  --shadow-floating: var(--shadow-lg-dark);
+  --shadow-overlay:  var(--shadow-xl-dark);
+
+  color-scheme: dark;
+}
+
+/* ══════════════════════════════════════════════════
+   RESET & BASE
+══════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background 0.25s var(--ease-default), color 0.25s var(--ease-default);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+
+/* ══════════════════════════════════════════════════
+   LAYOUT DO SHOWCASE
+══════════════════════════════════════════════════ */
+.showcase-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0 32px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(8px);
+  transition: background 0.25s, border-color 0.25s;
+}
+
+.showcase-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.showcase-logo-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.showcase-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.nav-link {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
+  transition: color 0.1s, background 0.1s;
+}
+.nav-link:hover { color: var(--text-primary); background: var(--bg-hover); }
+.nav-link.active { color: var(--text-primary); font-weight: 500; }
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 3px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.toggle-option {
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: all 0.15s var(--ease-default);
+  user-select: none;
+}
+.toggle-option.active {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.showcase-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 32px 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 80px;
+}
+
+/* Seção */
+.section { display: flex; flex-direction: column; gap: 28px; }
+
+.section-header { display: flex; flex-direction: column; gap: 6px; }
+
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+
+.section-title {
+  font-family: var(--font-editor);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.section-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 560px;
+}
+
+.section-divider {
+  width: 100%;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+/* Grid de componentes */
+.comp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.comp-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.comp-card:hover { border-color: var(--border); box-shadow: var(--shadow-sm); }
+
+.comp-card-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.comp-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.comp-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ══════════════════════════════════════════════════
+   1 — PALETA DE CORES
+══════════════════════════════════════════════════ */
+.palette-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.palette-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.swatches {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.1s var(--ease-spring), box-shadow 0.1s;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+.swatch:hover {
+  transform: scale(1.15) translateY(-2px);
+  box-shadow: var(--shadow-md);
+  z-index: 2;
+}
+
+.swatch-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.1s;
+}
+.swatch:hover .swatch-tooltip { opacity: 1; }
+
+/* Accent showcase */
+.accent-band {
+  display: flex;
+  height: 48px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+.accent-band > div {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* ══════════════════════════════════════════════════
+   2 — TIPOGRAFIA
+══════════════════════════════════════════════════ */
+.type-scale {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.type-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 80px;
+  align-items: baseline;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.type-row:last-child { border-bottom: none; }
+
+.type-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.type-sample { color: var(--text-primary); line-height: 1.2; }
+.type-size { font-family: var(--font-mono); font-size: 11px; color: var(--text-disabled); text-align: right; }
+
+/* Editor sample */
+.editor-sample {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 32px 40px;
+  font-family: var(--font-editor);
+  line-height: 1.75;
+  color: var(--text-primary);
+  max-width: 620px;
+}
+
+.editor-h1 { font-size: 28px; font-weight: 700; margin-bottom: 16px; font-family: var(--font-ui); letter-spacing: -0.02em; }
+.editor-h2 { font-size: 22px; font-weight: 600; margin: 24px 0 12px; font-family: var(--font-ui); }
+.editor-h3 { font-size: 18px; font-weight: 600; margin: 20px 0 10px; font-family: var(--font-ui); }
+.editor-p { font-size: 16px; margin-bottom: 14px; color: var(--text-primary); }
+.editor-strong { font-weight: 700; }
+.editor-em { font-style: italic; }
+.editor-link { color: var(--link); text-decoration: underline; text-decoration-color: rgba(201,138,32,0.4); }
+.editor-code { font-family: var(--font-mono); font-size: 13.5px; background: var(--bg-code); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 1px 6px; }
+.editor-blockquote { border-left: 3px solid var(--border); background: var(--bg-secondary); padding: 10px 16px; border-radius: 0 var(--radius-md) var(--radius-md) 0; margin: 14px 0; font-style: italic; color: var(--text-secondary); }
+.editor-highlight { background: rgba(232,168,60,0.22); border-radius: 2px; padding: 1px 2px; }
+
+/* ══════════════════════════════════════════════════
+   3 — BOTÕES
+══════════════════════════════════════════════════ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  transition: background 0.1s, color 0.1s, transform 0.05s, box-shadow 0.1s;
+  text-decoration: none;
+  white-space: nowrap;
+  outline: none;
+  position: relative;
+}
+.btn:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
+.btn:active { transform: scale(0.97); }
+
+/* Sizes */
+.btn-sm { height: 28px; padding: 0 10px; font-size: 13px; border-radius: var(--radius-md); }
+.btn-md { height: 32px; padding: 0 14px; font-size: 14px; border-radius: var(--radius-md); }
+.btn-lg { height: 38px; padding: 0 18px; font-size: 15px; border-radius: var(--radius-md); }
+
+/* Variants */
+.btn-primary {
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+}
+.btn-primary:hover { background: var(--btn-primary-hover); }
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { background: var(--bg-active); color: var(--text-primary); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+.btn-ghost:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+.btn-accent {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+.btn-accent:hover { background: var(--accent-hover); }
+
+.btn-danger {
+  background: var(--error-bg);
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
+}
+.btn-danger:hover { background: var(--color-error); color: #fff; }
+
+.btn-disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+.btn svg { width: 14px; height: 14px; }
+
+/* ══════════════════════════════════════════════════
+   4 — INPUTS
+══════════════════════════════════════════════════ */
+.input-field {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.1s, box-shadow 0.1s;
+}
+.input-field::placeholder { color: var(--text-placeholder); }
+.input-field:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--input-focus-ring);
+}
+.input-field.input-error { border-color: var(--color-error); }
+.input-field.input-error:focus { box-shadow: 0 0 0 3px rgba(224,82,82,.15); }
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.input-wrapper .input-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.input-wrapper .input-field { padding-left: 32px; }
+
+.textarea-field {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--text-primary);
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.1s, box-shadow 0.1s;
+}
+.textarea-field:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--input-focus-ring);
+}
+
+/* Checkbox */
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.checkbox-input { display: none; }
+.checkbox-box {
+  width: 15px; height: 15px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--input-bg);
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.1s, border-color 0.1s, transform 0.1s var(--ease-spring);
+  flex-shrink: 0;
+}
+.checkbox-input:checked + .checkbox-box {
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  transform: scale(1.05);
+}
+.checkbox-input:checked + .checkbox-box::after {
+  content: '';
+  width: 8px; height: 5px;
+  border-left: 1.5px solid var(--text-on-accent);
+  border-bottom: 1.5px solid var(--text-on-accent);
+  transform: rotate(-45deg) translateY(-1px);
+}
+.checkbox-label { font-size: 14px; color: var(--text-primary); }
+
+/* Toggle */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+.toggle-input { display: none; }
+.toggle-track {
+  width: 34px; height: 19px;
+  border-radius: var(--radius-full);
+  background: var(--border);
+  position: relative;
+  transition: background 0.15s var(--ease-default);
+}
+.toggle-thumb {
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  background: white;
+  position: absolute;
+  top: 2px; left: 2px;
+  transition: transform 0.15s var(--ease-default);
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.toggle-input:checked ~ .toggle-track { background: var(--accent); }
+.toggle-input:checked ~ .toggle-track .toggle-thumb { transform: translateX(15px); }
+
+/* ══════════════════════════════════════════════════
+   5 — TAGS & BADGES
+══════════════════════════════════════════════════ */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--bg-tag);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  cursor: default;
+  transition: background 0.1s, color 0.1s;
+}
+.tag:hover { background: var(--bg-hover); color: var(--text-primary); }
+.tag-active {
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+  border-color: var(--accent-border);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+.badge-default { background: var(--bg-tertiary); color: var(--text-muted); }
+.badge-accent   { background: var(--accent-subtle); color: var(--accent-text); }
+.badge-success  { background: var(--success-bg); color: var(--color-success); }
+.badge-error    { background: var(--error-bg); color: var(--color-error); }
+.badge-warning  { background: var(--warning-bg); color: var(--color-warning); }
+
+/* ══════════════════════════════════════════════════
+   6 — MENU / DROPDOWN
+══════════════════════════════════════════════════ */
+.menu {
+  background: var(--menu-bg);
+  border: 1px solid var(--menu-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--menu-shadow);
+  padding: 4px;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.08s, color 0.08s;
+}
+.menu-item:hover { background: var(--menu-hover); color: var(--text-primary); }
+.menu-item.menu-item-active { background: var(--bg-selected); color: var(--accent-text); }
+.menu-item.menu-item-danger { color: var(--color-error); }
+.menu-item.menu-item-danger:hover { background: var(--error-bg); }
+
+.menu-item-icon { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.6; }
+.menu-item:hover .menu-item-icon { opacity: 1; }
+
+.menu-separator { height: 1px; background: var(--menu-border); margin: 3px 0; }
+
+.menu-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 6px 10px 2px;
+}
+
+.menu-shortcut {
+  margin-left: auto;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-disabled);
+}
+
+/* ══════════════════════════════════════════════════
+   7 — MODAL (MOCKUP)
+══════════════════════════════════════════════════ */
+.modal-demo {
+  background: var(--modal-bg);
+  border: 1px solid var(--modal-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--modal-shadow);
+  width: 100%;
+  max-width: 440px;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.modal-close {
+  width: 26px; height: 26px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.1s, color 0.1s;
+}
+.modal-close:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+.modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ══════════════════════════════════════════════════
+   8 — TOAST
+══════════════════════════════════════════════════ */
+.toast-stack { display: flex; flex-direction: column; gap: 8px; }
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--modal-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-floating);
+  max-width: 320px;
+  border-left: 3px solid transparent;
+  position: relative;
+  animation: toastIn 0.35s var(--ease-spring) forwards;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.toast-success { border-left-color: var(--color-success); }
+.toast-error   { border-left-color: var(--color-error); }
+.toast-warning { border-left-color: var(--color-warning); }
+.toast-info    { border-left-color: var(--accent); }
+
+.toast-icon {
+  width: 16px; height: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.toast-success .toast-icon { color: var(--color-success); }
+.toast-error   .toast-icon { color: var(--color-error); }
+.toast-warning .toast-icon { color: var(--color-warning); }
+.toast-info    .toast-icon { color: var(--accent); }
+
+.toast-content { flex: 1; }
+.toast-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.toast-desc  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+.toast-close {
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  transition: color 0.1s;
+  display: flex;
+}
+.toast-close:hover { color: var(--text-primary); }
+
+/* ══════════════════════════════════════════════════
+   9 — TOOLTIP
+══════════════════════════════════════════════════ */
+.tooltip-demo {
+  display: inline-flex;
+  position: relative;
+}
+.tooltip-trigger {
+  cursor: help;
+  border-bottom: 1px dashed var(--border);
+}
+.tooltip-popup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  font-size: 12px;
+  padding: 5px 9px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s, transform 0.1s;
+  transform: translateX(-50%) translateY(4px);
+  box-shadow: var(--shadow-md);
+}
+.tooltip-demo:hover .tooltip-popup {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ══════════════════════════════════════════════════
+   10 — SIDEBAR MOCKUP
+══════════════════════════════════════════════════ */
+.sidebar-mockup {
+  background: var(--sidebar-bg);
+  border: 1px solid var(--sidebar-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  width: 220px;
+}
+
+.sidebar-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 12px 6px;
+}
+
+.sidebar-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 8px 0 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  position: relative;
+  transition: background 0.08s, color 0.08s;
+}
+.sidebar-item:hover { background: var(--bg-hover); color: var(--text-primary); border-radius: var(--radius-md); }
+.sidebar-item.active {
+  background: var(--bg-selected);
+  color: var(--accent-text);
+  border-radius: var(--radius-md);
+}
+.sidebar-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 4px; bottom: 4px;
+  width: 2.5px;
+  background: var(--accent);
+  border-radius: 0 2px 2px 0;
+}
+
+.sidebar-indent { padding-left: 24px; }
+.sidebar-indent-2 { padding-left: 36px; }
+
+.sidebar-item-icon { width: 13px; height: 13px; flex-shrink: 0; opacity: 0.5; }
+.sidebar-item:hover .sidebar-item-icon,
+.sidebar-item.active .sidebar-item-icon { opacity: 1; }
+
+/* ══════════════════════════════════════════════════
+   11 — TABS MOCKUP
+══════════════════════════════════════════════════ */
+.tabs-mockup {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.tab-bar {
+  background: var(--tab-bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-end;
+  padding: 0 0 0 4px;
+  height: 36px;
+  gap: 2px;
+  overflow-x: auto;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 28px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.1s, color 0.1s;
+  position: relative;
+  border: 1px solid transparent;
+  border-bottom: none;
+  margin-top: 4px;
+}
+
+.tab:hover { background: var(--bg-hover); color: var(--text-secondary); }
+
+.tab.tab-active {
+  background: var(--tab-active-bg);
+  color: var(--text-primary);
+  font-weight: 500;
+  border-color: var(--border-subtle);
+  border-bottom: 1px solid var(--tab-active-bg);
+  margin-bottom: -1px;
+  z-index: 1;
+}
+.tab.tab-active::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--tab-accent);
+  border-radius: 2px 2px 0 0;
+}
+
+.tab-dirty-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.tab-close {
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted);
+  transition: background 0.1s, color 0.1s;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.tab:hover .tab-close { color: var(--text-secondary); }
+.tab-close:hover { background: var(--bg-active) !important; color: var(--text-primary) !important; }
+
+.tab-content { padding: 20px; font-size: 13px; color: var(--text-secondary); }
+
+/* ══════════════════════════════════════════════════
+   12 — STATUS BAR MOCKUP
+══════════════════════════════════════════════════ */
+.statusbar-mockup {
+  background: var(--statusbar-bg);
+  border: 1px solid var(--statusbar-border);
+  border-radius: var(--radius-md);
+  height: 24px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 16px;
+}
+
+.statusbar-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: color 0.1s;
+}
+.statusbar-item:hover { color: var(--text-secondary); }
+.statusbar-sep { flex: 1; }
+.statusbar-sync { color: var(--color-success); }
+.statusbar-sync-warn { color: var(--color-warning); }
+
+/* ══════════════════════════════════════════════════
+   13 — CODE BLOCK
+══════════════════════════════════════════════════ */
+.code-block {
+  background: var(--bg-code);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.code-lang-badge {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.code-block-body {
+  padding: 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+
+.code-block-body .kw  { color: var(--syntax-keyword); }
+.code-block-body .str { color: var(--syntax-string); }
+.code-block-body .cmt { color: var(--syntax-comment); font-style: italic; }
+.code-block-body .num { color: var(--syntax-number); }
+.code-block-body .fn  { color: var(--syntax-function); }
+.code-block-body .nt  { color: var(--text-primary); }
+
+/* ══════════════════════════════════════════════════
+   14 — TABLE
+══════════════════════════════════════════════════ */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  font-size: 13px;
+}
+.data-table th {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.data-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:nth-child(even) td { background: var(--bg-secondary); }
+.data-table tr:hover td { background: var(--bg-selected); }
+
+/* ══════════════════════════════════════════════════
+   15 — FEEDBACK / ALERTS
+══════════════════════════════════════════════════ */
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border-left: 3px solid;
+  font-size: 13px;
+}
+.alert-icon { width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; }
+.alert-title { font-weight: 600; margin-bottom: 2px; }
+.alert-desc { color: inherit; opacity: 0.85; }
+
+.alert-info    { background: var(--accent-subtle); border-color: var(--accent); color: var(--accent-text); }
+.alert-success { background: var(--success-bg); border-color: var(--color-success); color: var(--color-success); }
+.alert-warning { background: var(--warning-bg); border-color: var(--color-warning); color: var(--color-warning); }
+.alert-error   { background: var(--error-bg); border-color: var(--color-error); color: var(--color-error); }
+
+/* ══════════════════════════════════════════════════
+   16 — SPACING SCALE
+══════════════════════════════════════════════════ */
+.space-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.space-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.space-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+.space-bar {
+  height: 20px;
+  background: var(--accent);
+  border-radius: 2px;
+  opacity: 0.75;
+}
+.space-value {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  width: 40px;
+}
+.space-token {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-disabled);
+  width: 80px;
+  text-align: right;
+}
+
+/* ══════════════════════════════════════════════════
+   17 — ICONS GRID
+══════════════════════════════════════════════════ */
+.icon-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.icon-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 68px;
+  height: 68px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  transition: background 0.1s, border-color 0.1s, transform 0.1s var(--ease-spring);
+  cursor: default;
+}
+.icon-cell:hover {
+  background: var(--bg-selected);
+  border-color: var(--accent-border);
+  transform: scale(1.05);
+}
+.icon-cell svg { color: var(--text-secondary); }
+.icon-cell:hover svg { color: var(--accent-text); }
+.icon-name {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* ══════════════════════════════════════════════════
+   MISC UTILITIES
+══════════════════════════════════════════════════ */
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+.form-desc  { font-size: 12px; color: var(--text-muted); }
+.form-error { font-size: 12px; color: var(--color-error); }
+
+.flex-row { display: flex; align-items: center; }
+.flex-col { display: flex; flex-direction: column; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; }
+.flex-1 { flex: 1; }
+
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* Preview pane mockup for editor section */
+.editor-pane {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.editor-topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+}
+.editor-mode-btn {
+  padding: 3px 10px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  border: none;
+  background: none;
+  font-family: var(--font-ui);
+}
+.editor-mode-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+.editor-mode-btn.active { background: var(--bg-elevated); color: var(--text-primary); font-weight: 500; box-shadow: var(--shadow-sm); }
+
+/* Wide card */
+.wide-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  transition: border-color 0.15s;
+}
+.wide-card:hover { border-color: var(--border); }
+
+/* App layout preview */
+.app-preview {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.app-titlebar {
+  height: 36px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 6px;
+}
+.titlebar-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+}
+
+.app-body { display: flex; height: 320px; }
+
+.app-ribbon {
+  width: 44px;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  gap: 4px;
+}
+.ribbon-icon {
+  width: 32px; height: 32px;
+  border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: background 0.1s, color 0.1s;
+}
+.ribbon-icon:hover { background: var(--bg-hover); color: var(--text-primary); }
+.ribbon-icon.active { background: var(--accent-subtle); color: var(--accent-text); }
+
+.app-sidebar {
+  width: 200px;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.app-sidebar-header {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.app-sidebar-items { padding: 6px 6px; }
+
+.app-editor-area { flex: 1; display: flex; flex-direction: column; }
+
+.app-tabs { flex-shrink: 0; }
+
+.app-editor-content {
+  flex: 1;
+  padding: 24px 32px;
+  font-family: var(--font-editor);
+  font-size: 15px;
+  line-height: 1.75;
+  overflow: hidden;
+  color: var(--text-primary);
+}
+
+.app-statusbar {
+  height: 24px;
+  background: var(--statusbar-bg);
+  border-top: 1px solid var(--statusbar-border);
+}
+
+/* ══════════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════════ */
+@media (max-width: 700px) {
+  .comp-grid { grid-template-columns: 1fr; }
+  .showcase-content { padding: 32px 16px 64px; }
+  .app-sidebar { display: none; }
+  .palette-row { grid-template-columns: 1fr; }
+}
+
+</style>
+</head>
+<body class="theme-paper" id="app">
+
+<!-- HEADER -->
+<header class="showcase-header">
+  <div class="showcase-logo">
+    <div class="showcase-logo-dot"></div>
+    Cortex Design System
+  </div>
+  <nav class="showcase-nav">
+    <a href="#colors" class="nav-link">Cores</a>
+    <a href="#typography" class="nav-link">Tipografia</a>
+    <a href="#components" class="nav-link">Componentes</a>
+    <a href="#layout" class="nav-link">Layout</a>
+  </nav>
+  <div class="theme-toggle" onclick="toggleTheme()">
+    <div class="toggle-option" id="paper-opt" style="active">Paper</div>
+    <div class="toggle-option" id="ink-opt">Ink</div>
+  </div>
+</header>
+
+<main class="showcase-content">
+
+  <!-- HERO -->
+  <section class="section">
+    <div class="section-header">
+      <span class="section-label">Cortex</span>
+      <h1 class="section-title">Design System — Paper & Ink</h1>
+      <p class="section-desc">Sistema de design minimalista com sensação de papel e tinta. Dois temas: <strong>Paper</strong> (light, brancos cremosos e marrons sepia) e <strong>Ink</strong> (dark, marrons profundos e textos creme). Um único acento: âmbar.</p>
+    </div>
+
+    <!-- App preview -->
+    <div class="app-preview">
+      <div class="app-titlebar">
+        <div class="titlebar-dot" style="background:#E05252;"></div>
+        <div class="titlebar-dot" style="background:#D4A017;"></div>
+        <div class="titlebar-dot" style="background:#4A9B6F;"></div>
+      </div>
+      <div class="app-body">
+        <div class="app-ribbon">
+          <div class="ribbon-icon active">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </div>
+          <div class="ribbon-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <div class="ribbon-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+        </div>
+        <div class="app-sidebar">
+          <div class="app-sidebar-header">Arquivos</div>
+          <div class="app-sidebar-items">
+            <div class="sidebar-item" style="gap:7px">
+              <svg class="sidebar-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              Projeto
+            </div>
+            <div class="sidebar-item sidebar-indent active" style="gap:7px">
+              <svg class="sidebar-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Arquitetura
+            </div>
+            <div class="sidebar-item sidebar-indent" style="gap:7px">
+              <svg class="sidebar-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Design System
+            </div>
+            <div class="sidebar-item sidebar-indent" style="gap:7px">
+              <svg class="sidebar-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Roadmap
+            </div>
+            <div class="sidebar-item" style="gap:7px">
+              <svg class="sidebar-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              Pessoal
+            </div>
+          </div>
+        </div>
+        <div class="app-editor-area">
+          <div class="app-tabs">
+            <div class="tab-bar">
+              <div class="tab tab-active">
+                <div class="tab-dirty-dot"></div>
+                Arquitetura.md
+                <div class="tab-close">✕</div>
+              </div>
+              <div class="tab">
+                Design System.md
+                <div class="tab-close">✕</div>
+              </div>
+              <div class="tab">
+                Roadmap.md
+                <div class="tab-close">✕</div>
+              </div>
+            </div>
+          </div>
+          <div class="app-editor-content">
+            <div class="editor-h1" style="font-size:22px;margin-bottom:10px;">Arquitetura do Core</div>
+            <p style="font-size:14px;margin-bottom:8px;color:var(--text-secondary);">O projeto é um <span class="editor-code">monorepo</span> gerenciado com <strong>Bun Workspaces</strong>. Cada camada é independente e testável.</p>
+            <p style="font-size:14px;color:var(--text-muted);font-style:italic;">A separação em pacotes é obrigatória...</p>
+          </div>
+          <div class="app-statusbar"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider" id="colors"></div>
+
+  <!-- CORES -->
+  <section class="section">
+    <div class="section-header">
+      <span class="section-label">01 — Fundação</span>
+      <h2 class="section-title">Paleta de Cores</h2>
+      <p class="section-desc">Dois grupos de primitivos: <em>Stone</em> (brancos aquecidos até marrom-tinta) e <em>Ink</em> (marrons profundos para o dark mode). Um único acento cromático: âmbar.</p>
+    </div>
+
+    <div class="wide-card">
+      <div style="display:flex;flex-direction:column;gap:14px;">
+
+        <div class="palette-row">
+          <span class="palette-name">stone</span>
+          <div class="swatches">
+            <div class="swatch" style="background:#FAFAF8"><span class="swatch-tooltip">50 · #FAFAF8</span></div>
+            <div class="swatch" style="background:#F5F4F0"><span class="swatch-tooltip">100 · #F5F4F0</span></div>
+            <div class="swatch" style="background:#EDECEA"><span class="swatch-tooltip">150 · #EDECEA</span></div>
+            <div class="swatch" style="background:#E4E3DF"><span class="swatch-tooltip">200 · #E4E3DF</span></div>
+            <div class="swatch" style="background:#D0CFC8"><span class="swatch-tooltip">300 · #D0CFC8</span></div>
+            <div class="swatch" style="background:#B3B2A8"><span class="swatch-tooltip">400 · #B3B2A8</span></div>
+            <div class="swatch" style="background:#8A8980"><span class="swatch-tooltip">500 · #8A8980</span></div>
+            <div class="swatch" style="background:#6B6A62"><span class="swatch-tooltip">600 · #6B6A62</span></div>
+            <div class="swatch" style="background:#4E4D47"><span class="swatch-tooltip">700 · #4E4D47</span></div>
+            <div class="swatch" style="background:#332F28"><span class="swatch-tooltip">800 · #332F28</span></div>
+            <div class="swatch" style="background:#201D18"><span class="swatch-tooltip">900 · #201D18</span></div>
+            <div class="swatch" style="background:#120F0B"><span class="swatch-tooltip">950 · #120F0B</span></div>
+          </div>
+        </div>
+
+        <div class="palette-row">
+          <span class="palette-name">ink</span>
+          <div class="swatches">
+            <div class="swatch" style="background:#F2F2F1;border-color:rgba(0,0,0,.08)"><span class="swatch-tooltip">50 · #F2F2F1</span></div>
+            <div class="swatch" style="background:#D4D3D1;border-color:rgba(0,0,0,.08)"><span class="swatch-tooltip">100 · #D4D3D1</span></div>
+            <div class="swatch" style="background:#9E9C99"><span class="swatch-tooltip">200 · #9E9C99</span></div>
+            <div class="swatch" style="background:#6A6866"><span class="swatch-tooltip">300 · #6A6866</span></div>
+            <div class="swatch" style="background:#414040"><span class="swatch-tooltip">400 · #414040</span></div>
+            <div class="swatch" style="background:#2C2B2A"><span class="swatch-tooltip">500 · #2C2B2A</span></div>
+            <div class="swatch" style="background:#222120"><span class="swatch-tooltip">600 · #222120</span></div>
+            <div class="swatch" style="background:#1A1918"><span class="swatch-tooltip">700 · #1A1918</span></div>
+            <div class="swatch" style="background:#111110"><span class="swatch-tooltip">800 · #111110</span></div>
+            <div class="swatch" style="background:#0A0A09"><span class="swatch-tooltip">900 · #0A0A09</span></div>
+          </div>
+        </div>
+
+        <div class="palette-row">
+          <span class="palette-name">amber</span>
+          <div class="swatches">
+            <div class="swatch" style="background:#FEF3E2;border-color:rgba(0,0,0,.06)"><span class="swatch-tooltip">100 · #FEF3E2</span></div>
+            <div class="swatch" style="background:#FDE3B8;border-color:rgba(0,0,0,.06)"><span class="swatch-tooltip">200 · #FDE3B8</span></div>
+            <div class="swatch" style="background:#F9C46A"><span class="swatch-tooltip">300 · #F9C46A</span></div>
+            <div class="swatch" style="background:#E8A83C"><span class="swatch-tooltip">400 · #E8A83C</span></div>
+            <div class="swatch" style="background:#C98A20"><span class="swatch-tooltip">500 · #C98A20</span></div>
+            <div class="swatch" style="background:#A06A10"><span class="swatch-tooltip">600 · #A06A10</span></div>
+          </div>
+        </div>
+
+        <div class="palette-row">
+          <span class="palette-name">feedback</span>
+          <div class="swatches">
+            <div class="swatch" style="background:#FDEAEA;border-color:rgba(0,0,0,.06)"><span class="swatch-tooltip">red-100</span></div>
+            <div class="swatch" style="background:#E05252"><span class="swatch-tooltip">red-400</span></div>
+            <div class="swatch" style="background:#B83535"><span class="swatch-tooltip">red-600</span></div>
+            <div class="swatch" style="background:#E8F5EE;border-color:rgba(0,0,0,.06)"><span class="swatch-tooltip">green-100</span></div>
+            <div class="swatch" style="background:#4A9B6F"><span class="swatch-tooltip">green-400</span></div>
+            <div class="swatch" style="background:#FDF6E3;border-color:rgba(0,0,0,.06)"><span class="swatch-tooltip">yellow-100</span></div>
+            <div class="swatch" style="background:#D4A017"><span class="swatch-tooltip">yellow-400</span></div>
+          </div>
+        </div>
+
+        <!-- Accent band -->
+        <div style="margin-top:8px">
+          <div class="palette-name" style="margin-bottom:8px">acento âmbar — progressão</div>
+          <div class="accent-band">
+            <div style="background:#FEF3E2;color:#A06A10;font-size:9px;">100</div>
+            <div style="background:#FDE3B8;color:#A06A10;font-size:9px;">200</div>
+            <div style="background:#F9C46A;color:#4E2A00;font-size:9px;">300</div>
+            <div style="background:#E8A83C;color:#fff;font-size:9px;font-weight:600;">400 ★</div>
+            <div style="background:#C98A20;color:#fff;font-size:9px;">500</div>
+            <div style="background:#A06A10;color:#fff;font-size:9px;">600</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Semantic colors -->
+    <div class="comp-grid">
+      <div class="comp-card">
+        <span class="comp-card-label">Superfícies</span>
+        <div class="comp-card-body">
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <div style="display:flex;align-items:center;gap:10px" data-tip="bg-primary">
+              <div style="width:32px;height:20px;border-radius:4px;background:var(--bg-primary);border:1px solid var(--border-subtle);flex-shrink:0;"></div>
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">--bg-primary</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:32px;height:20px;border-radius:4px;background:var(--bg-secondary);border:1px solid var(--border-subtle);flex-shrink:0;"></div>
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">--bg-secondary</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:32px;height:20px;border-radius:4px;background:var(--bg-elevated);border:1px solid var(--border-subtle);flex-shrink:0;"></div>
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">--bg-elevated</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:32px;height:20px;border-radius:4px;background:var(--bg-selected);border:1px solid var(--accent-border);flex-shrink:0;"></div>
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">--bg-selected</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <span class="comp-card-label">Texto</span>
+        <div class="comp-card-body" style="gap:6px">
+          <div style="font-size:14px;font-weight:600;color:var(--text-primary);">Texto primário</div>
+          <div style="font-size:14px;color:var(--text-secondary);">Texto secundário</div>
+          <div style="font-size:14px;color:var(--text-muted);">Texto muted</div>
+          <div style="font-size:14px;color:var(--text-disabled);">Texto desabilitado</div>
+          <div style="font-size:14px;color:var(--accent-text);font-weight:500;">Texto de acento</div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <span class="comp-card-label">Bordas & Estado</span>
+        <div class="comp-card-body">
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="height:1px;background:var(--border-subtle);"></div>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">border-subtle</span>
+            <div style="height:1px;background:var(--border);"></div>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">border-default</span>
+            <div style="height:2px;background:var(--accent);"></div>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">border-focus (acento)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider" id="typography"></div>
+
+  <!-- TIPOGRAFIA -->
+  <section class="section">
+    <div class="section-header">
+      <span class="section-label">02 — Tipografia</span>
+      <h2 class="section-title">Famílias & Escala</h2>
+      <p class="section-desc">Três famílias: <strong>DM Sans</strong> para UI, <strong>Lora</strong> para o editor (prosa), <strong>DM Mono</strong> para código.</p>
+    </div>
+
+    <div class="comp-grid">
+      <div class="comp-card">
+        <span class="comp-card-label">DM Sans — UI</span>
+        <div style="font-family:var(--font-ui);display:flex;flex-direction:column;gap:4px;">
+          <div style="font-size:22px;font-weight:700;color:var(--text-primary);letter-spacing:-0.02em;">Cortex</div>
+          <div style="font-size:15px;font-weight:500;color:var(--text-primary);">Notas conectadas</div>
+          <div style="font-size:13px;color:var(--text-secondary);">Sidebar, menus, labels</div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);">seção de configuração</div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <span class="comp-card-label">Lora — Editor</span>
+        <div style="font-family:var(--font-editor);display:flex;flex-direction:column;gap:6px;">
+          <div style="font-size:22px;font-weight:700;color:var(--text-primary);line-height:1.2;">Uma nota sobre ideias</div>
+          <div style="font-size:15px;color:var(--text-primary);line-height:1.7;">Texto do corpo do editor, projetado para leitura longa com serifas discretas.</div>
+          <div style="font-size:15px;font-style:italic;color:var(--text-secondary);">Itálico e citações</div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <span class="comp-card-label">DM Mono — Código</span>
+        <div style="font-family:var(--font-mono);display:flex;flex-direction:column;gap:4px;">
+          <div style="font-size:13px;color:var(--syntax-keyword);">const <span style="color:var(--syntax-function);">vault</span> = {</div>
+          <div style="font-size:13px;color:var(--text-primary);padding-left:12px;"><span style="color:var(--text-muted);">// configuração</span></div>
+          <div style="font-size:13px;color:var(--text-primary);padding-left:12px;">id: <span style="color:var(--syntax-string);">"uuid-v4"</span></div>
+          <div style="font-size:13px;color:var(--text-primary);">}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Ln 42, Col 8</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scale -->
+    <div class="wide-card">
+      <div class="type-scale">
+        <div class="type-row">
+          <span class="type-meta">text-4xl</span>
+          <span class="type-sample" style="font-size:36px;font-weight:700;letter-spacing:-0.02em;">Display</span>
+          <span class="type-size">36px 700</span>
+        </div>
+        <div class="type-row">
+          <span class="type-meta">text-3xl</span>
+          <span class="type-sample" style="font-size:30px;font-weight:700;letter-spacing:-0.02em;">Título grande</span>
+          <span class="type-size">30px 700</span>
+        </div>
+        <div class="type-row">
+          <span class="type-meta">text-2xl</span>
+          <span class="type-sample" style="font-size:24px;font-weight:600;">Modal / seção</span>
+          <span class="type-size">24px 600</span>
+        </div>
+        <div class="type-row">
+          <span class="type-meta">text-xl</span>
+          <span class="type-sample" style="font-size:20px;font-weight:600;">Heading de painel</span>
+          <span class="type-size">20px 600</span>
+        </div>
+        <div class="type-row">
+          <span class="type-meta">text-lg</span>
+          <span class="type-sample" style="font-size:17px;font-weight:500;">Título de sidebar</span>
+          <span class="type-size">17px 500</span>
+        </div>
+        <div class="type-row">
+          <span class="type-meta">text-base</span>
+          <span class="type-sample" style="font-size:14px;">Corpo da UI padrão</span>
+          <span class="type-size">14px 400</span>
+        </div>
+        <div class="type-row">
+          <span class="type-meta">text-sm</span>
+          <span class="type-sample" style="font-size:13px;color:var(--text-secondary);">Item de lista, tooltip</span>
+          <span class="type-size">13px 400</span>
+        </div>
+        <div class="type-row">
+          <span class="type-meta">text-xs</span>
+          <span class="type-sample" style="font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:.07em;text-transform:uppercase;">LABEL DE STATUS BAR</span>
+          <span class="type-size">11px 600</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Editor sample -->
+    <div>
+      <div class="form-label" style="margin-bottom:10px;">Amostra de editor</div>
+      <div class="editor-sample">
+        <div class="editor-h1">Fundamentos do Cortex</div>
+        <div class="editor-h2">Arquitetura local-first</div>
+        <p class="editor-p">O Cortex armazena todas as notas como <span class="editor-code">arquivos .md</span> no disco. A <a href="#" class="editor-link">sincronização é opcional</a> e nunca bloqueia o fluxo de trabalho. Cada vault tem um <strong class="editor-strong">UUID permanente</strong> que sobrevive a movimentações de pasta.</p>
+        <div class="editor-blockquote">O espaço em branco não é um erro — é o que separa uma nota boa de uma nota legível.</div>
+        <p class="editor-p">Textos com <span class="editor-highlight">destaque em âmbar</span> e links internos como <span style="color:var(--accent-text);text-decoration:underline;cursor:pointer;">[[Design System]]</span> são renderizados pelo Live Preview sem recarregar a página.</p>
+        <div class="editor-h3">Código e configurações</div>
+        <p class="editor-p">Acesse as configurações via <kbd class="kbd">Ctrl+,</kbd> ou pelo Command Palette com <kbd class="kbd">Ctrl+P</kbd>.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider" id="components"></div>
+
+  <!-- BOTÕES -->
+  <section class="section">
+    <div class="section-header">
+      <span class="section-label">03 — Componentes</span>
+      <h2 class="section-title">Botões</h2>
+    </div>
+
+    <div class="comp-grid">
+      <div class="comp-card">
+        <span class="comp-card-label">Hierarquia</span>
+        <div class="comp-card-body">
+          <div class="comp-row">
+            <button class="btn btn-md btn-primary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Primary
+            </button>
+            <button class="btn btn-md btn-secondary">Secondary</button>
+            <button class="btn btn-md btn-ghost">Ghost</button>
+          </div>
+          <div class="comp-row">
+            <button class="btn btn-md btn-accent">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              Accent
+            </button>
+            <button class="btn btn-md btn-danger">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              Danger
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <span class="comp-card-label">Tamanhos</span>
+        <div class="comp-card-body">
+          <div class="comp-row" style="align-items:center">
+            <button class="btn btn-sm btn-secondary">Small</button>
+            <button class="btn btn-md btn-secondary">Medium</button>
+            <button class="btn btn-lg btn-secondary">Large</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <span class="comp-card-label">Estados</span>
+        <div class="comp-card-body">
+          <div class="comp-row">
+            <button class="btn btn-md btn-primary">Normal</button>
+            <button class="btn btn-md btn-primary btn-disabled">Disabled</button>
+          </div>
+          <div class="comp-row">
+            <button class="btn btn-md btn-ghost">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+              Icon Left
+            </button>
+            <button class="btn btn-md btn-ghost">
+              Icon Right
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+          <div class="comp-row">
+            <span class="kbd">Ctrl+P</span>
+            <span class="kbd">Ctrl+K</span>
+            <span class="kbd">Esc</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INPUTS -->
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">Inputs & Formulários</h2>
+    </div>
+
+    <div class="comp-grid">
+      <div class="comp-card">
+        <span class="comp-card-label">Input padrão</span>
+        <div class="comp-card-body">
+          <div class="form-group">
+            <label class="form-label">Nome da nota</label>
+            <input class="input-field" type="text" placeholder="Sem título...">
+            <span class="form-desc">Pressione Enter para confirmar</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Pasta inválida</label>
+            <input class="input-field input-error" type="text" value="/caminho/invalido">
+            <span class="form-error">Pasta não encontrada no vault</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <span class="comp-card-label">Com ícone & Textarea</span>
+        <div class="comp-card-body">
+          <div class="input-wrapper">
+            <svg class="input-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="input-field" type="text" placeholder="Buscar notas...">
+          </div>
+          <textarea class="textarea-field" placeholder="Escreva sua nota aqui..." rows="3"></textarea>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <span class="comp-card-label">Checkbox & Toggle</span>
+        <div class="comp-card-body">
+          <label class="checkbox-row">
+            <input type="checkbox" class="checkbox-input" checked>
+            <div class="checkbox-box"></div>
+            <span class="checkbox-label">Live Preview ativo</span>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" class="checkbox-input">
+            <div class="checkbox-box"></div>
+            <span class="checkbox-label">Vim mode</span>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" class="checkbox-input" disabled>
+            <div class="checkbox-box" style="opacity:.4"></div>
+            <span class="checkbox-label" style="color:var(--text-disabled)">Sync (desabilitado)</span>
+          </label>
+
+          <div style="height:1px;background:var(--border-subtle);"></div>
+
+          <label class="toggle-row">
+            <input type="checkbox" class="toggle-input" checked id="t1">
+            <div class="toggle-track" onclick="document.getElementById('t1').click()">
+              <div class="toggle-thumb"></div>
+            </div>
+            <span class="form-label" style="cursor:pointer">Auto-save contínuo</span>
+          </label>
+          <label class="toggle-row">
+            <input type="checkbox" class="toggle-input" id="t2">
+            <div class="toggle-track" onclick="document.getElementById('t2').click()">
+              <div class="toggle-thumb"></div>
+            </div>
+            <span class="form-label" style="cursor:pointer">Spell check</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAGS & BADGES -->
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">Tags & Badges</h2>
+    </div>
+
+    <div class="comp-grid">
+      <div class="comp-card">
+        <span class="comp-card-label">Tags de nota</span>
+        <div class="comp-row" style="flex-wrap:wrap;">
+          <span class="tag">#zettelkasten</span>
+          <span class="tag tag-active">#design</span>
+          <span class="tag">#arquitetura</span>
+          <span class="tag">#rust</span>
+          <span class="tag">#react</span>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <span class="comp-card-label">Status badges</span>
+        <div class="comp-row" style="flex-wrap:wrap;gap:6px;">
+          <span class="badge badge-default">v0.3</span>
+          <span class="badge badge-accent">beta</span>
+          <span class="badge badge-success">synced</span>
+          <span class="badge badge-warning">conflito</span>
+          <span class="badge badge-error">erro</span>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <span class="comp-card-label">Atalhos kbd</span>
+        <div class="comp-row" style="flex-wrap:wrap;">
+          <span class="kbd">Ctrl+P</span>
+          <span class="kbd">Ctrl+O</span>
+          <span class="kbd">Ctrl+,</span>
+          <span class="kbd">Ctrl+Shift+T</span>
+          <span class="kbd">Alt+Enter</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MENU & DROPDOWN -->
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">Menu & Dropdown</h2>
+    </div>
+
+    <div class="comp-grid">
+      <div class="comp-card">
+        <span class="comp-card-label">Context menu</span>
+        <div class="menu" style="box-shadow:none;border-color:var(--border);">
+          <div class="menu-label">Arquivo</div>
+          <div class="menu-item">
+            <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+            Abrir em nova tab
+            <span class="menu-shortcut">Ctrl+Enter</span>
+          </div>
+          <div class="menu-item menu-item-active">
+            <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/></svg>
+            Split vertical
+            <span class="menu-shortcut">Ctrl+\</span>
+          </div>
+          <div class="menu-item">
+            <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Renomear
+            <span class="menu-shortcut">F2</span>
+          </div>
+          <div class="menu-separator"></div>
+          <div class="menu-item menu-item-danger">
+            <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            Mover para lixeira
+            <span class="menu-shortcut">Del</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <span class="comp-card-label">Command Palette</span>
+        <div style="background:var(--modal-bg);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;">
+          <div style="display:flex;align-items:center;gap:8px;padding:0 14px;height:44px;border-bottom:1px solid var(--border-subtle);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span style="font-size:14px;color:var(--text-placeholder);flex:1;">Buscar comandos...</span>
+            <span class="kbd">Ctrl+P</span>
+          </div>
+          <div style="padding:4px;">
+            <div class="menu-label">Recentes</div>
+            <div class="menu-item menu-item-active">
+              <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              Abrir busca global
+              <span class="menu-shortcut">Ctrl+Shift+F</span>
+            </div>
+            <div class="menu-item">
+              <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              Alternar Live Preview
+              <span class="menu-shortcut">Ctrl+E</span>
+            </div>
+            <div class="menu-item">
+              <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+              Trocar de vault
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <span class="comp-card-label">Toasts</span>
+        <div class="toast-stack">
+          <div class="toast toast-success">
+            <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <div class="toast-content">
+              <div class="toast-title">Sincronizado</div>
+              <div class="toast-desc">Vault atualizado com sucesso</div>
+            </div>
+            <button class="toast-close">✕</button>
+          </div>
+          <div class="toast toast-warning">
+            <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <div class="toast-content">
+              <div class="toast-title">Conflito detectado</div>
+              <div class="toast-desc">Arquivo editado em outro device</div>
+            </div>
+            <button class="toast-close">✕</button>
+          </div>
+          <div class="toast toast-error">
+            <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div class="toast-content">
+              <div class="toast-title">Erro de conexão</div>
+              <div class="toast-desc">Não foi possível alcançar o servidor</div>
+            </div>
+            <button class="toast-close">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODAL -->
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">Modal & Alertas</h2>
+    </div>
+
+    <div class="comp-grid">
+      <div class="comp-card" style="grid-column: span 2;">
+        <span class="comp-card-label">Dialog</span>
+        <div style="display:flex;justify-content:center;">
+          <div class="modal-demo">
+            <div class="modal-header">
+              <span class="modal-title">Excluir nota permanentemente?</span>
+              <button class="modal-close">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div class="modal-body">
+              <p style="font-size:14px;color:var(--text-secondary);line-height:1.6;">A nota <strong style="color:var(--text-primary);">Arquitetura do Core.md</strong> será movida para a lixeira. Você pode restaurá-la dentro de 30 dias.</p>
+              <div class="alert alert-warning">
+                <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                <div><div class="alert-title">Atenção</div><div class="alert-desc">Notas excluídas perdem seus snapshots locais.</div></div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-md btn-ghost">Cancelar</button>
+              <button class="btn btn-md btn-danger">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                Mover para lixeira
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <span class="comp-card-label">Alertas inline</span>
+        <div class="comp-card-body">
+          <div class="alert alert-info">
+            <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <div><div class="alert-title">Dica</div><div class="alert-desc">Use <code>[[</code> para criar links internos.</div></div>
+          </div>
+          <div class="alert alert-success">
+            <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            <div><div class="alert-title">Salvo</div><div class="alert-desc">Arquivo sincronizado com sucesso.</div></div>
+          </div>
+          <div class="alert alert-error">
+            <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            <div><div class="alert-title">Erro de merge</div><div class="alert-desc">Conflito não pode ser resolvido automaticamente.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SIDEBAR + TABS -->
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">Sidebar & Tabs</h2>
+    </div>
+
+    <div class="comp-grid">
+      <div class="comp-card">
+        <span class="comp-card-label">File explorer</span>
+        <div class="sidebar-mockup">
+          <div class="sidebar-section-header">
+            <span class="sidebar-section-title">Arquivos</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);cursor:pointer;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div style="padding:4px 6px;display:flex;flex-direction:column;gap:1px;">
+            <div class="sidebar-item">
+              <svg class="sidebar-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent-text);"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              Cortex
+            </div>
+            <div class="sidebar-item sidebar-indent">
+              <svg class="sidebar-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent-text);"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              Documentação
+            </div>
+            <div class="sidebar-item sidebar-indent-2 active">
+              <svg class="sidebar-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+              Arquitetura.md
+            </div>
+            <div class="sidebar-item sidebar-indent-2">
+              <svg class="sidebar-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+              Design System.md
+            </div>
+            <div class="sidebar-item sidebar-indent">
+              <svg class="sidebar-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent-text);"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              Notas
+            </div>
+            <div class="sidebar-item sidebar-indent-2">
+              <svg class="sidebar-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+              Reunião 2026-03.md
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-card" style="flex:1">
+        <span class="comp-card-label">Tab bar</span>
+        <div class="tabs-mockup">
+          <div class="tab-bar">
+            <div class="tab tab-active">
+              <div class="tab-dirty-dot"></div>
+              Arquitetura.md
+              <div class="tab-close">✕</div>
+            </div>
+            <div class="tab">
+              Design System.md
+              <div class="tab-close">✕</div>
+            </div>
+            <div class="tab">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent);flex-shrink:0;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Roadmap.md
+            </div>
+          </div>
+          <div class="tab-content">
+            <p style="color:var(--text-primary);font-family:var(--font-editor);font-size:15px;line-height:1.7;">
+              <strong>Arquitetura do Core</strong> — cada tab mantém sua instância do editor <code style="font-family:var(--font-mono);font-size:12px;background:var(--bg-code);padding:1px 5px;border-radius:3px;">EditorView</code> ativa em memória enquanto estiver aberta.
+            </p>
+          </div>
+        </div>
+
+        <div class="comp-card-label" style="margin-top:8px;">Status bar</div>
+        <div class="statusbar-mockup">
+          <div class="statusbar-item statusbar-sync">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Sincronizado
+          </div>
+          <div class="statusbar-item">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+            Markdown
+          </div>
+          <div class="statusbar-sep"></div>
+          <div class="statusbar-item">Ln 42, Col 8</div>
+          <div class="statusbar-item">2.4 KB</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CÓDIGO & TABELA -->
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">Código & Tabelas</h2>
+    </div>
+
+    <div class="comp-grid">
+      <div class="comp-card">
+        <span class="comp-card-label">Bloco de código</span>
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-lang-badge">typescript</span>
+            <button class="btn btn-sm btn-ghost" style="padding:0 8px;height:24px;font-size:11px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copiar
+            </button>
+          </div>
+          <div class="code-block-body">
+<span class="kw">interface</span> <span class="fn">NoteCacheEntry</span> <span class="nt">{</span><br>
+&nbsp;&nbsp;<span class="nt">filePath</span><span class="nt">:</span> <span class="kw">string</span><span class="nt">;</span><br>
+&nbsp;&nbsp;<span class="nt">content</span><span class="nt">:</span> <span class="kw">string</span><span class="nt">;</span><br>
+&nbsp;&nbsp;<span class="nt">hash</span><span class="nt">:</span> <span class="kw">string</span><span class="nt">;</span> <span class="cmt">// blake3</span><br>
+&nbsp;&nbsp;<span class="nt">dirty</span><span class="nt">:</span> <span class="kw">boolean</span><span class="nt">;</span><br>
+&nbsp;&nbsp;<span class="nt">snapshots</span><span class="nt">:</span> <span class="fn">Snapshot</span><span class="nt">[];</span><br>
+<span class="nt">}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <span class="comp-card-label">Tabela de dados</span>
+        <div style="overflow:auto;border-radius:var(--radius-md);border:1px solid var(--border);">
+          <table class="data-table" style="border:none;">
+            <thead>
+              <tr>
+                <th>Componente</th>
+                <th>Raio</th>
+                <th>Sombra</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Input</td><td>6px</td><td>ring âmbar</td></tr>
+              <tr><td>Botão</td><td>6px</td><td>—</td></tr>
+              <tr><td>Modal</td><td>14px</td><td>xl</td></tr>
+              <tr><td>Tooltip</td><td>3px</td><td>md</td></tr>
+              <tr><td>Tag</td><td>full</td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <span class="comp-card-label">Tooltip</span>
+        <div class="comp-card-body" style="padding:20px 0">
+          <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
+            <div class="tooltip-demo">
+              <span class="tooltip-trigger">Vault UUID</span>
+              <div class="tooltip-popup">Identificador permanente do vault</div>
+            </div>
+            <div class="tooltip-demo">
+              <span class="tooltip-trigger">blake3 hash</span>
+              <div class="tooltip-popup">Calculado pelo Rust nativo</div>
+            </div>
+            <div class="tooltip-demo">
+              <span class="tooltip-trigger">diff-match-patch</span>
+              <div class="tooltip-popup">Algoritmo do Google para merge</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider" id="layout"></div>
+
+  <!-- ESPAÇAMENTO -->
+  <section class="section">
+    <div class="section-header">
+      <span class="section-label">04 — Fundação</span>
+      <h2 class="section-title">Espaçamento & Raios</h2>
+    </div>
+
+    <div class="comp-grid">
+      <div class="comp-card">
+        <span class="comp-card-label">Escala (base 4px)</span>
+        <div class="space-grid">
+          <div class="space-row">
+            <span class="space-token">space-1</span>
+            <div class="space-bar-wrap"><div class="space-bar" style="width:4px;"></div><span class="space-value">4px</span></div>
+          </div>
+          <div class="space-row">
+            <span class="space-token">space-2</span>
+            <div class="space-bar-wrap"><div class="space-bar" style="width:8px;"></div><span class="space-value">8px</span></div>
+          </div>
+          <div class="space-row">
+            <span class="space-token">space-3</span>
+            <div class="space-bar-wrap"><div class="space-bar" style="width:12px;"></div><span class="space-value">12px</span></div>
+          </div>
+          <div class="space-row">
+            <span class="space-token">space-4</span>
+            <div class="space-bar-wrap"><div class="space-bar" style="width:16px;"></div><span class="space-value">16px</span></div>
+          </div>
+          <div class="space-row">
+            <span class="space-token">space-6</span>
+            <div class="space-bar-wrap"><div class="space-bar" style="width:24px;"></div><span class="space-value">24px</span></div>
+          </div>
+          <div class="space-row">
+            <span class="space-token">space-8</span>
+            <div class="space-bar-wrap"><div class="space-bar" style="width:32px;"></div><span class="space-value">32px</span></div>
+          </div>
+          <div class="space-row">
+            <span class="space-token">space-12</span>
+            <div class="space-bar-wrap"><div class="space-bar" style="width:48px;"></div><span class="space-value">48px</span></div>
+          </div>
+          <div class="space-row">
+            <span class="space-token">space-16</span>
+            <div class="space-bar-wrap"><div class="space-bar" style="width:64px;"></div><span class="space-value">64px</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <span class="comp-card-label">Border radius</span>
+        <div class="comp-card-body">
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:40px;height:32px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:3px;"></div>
+              <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);">radius-sm — 3px (badge, tag)</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:40px;height:32px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:6px;"></div>
+              <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);">radius-md — 6px (input, btn)</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:40px;height:32px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:10px;"></div>
+              <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);">radius-lg — 10px (card, menu)</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:40px;height:32px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:14px;"></div>
+              <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);">radius-xl — 14px (modal, toast)</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:40px;height:32px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:9999px;"></div>
+              <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);">radius-full — pill (tag, toggle)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <span class="comp-card-label">Elevação & sombras</span>
+        <div style="display:flex;flex-direction:column;gap:14px;padding:8px 0;">
+          <div style="background:var(--bg-elevated);border-radius:var(--radius-md);padding:12px;box-shadow:var(--shadow-sm);text-align:center;font-size:12px;color:var(--text-muted);">shadow-sm — cards</div>
+          <div style="background:var(--bg-elevated);border-radius:var(--radius-lg);padding:12px;box-shadow:var(--shadow-md);text-align:center;font-size:12px;color:var(--text-muted);">shadow-md — menus, dropdowns</div>
+          <div style="background:var(--bg-elevated);border-radius:var(--radius-xl);padding:12px;box-shadow:var(--shadow-lg);text-align:center;font-size:12px;color:var(--text-muted);">shadow-lg — toasts, floating</div>
+          <div style="background:var(--bg-elevated);border-radius:var(--radius-xl);padding:12px;box-shadow:var(--shadow-xl);text-align:center;font-size:12px;color:var(--text-muted);">shadow-xl — modais</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  let currentTheme = 'paper';
+
+  function toggleTheme() {
+    const body = document.getElementById('app');
+    const paperOpt = document.getElementById('paper-opt');
+    const inkOpt = document.getElementById('ink-opt');
+
+    if (currentTheme === 'paper') {
+      body.classList.remove('theme-paper');
+      body.classList.add('theme-ink');
+      paperOpt.classList.remove('active');
+      inkOpt.classList.add('active');
+      currentTheme = 'ink';
+    } else {
+      body.classList.remove('theme-ink');
+      body.classList.add('theme-paper');
+      inkOpt.classList.remove('active');
+      paperOpt.classList.add('active');
+      currentTheme = 'paper';
+    }
+  }
+
+  // Init paper active
+  document.getElementById('paper-opt').classList.add('active');
+
+  // Toggle inputs
+  document.querySelectorAll('.toggle-track').forEach(track => {
+    track.addEventListener('click', () => {
+      const input = track.previousElementSibling;
+      // handled by onclick inline
+    });
+  });
+
+  // Smooth scroll for nav
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(link.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  // Active nav on scroll
+  const sections = document.querySelectorAll('.section-divider[id]');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 100) current = s.id;
+    });
+    document.querySelectorAll('.nav-link').forEach(l => {
+      l.classList.toggle('active', l.getAttribute('href') === '#' + current);
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"jsx": "react-jsx",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"noEmit": true
+	},
+	"references": [
+		{ "path": "packages/ipc" },
+		{ "path": "packages/platform" },
+		{ "path": "packages/core" },
+		{ "path": "packages/editor" },
+		{ "path": "packages/ui" },
+		{ "path": "packages/theme" },
+		{ "path": "packages/settings" },
+		{ "path": "apps/desktop" },
+		{ "path": "apps/desktop/tsconfig.node.json" }
+	],
+	"files": []
+}

@@ -1,0 +1,16 @@
+{
+	"name": "@cortex/platform",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./adapters/tauri": "./src/adapters/tauri/index.ts"
+	},
+	"dependencies": {
+		"@cortex/ipc": "workspace:*"
+	},
+	"devDependencies": {
+		"typescript": "^5.7.0"
+	}
+}

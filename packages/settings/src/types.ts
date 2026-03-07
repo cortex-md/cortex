@@ -1,0 +1,44 @@
+import { z } from "zod"
+
+export const AppearanceSettingsSchema = z.object({
+	theme: z.enum(["paper", "ink"] as const).default("ink"),
+	accentColor: z.string().default("#e8a83c"),
+	fontSize: z.number().min(10).max(24).default(16),
+	lineHeight: z.number().min(1).max(2).default(1.5),
+})
+
+export const EditorSettingsSchema = z.object({
+	tabSize: z.number().min(2).max(8).default(2),
+	useSpaces: z.boolean().default(true),
+	wordWrap: z.boolean().default(true),
+	showLineNumbers: z.boolean().default(true),
+	autoSave: z.boolean().default(true),
+	autoSaveInterval: z.number().min(1000).default(2000),
+})
+
+export const FilesSettingsSchema = z.object({
+	excludePatterns: z.array(z.string()).default(["node_modules", ".git", "dist"]),
+	hideHiddenFiles: z.boolean().default(true),
+})
+
+export const HotkeysSettingsSchema = z.record(z.string(), z.string()).default({})
+
+export const AppSettingsSchema = z.object({
+	appearance: AppearanceSettingsSchema.default({}),
+	editor: EditorSettingsSchema.default({}),
+	files: FilesSettingsSchema.default({}),
+	hotkeys: HotkeysSettingsSchema.default({}),
+})
+
+export type AppearanceSettings = z.infer<typeof AppearanceSettingsSchema>
+export type EditorSettings = z.infer<typeof EditorSettingsSchema>
+export type FilesSettings = z.infer<typeof FilesSettingsSchema>
+export type HotkeysSettings = z.infer<typeof HotkeysSettingsSchema>
+export type AppSettings = z.infer<typeof AppSettingsSchema>
+
+export interface SettingsChangeEvent {
+	section: keyof AppSettings
+	key: string
+	oldValue: unknown
+	newValue: unknown
+}

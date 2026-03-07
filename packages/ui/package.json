@@ -1,0 +1,19 @@
+{
+	"name": "@cortex/ui",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"peerDependencies": {
+		"react": ">=19"
+	},
+	"dependencies": {
+		"lucide-react": "^0.525.0"
+	},
+	"devDependencies": {
+		"@types/react": "^19.1.8",
+		"typescript": "~5.8.3"
+	}
+}

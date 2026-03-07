@@ -1,0 +1,119 @@
+export type ThemeName = "paper" | "ink"
+
+export interface ThemeTokens {
+	primitive: {
+		stone: Record<string, string>
+		ink: Record<string, string>
+		amber: Record<string, string>
+		amberDark: Record<string, string>
+		red: Record<string, string>
+		green: Record<string, string>
+		yellow: Record<string, string>
+	}
+	semantic: {
+		bg: {
+			primary: string
+			secondary: string
+			tertiary: string
+			elevated: string
+			hover: string
+			active: string
+			selected: string
+			code: string
+			tag: string
+		}
+		text: {
+			primary: string
+			secondary: string
+			muted: string
+			disabled: string
+			placeholder: string
+			onAccent: string
+		}
+		accent: {
+			default: string
+			hover: string
+			active: string
+			subtle: string
+			border: string
+			text: string
+		}
+		link: {
+			default: string
+			hover: string
+			broken: string
+		}
+		border: {
+			default: string
+			subtle: string
+			strong: string
+			focus: string
+		}
+		syntax: {
+			keyword: string
+			string: string
+			comment: string
+			number: string
+			function: string
+			type: string
+			operator: string
+			property: string
+		}
+	}
+	fonts: {
+		ui: string
+		editor: string
+		mono: string
+	}
+	status: {
+		error: string
+		errorBg: string
+		success: string
+		successBg: string
+		warning: string
+		warningBg: string
+	}
+	component: {
+		btnPrimaryBg: string
+		btnPrimaryText: string
+		btnPrimaryHover: string
+		inputBg: string
+		inputBorder: string
+		inputFocusRing: string
+		menuBg: string
+		menuBorder: string
+		menuShadow: string
+		menuHover: string
+		modalBg: string
+		modalBorder: string
+		modalShadow: string
+		tooltipBg: string
+		tooltipText: string
+		sidebarBg: string
+		sidebarBorder: string
+		tabBg: string
+		tabActiveBg: string
+		tabAccent: string
+		statusbarBg: string
+		statusbarBorder: string
+		scrollbarThumb: string
+		scrollbarHover: string
+		shadowRaised: string
+		shadowFloating: string
+		shadowOverlay: string
+	}
+	colorScheme: "light" | "dark"
+}
+
+export interface Theme {
+	name: ThemeName
+	displayName: string
+	isDark: boolean
+	tokens: ThemeTokens
+	cssVariables: Record<string, string>
+}
+
+export interface ThemeTokenMap {
+	tokens: Record<string, string>
+	theme: ThemeName
+}

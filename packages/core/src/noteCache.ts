@@ -1,0 +1,280 @@
+import { getPlatform } from "@cortex/platform"
+
+export type SnapshotTrigger = "auto" | "manual" | "pre-save" | "pre-sync"
+
+export interface Snapshot {
+	timestamp: number
+	content: string
+	trigger: SnapshotTrigger
+}
+
+export interface NoteCacheEntry {
+	filePath: string
+	content: string
+	diskContent: string
+	mtime: number
+	hash: string
+	dirty: boolean
+	lastAccessed: number
+	openTabCount: number
+	snapshots: Snapshot[]
+}
+
+export type ExternalChangeKind = "overwrite" | "conflict"
+
+export interface ExternalChangeEvent {
+	filePath: string
+	kind: ExternalChangeKind
+	snapshot: Snapshot
+}
+
+type ExternalChangeListener = (event: ExternalChangeEvent) => void
+
+const EVICTION_IDLE_MS = 15 * 60 * 1000
+const EVICTION_INTERVAL_MS = 5 * 60 * 1000
+const SNAPSHOT_INTERVAL_MS = 5 * 60 * 1000
+const SNAPSHOT_MAX_PER_FILE = 50
+const SNAPSHOT_RETENTION_DAYS = 30
+const AUTOSAVE_DEBOUNCE_MS = 2000
+
+class NoteCache {
+	private entries = new Map<string, NoteCacheEntry>()
+	private saveTimers = new Map<string, ReturnType<typeof setTimeout>>()
+	private snapshotTimers = new Map<string, ReturnType<typeof setInterval>>()
+	private externalChangeListeners: ExternalChangeListener[] = []
+	private evictionTimer: ReturnType<typeof setInterval> | null = null
+
+	start() {
+		this.evictionTimer = setInterval(() => this.runEviction(), EVICTION_INTERVAL_MS)
+	}
+
+	stop() {
+		if (this.evictionTimer) {
+			clearInterval(this.evictionTimer)
+			this.evictionTimer = null
+		}
+		for (const timer of this.saveTimers.values()) clearTimeout(timer)
+		for (const timer of this.snapshotTimers.values()) clearInterval(timer)
+		this.saveTimers.clear()
+		this.snapshotTimers.clear()
+	}
+
+	async read(filePath: string): Promise<string> {
+		const entry = this.entries.get(filePath)
+		if (entry && !entry.dirty) {
+			entry.lastAccessed = Date.now()
+			return entry.content
+		}
+
+		const platform = getPlatform()
+		const content = await platform.fs.readFile(filePath)
+		const hash = await platform.fs.hashFile(filePath)
+
+		const now = Date.now()
+		if (entry) {
+			entry.content = content
+			entry.diskContent = content
+			entry.hash = hash
+			entry.lastAccessed = now
+		} else {
+			this.entries.set(filePath, {
+				filePath,
+				content,
+				diskContent: content,
+				mtime: now,
+				hash,
+				dirty: false,
+				lastAccessed: now,
+				openTabCount: 0,
+				snapshots: [],
+			})
+		}
+
+		return content
+	}
+
+	write(filePath: string, content: string) {
+		const entry = this.entries.get(filePath)
+		if (!entry) return
+
+		entry.content = content
+		entry.dirty = content !== entry.diskContent
+		entry.lastAccessed = Date.now()
+
+		if (entry.dirty) {
+			this.scheduleSave(filePath)
+		}
+	}
+
+	private scheduleSave(filePath: string) {
+		const existing = this.saveTimers.get(filePath)
+		if (existing) clearTimeout(existing)
+
+		const timer = setTimeout(() => {
+			this.saveTimers.delete(filePath)
+			this.flush(filePath)
+		}, AUTOSAVE_DEBOUNCE_MS)
+
+		this.saveTimers.set(filePath, timer)
+	}
+
+	async flush(filePath: string): Promise<void> {
+		const entry = this.entries.get(filePath)
+		if (!entry || !entry.dirty) return
+
+		const timer = this.saveTimers.get(filePath)
+		if (timer) {
+			clearTimeout(timer)
+			this.saveTimers.delete(filePath)
+		}
+
+		const platform = getPlatform()
+		this.takeSnapshot(filePath, "pre-save")
+		await platform.fs.writeFile(filePath, entry.content)
+		const hash = await platform.fs.hashFile(filePath)
+
+		entry.diskContent = entry.content
+		entry.dirty = false
+		entry.hash = hash
+		entry.mtime = Date.now()
+	}
+
+	async flushAll(): Promise<void> {
+		const dirtyPaths = Array.from(this.entries.entries())
+			.filter(([, e]) => e.dirty)
+			.map(([p]) => p)
+
+		await Promise.all(dirtyPaths.map((p) => this.flush(p)))
+	}
+
+	openTab(filePath: string) {
+		const entry = this.entries.get(filePath)
+		if (entry) {
+			entry.openTabCount++
+			this.startSnapshotTimer(filePath)
+		}
+	}
+
+	async closeTab(filePath: string) {
+		const entry = this.entries.get(filePath)
+		if (!entry) return
+
+		if (entry.dirty) await this.flush(filePath)
+
+		entry.openTabCount = Math.max(0, entry.openTabCount - 1)
+
+		if (entry.openTabCount === 0) {
+			this.stopSnapshotTimer(filePath)
+		}
+	}
+
+	private startSnapshotTimer(filePath: string) {
+		if (this.snapshotTimers.has(filePath)) return
+		const timer = setInterval(() => {
+			this.takeSnapshot(filePath, "auto")
+		}, SNAPSHOT_INTERVAL_MS)
+		this.snapshotTimers.set(filePath, timer)
+	}
+
+	private stopSnapshotTimer(filePath: string) {
+		const timer = this.snapshotTimers.get(filePath)
+		if (timer) {
+			clearInterval(timer)
+			this.snapshotTimers.delete(filePath)
+		}
+	}
+
+	takeSnapshot(filePath: string, trigger: SnapshotTrigger): Snapshot | null {
+		const entry = this.entries.get(filePath)
+		if (!entry) return null
+
+		const snapshot: Snapshot = {
+			timestamp: Date.now(),
+			content: entry.content,
+			trigger,
+		}
+
+		entry.snapshots.push(snapshot)
+		this.pruneSnapshots(entry)
+		return snapshot
+	}
+
+	private pruneSnapshots(entry: NoteCacheEntry) {
+		const retentionMs = SNAPSHOT_RETENTION_DAYS * 24 * 60 * 60 * 1000
+		const cutoff = Date.now() - retentionMs
+		entry.snapshots = entry.snapshots
+			.filter((s) => s.timestamp > cutoff)
+			.slice(-SNAPSHOT_MAX_PER_FILE)
+	}
+
+	async handleExternalChange(filePath: string, newHash: string) {
+		const entry = this.entries.get(filePath)
+		if (!entry) return
+		if (newHash === entry.hash) return
+
+		if (!entry.dirty) {
+			const platform = getPlatform()
+			const content = await platform.fs.readFile(filePath)
+			entry.content = content
+			entry.diskContent = content
+			entry.hash = newHash
+			entry.mtime = Date.now()
+
+			this.notifyExternalChange({
+				filePath,
+				kind: "overwrite",
+				snapshot: { timestamp: Date.now(), content, trigger: "auto" },
+			})
+		} else {
+			const snapshot = this.takeSnapshot(filePath, "pre-save")!
+			this.notifyExternalChange({ filePath, kind: "conflict", snapshot })
+		}
+	}
+
+	private notifyExternalChange(event: ExternalChangeEvent) {
+		for (const listener of this.externalChangeListeners) listener(event)
+	}
+
+	onExternalChange(listener: ExternalChangeListener): () => void {
+		this.externalChangeListeners.push(listener)
+		return () => {
+			this.externalChangeListeners = this.externalChangeListeners.filter((l) => l !== listener)
+		}
+	}
+
+	private async runEviction() {
+		const now = Date.now()
+		const toEvict: string[] = []
+
+		for (const [path, entry] of this.entries) {
+			if (entry.openTabCount > 0) continue
+			if (now - entry.lastAccessed > EVICTION_IDLE_MS) {
+				toEvict.push(path)
+			}
+		}
+
+		for (const path of toEvict) {
+			await this.flush(path)
+			this.entries.delete(path)
+		}
+	}
+
+	getEntry(filePath: string): NoteCacheEntry | undefined {
+		return this.entries.get(filePath)
+	}
+
+	getSnapshots(filePath: string): Snapshot[] {
+		return this.entries.get(filePath)?.snapshots ?? []
+	}
+
+	isDirty(filePath: string): boolean {
+		return this.entries.get(filePath)?.dirty ?? false
+	}
+
+	clear() {
+		this.stop()
+		this.entries.clear()
+	}
+}
+
+export const noteCache = new NoteCache()

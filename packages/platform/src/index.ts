@@ -1,0 +1,31 @@
+import type { App } from "./interfaces/App"
+import type { Dialog } from "./interfaces/Dialog"
+import type { FileSystem } from "./interfaces/FileSystem"
+import type { Storage } from "./interfaces/Storage"
+import type { Vault } from "./interfaces/Vault"
+
+export type { Dialog } from "./interfaces/Dialog"
+export type { FileEntry, FileSystem, WatchEvent } from "./interfaces/FileSystem"
+export type { Storage } from "./interfaces/Storage"
+export type { Vault, VaultMetadata, VaultRegistryEntry } from "./interfaces/Vault"
+
+export interface Platform {
+	fs: FileSystem
+	dialog: Dialog
+	storage: Storage
+	vault: Vault
+	app: App
+}
+
+let _platform: Platform | null = null
+
+export function initPlatform(platform: Platform): void {
+	_platform = platform
+}
+
+export function getPlatform(): Platform {
+	if (!_platform) {
+		throw new Error("Platform not initialized. Call initPlatform() first.")
+	}
+	return _platform
+}
