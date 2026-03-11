@@ -2,8 +2,12 @@ import { z } from "zod"
 
 export const AppearanceSettingsSchema = z.object({
 	theme: z.enum(["paper", "ink"] as const).default("ink"),
+	colorscheme: z.enum(["light", "dark", "system"]).default("system"),
 	accentColor: z.string().default("#e8a83c"),
-	fontSize: z.number().min(10).max(24).default(16),
+	uiFontFamily: z.string().default("DM Sans"),
+	uiFontSize: z.number().min(10).max(24).default(14),
+	editorFontFamily: z.string().default("Lora"),
+	editorFontSize: z.number().min(10).max(24).default(16),
 	lineHeight: z.number().min(1).max(2).default(1.5),
 })
 
@@ -21,9 +25,14 @@ export const FilesSettingsSchema = z.object({
 	hideHiddenFiles: z.boolean().default(true),
 })
 
+export const GeneralSettingsSchema = z.object({
+	autoOpenLastVault: z.boolean().default(true),
+})
+
 export const HotkeysSettingsSchema = z.record(z.string(), z.string()).default({})
 
 export const AppSettingsSchema = z.object({
+	general: GeneralSettingsSchema.default({}),
 	appearance: AppearanceSettingsSchema.default({}),
 	editor: EditorSettingsSchema.default({}),
 	files: FilesSettingsSchema.default({}),
@@ -31,6 +40,7 @@ export const AppSettingsSchema = z.object({
 })
 
 export type AppearanceSettings = z.infer<typeof AppearanceSettingsSchema>
+export type GeneralSettings = z.infer<typeof GeneralSettingsSchema>
 export type EditorSettings = z.infer<typeof EditorSettingsSchema>
 export type FilesSettings = z.infer<typeof FilesSettingsSchema>
 export type HotkeysSettings = z.infer<typeof HotkeysSettingsSchema>

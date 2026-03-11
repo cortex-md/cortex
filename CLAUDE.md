@@ -8,7 +8,70 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **apps/desktop** — The Tauri application entry point
 - **packages/** — Reusable modules (ui, core, platform, ipc, theme, editor, settings)
 
+## Packages responsabilities
+
+```
+cortex/
+├── apps/
+│   ├── desktop/                    # App Tauri (shell Rust + frontend React/Vite)
+│   │   ├── src-tauri/              # Camada nativa Rust
+│   │   │   ├── src/
+│   │   │   │   ├── commands/       # Handlers IPC expostos ao frontend via tauri-specta
+│   │   │   │   │   ├── vault.rs    # open_vault, close_vault, scan_vault, get_vault_metadata
+│   │   │   │   │   ├── fs.rs       # read_file, write_file, delete_file, rename_file, hash_file
+│   │   │   │   │   ├── watcher.rs  # start_watching, stop_watching (emite eventos Tauri)
+│   │   │   │   │   ├── window.rs   # open_vault_in_new_window, get_window_label
+│   │   │   │   │   ├── dialog.rs   # pick_folder, show_confirm_dialog
+│   │   │   │   │   ├── shell.rs    # open_in_system_explorer, reveal_file
+│   │   │   │   │   ├── registry.rs # update_vault_registry, read_vault_registry
+│   │   │   │   │   ├── auth.rs     # keychain read/write para tokens e device identity
+│   │   │   │   │   └── menu.rs     # show_context_menu, update_menu_item, menubar setup
+│   │   │   │   ├── sync/           # Engine de sync — roda em thread Rust separada
+│   │   │   │   │   ├── engine.rs   # Loop principal: detecta mudanças, enfileira ops, executa
+│   │   │   │   │   ├── uploader.rs # Upload de arquivos via HTTP POST com retry e backoff
+│   │   │   │   │   ├── downloader.rs # Download e aplicação de versões remotas
+│   │   │   │   │   ├── sse.rs      # Cliente SSE persistente: conecta, reconecta, emite eventos Tauri
+│   │   │   │   │   ├── merge.rs    # Three-way merge via diff-match-patch (Markdown) e JSON merge
+│   │   │   │   │   ├── conflict.rs # Detecção de conflito via hash triplo (local/remote/ancestor)
+│   │   │   │   │   ├── db.rs       # Interface com sync.db (SQLite): leitura e escrita de sync_state
+│   │   │   │   │   └── auth.rs     # Refresh de access token, fluxo de device token
+│   │   │   │   ├── keychain/       # Abstração cross-platform para keychain do OS
+│   │   │   │   │   └── mod.rs      # macOS Keychain, Windows Credential Manager, Linux libsecret
+│   │   │   │   ├── protocol/       # Protocolo cortex:// para servir assets do vault ao webview
+│   │   │   │   │   └── mod.rs
+│   │   │   │   └── main.rs         # Entry point Tauri: registra comandos, plugins, setup inicial
+│   │   │   └── Cargo.toml
+│   │   └── src/                    # Entrada React — composição dos packages
+│   │       ├── main.tsx            # initPlatform(tauriAdapter), monta React app
+│   │       └── App.tsx             # Composição de layout, providers, workspace
+│   └── mobile/                     # (futuro) React Native — consome packages/core e packages/platform
+├── packages/
+│   ├── core/                       # Lógica pura: vault, metadata, eventos, Note Cache, índice, utiliza o plataform que sera adaptado para cada sistema.
+│   ├── editor/                     # Motor de edição: CodeMirror 6 + extensões Markdown + Live Preview
+│   ├── ui/                         # Componentes React compartilhados, design system
+│   ├── plugin-api/                 # Contratos públicos que plugins podem importar
+│   ├── platform/                   # Abstração de plataforma: adapters para Tauri e RN, definição dos tipos principais do filesystem, dialogs e etc.
+│   ├── settings/                   # Engine de configurações, cache em memória, persistência
+│   ├── search/                     # MiniSearch: indexação, serialização, queries
+│   ├── theme/                      # Engine de temas, variáveis CSS, Theme Token Bridge (CSS→RN)
+│   ├── sync-client/                # Estado reativo do sync no frontend: status, conflitos, UI bridge
+│   └── ipc/                        # Implementação do pacote plataform para o tauri, utilizando suas dependencias e implementações
+├── plugins/                        # Plugins core bundled
+│   ├── file-explorer/
+│   ├── quick-switcher/
+│   └── ...
+├── bun.lockb
+└── bunfig.toml
+```
+
 ## Code Conventions
+
+
+### UI components 
+Aways use the components from `@cortex/ui` as needed instead of creating new things or using primitive components from html.
+
+### Simplify
+After finishing any task run the /simplify command to clean up any leftover code that has over engineered.
 
 ### No Comments
 Code is self-documenting through descriptive naming. Function names, variable names, and type names should clearly express intent. Comments are never needed if names are precise.
@@ -19,6 +82,7 @@ Code is self-documenting through descriptive naming. Function names, variable na
 - **Type names**: Use PascalCase for interfaces/types: `EditorState`, `FileEntry`, `VaultMetadata`
 - **Constants**: UPPER_SNAKE_CASE for compile-time constants, lowercase for module-scoped constants
 - **Event handlers**: Prefix with action verb: `handleOpenVault`, `handleResize`, `updateCursor`
+- **CLAUDE.md**: Aways update the CLAUDE.md files from the packages you have made changes, to keep the documentation alive.
 
 ### Formatting & Linting
 - **Biome** enforces all code style (see `biome.json`)

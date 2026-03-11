@@ -56,6 +56,8 @@ export interface WorkspaceState {
 
 	openTab: (filePath: string, opts?: OpenTabOptions) => void
 	closeTab: (tabId: string, paneId: string) => void
+	closeTabsByPath: (filePath: string) => void
+	updateTabPath: (oldPath: string, newPath: string) => void
 	activateTab: (tabId: string, paneId: string) => void
 	pinTab: (tabId: string, paneId: string) => void
 	markTabDirty: (tabId: string, dirty: boolean) => void
@@ -212,6 +214,30 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 						{ filePath: tab.filePath, title: tab.title },
 						...recentlyClosed.slice(0, MAX_RECENT_CLOSED - 1),
 					]
+				})
+			},
+
+			closeTabsByPath: (filePath) => {
+				const { panes } = get()
+				for (const [paneId, pane] of Object.entries(panes)) {
+					const matchingTabs = pane.tabs.filter((t) => t.filePath === filePath)
+					for (const tab of matchingTabs) {
+						get().closeTab(tab.id, paneId)
+					}
+				}
+			},
+
+			updateTabPath: (oldPath, newPath) => {
+				set((s) => {
+					const newTitle = titleFromPath(newPath)
+					for (const pane of Object.values(s.panes)) {
+						for (const tab of pane.tabs) {
+							if (tab.filePath === oldPath) {
+								tab.filePath = newPath
+								tab.title = newTitle
+							}
+						}
+					}
 				})
 			},
 

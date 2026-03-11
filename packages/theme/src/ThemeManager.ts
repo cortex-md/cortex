@@ -5,7 +5,7 @@ import { paperTheme } from "./themes/paper"
 import type { Theme, ThemeName } from "./types"
 
 export class ThemeManager {
-	private themes: Map<ThemeName, Theme> = new Map()
+	private themes: Map<string, Theme> = new Map()
 	private activeTheme: Theme
 	private listeners: Set<(theme: Theme) => void> = new Set()
 	private adapter: ThemeAdapter | null
@@ -50,6 +50,14 @@ export class ThemeManager {
 			const cssString = generateCSSString(theme)
 			this.adapter?.injectCSS(cssString, theme.name)
 		}
+	}
+
+	applyOverrides(overrides: Record<string, string>): void {
+		this.adapter?.applyOverrides(overrides)
+	}
+
+	clearOverrides(): void {
+		this.adapter?.clearOverrides()
 	}
 
 	subscribe(listener: (theme: Theme) => void): () => void {

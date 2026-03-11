@@ -15,5 +15,4 @@
 		"declarationMap": true,
 		"outDir": "dist"
 	},
-	"include": ["src"]
 }

@@ -1,0 +1,191 @@
+import type { FontInfo } from "@cortex/platform"
+import { getPlatform } from "@cortex/platform"
+import type { AppearanceSettings } from "@cortex/settings"
+import { getThemeManager } from "@cortex/theme"
+import { Label, NativeSelect, NativeSelectOption, Slider } from "@cortex/ui"
+import { useEffect, useState } from "react"
+import type { UpdateSettingFn } from "."
+import { applyAppearanceSettings, buildAppearanceOverrides } from "./applyAppearance"
+
+interface AppearanceSectionProps {
+	settings: AppearanceSettings
+	onUpdate: UpdateSettingFn
+}
+
+export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps) {
+	const [systemFonts, setSystemFonts] = useState<FontInfo[]>([])
+
+	useEffect(() => {
+		getPlatform().font.listSystemFonts().then(setSystemFonts)
+	}, [])
+
+	const applyOverrides = (partial: Partial<AppearanceSettings>) => {
+		getThemeManager().applyOverrides(buildAppearanceOverrides({ ...settings, ...partial }))
+	}
+
+	const handleColorschemeChange = (colorscheme: "light" | "dark" | "system") => {
+		onUpdate("appearance", "colorscheme", colorscheme)
+		applyAppearanceSettings({ ...settings, colorscheme })
+	}
+
+	const handleAccentColorChange = (hex: string) => {
+		onUpdate("appearance", "accentColor", hex)
+		applyOverrides({ accentColor: hex })
+	}
+
+	const handleUIFontFamilyChange = (fontFamily: string) => {
+		onUpdate("appearance", "uiFontFamily", fontFamily)
+		applyOverrides({ uiFontFamily: fontFamily })
+	}
+
+	const handleUIFontSizeChange = (size: number) => {
+		onUpdate("appearance", "uiFontSize", size)
+		applyOverrides({ uiFontSize: size })
+	}
+
+	const handleEditorFontFamilyChange = (fontFamily: string) => {
+		onUpdate("appearance", "editorFontFamily", fontFamily)
+		applyOverrides({ editorFontFamily: fontFamily })
+	}
+
+	const handleEditorFontSizeChange = (size: number) => {
+		onUpdate("appearance", "editorFontSize", size)
+		applyOverrides({ editorFontSize: size })
+	}
+
+	const handleLineHeightChange = (lineHeight: number) => {
+		onUpdate("appearance", "lineHeight", lineHeight)
+	}
+
+	return (
+		<section>
+			<div className="mb-6">
+				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
+					Theme
+				</h3>
+				<div className="flex items-center justify-between px-0 py-2 gap-4">
+					<Label htmlFor="colorscheme">Colorscheme</Label>
+					<NativeSelect
+						id="colorscheme"
+						value={settings.colorscheme}
+						onChange={(e) => handleColorschemeChange(e.target.value as "light" | "dark" | "system")}
+					>
+						<NativeSelectOption value="light">Light</NativeSelectOption>
+						<NativeSelectOption value="dark">Dark</NativeSelectOption>
+						<NativeSelectOption value="system">System</NativeSelectOption>
+					</NativeSelect>
+				</div>
+
+				<div className="flex items-center justify-between px-0 py-2 gap-4">
+					<Label htmlFor="accent-color">Accent Color</Label>
+					<div className="flex items-center gap-2">
+						<input
+							id="accent-color"
+							type="color"
+							value={settings.accentColor}
+							onChange={(e) => handleAccentColorChange(e.target.value)}
+							className="w-8 h-8 rounded-md border border-input cursor-pointer bg-transparent p-0"
+						/>
+						<span className="text-[11px] text-text-muted font-family-mono min-w-[60px]">
+							{settings.accentColor}
+						</span>
+					</div>
+				</div>
+			</div>
+
+			<div className="mb-6">
+				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
+					Interface
+				</h3>
+				<div className="flex items-center justify-between px-0 py-2 gap-4">
+					<Label htmlFor="ui-font-family">UI Font</Label>
+					<NativeSelect
+						id="ui-font-family"
+						value={settings.uiFontFamily}
+						onChange={(e) => handleUIFontFamilyChange(e.target.value)}
+					>
+						<NativeSelectOption value="System Default">System Default</NativeSelectOption>
+						{systemFonts.map((font) => (
+							<NativeSelectOption key={font.family} value={font.family}>
+								{font.family}
+							</NativeSelectOption>
+						))}
+					</NativeSelect>
+				</div>
+
+				<div className="flex items-center justify-between px-0 py-2 gap-4">
+					<Label htmlFor="ui-font-size">UI Font Size</Label>
+					<div className="flex items-center gap-3 flex-1">
+						<Slider
+							id="ui-font-size"
+							min={10}
+							max={20}
+							defaultValue={[settings.uiFontSize]}
+							onValueChange={(value: number[]) => handleUIFontSizeChange(value[0])}
+							className="flex-1 h-1 cursor-pointer accent-color-accent"
+						/>
+						<span className="text-[11px] text-text-muted min-w-[36px] text-right font-family-mono">
+							{settings.uiFontSize}px
+						</span>
+					</div>
+				</div>
+			</div>
+
+			<div className="mb-6">
+				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
+					Editor
+				</h3>
+				<div className="flex items-center justify-between px-0 py-2 gap-4">
+					<Label htmlFor="editor-font-family">Editor Font</Label>
+					<NativeSelect
+						id="editor-font-family"
+						value={settings.editorFontFamily}
+						onChange={(e) => handleEditorFontFamilyChange(e.target.value)}
+					>
+						<NativeSelectOption value="System Default">System Default</NativeSelectOption>
+						{systemFonts.map((font) => (
+							<NativeSelectOption key={font.family} value={font.family}>
+								{font.family}
+							</NativeSelectOption>
+						))}
+					</NativeSelect>
+				</div>
+
+				<div className="flex items-center justify-between px-0 py-2 gap-4">
+					<Label htmlFor="editor-font-size">Editor Font Size</Label>
+					<div className="flex items-center gap-3 flex-1">
+						<Slider
+							id="editor-font-size"
+							min={12}
+							max={24}
+							defaultValue={[settings.editorFontSize]}
+							onValueChange={(value: number[]) => handleEditorFontSizeChange(value[0])}
+							className="flex-1 h-1 cursor-pointer accent-color-accent"
+						/>
+						<span className="text-[11px] text-text-muted min-w-[36px] text-right font-family-mono">
+							{settings.editorFontSize}px
+						</span>
+					</div>
+				</div>
+
+				<div className="flex items-center justify-between px-0 py-2 gap-4">
+					<Label htmlFor="line-height">Line Height</Label>
+					<div className="flex items-center gap-3 flex-1">
+						<Slider
+							id="line-height"
+							min={1.2}
+							max={2}
+							step={0.1}
+							defaultValue={[settings.lineHeight]}
+							onValueChange={(value: number[]) => handleLineHeightChange(value[0])}
+							className="flex-1 h-1 cursor-pointer accent-color-accent"
+						/>
+						<span className="text-[11px] text-text-muted min-w-[36px] text-right font-family-mono">
+							{settings.lineHeight}x
+						</span>
+					</div>
+				</div>
+			</div>
+		</section>
+	)
+}

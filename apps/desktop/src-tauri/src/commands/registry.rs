@@ -32,7 +32,7 @@ pub fn read_vault_registry() -> Result<Vec<VaultRegistryEntry>, String> {
 }
 
 #[tauri::command]
-pub fn update_vault_registry(uuid: String, path: String, name: String) -> Result<(), String> {
+pub fn update_vault_registry(uuid: String, path: String, name: String, icon: Option<String>, color: Option<String>) -> Result<(), String> {
     let reg_path = registry_path()?;
     let mut entries = if reg_path.exists() {
         let content = fs::read_to_string(&reg_path).map_err(|e| e.to_string())?;
@@ -50,14 +50,20 @@ pub fn update_vault_registry(uuid: String, path: String, name: String) -> Result
         existing.path = path;
         existing.name = name;
         existing.last_opened = now;
+        if icon.is_some() {
+            existing.icon = icon;
+        }
+        if color.is_some() {
+            existing.color = color;
+        }
     } else {
         entries.push(VaultRegistryEntry {
             uuid,
             path,
             name,
             last_opened: now,
-            icon: None,
-            color: None,
+            icon,
+            color,
         });
     }
 

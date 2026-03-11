@@ -5,6 +5,7 @@ export type {
 	AppSettings,
 	EditorSettings,
 	FilesSettings,
+	GeneralSettings,
 	HotkeysSettings,
 	SettingsChangeEvent,
 } from "./types"
@@ -13,5 +14,6 @@ export {
 	AppSettingsSchema,
 	EditorSettingsSchema,
 	FilesSettingsSchema,
+	GeneralSettingsSchema,
 	HotkeysSettingsSchema,
 } from "./types"

@@ -24,3 +24,4 @@ blake3 = "1"
 uuid = { version = "1", features = ["v4"] }
 dirs = "6"
 tokio = { version = "1", features = ["sync"] }
+font-kit = "0.14"

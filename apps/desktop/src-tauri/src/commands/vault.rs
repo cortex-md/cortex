@@ -41,7 +41,10 @@ fn read_or_create_vault_id(vault_path: &str) -> Result<String, String> {
 pub fn open_vault(path: String) -> Result<VaultMetadata, String> {
     let p = Path::new(&path);
     if !p.exists() || !p.is_dir() {
-        return Err(format!("Path does not exist or is not a directory: {}", path));
+        return Err(format!(
+            "Path does not exist or is not a directory: {}",
+            path
+        ));
     }
     ensure_cortex_dir(&path)?;
     let uuid = read_or_create_vault_id(&path)?;

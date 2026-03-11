@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 3, "column": 0}, "map": {"version":3,"sources":[],"names":[],"mappings":"","debugId":null}},
+    {"offset": {"line": 11, "column": 0}, "map": {"version":3,"sources":["file:///Users/furqas/projects/personal/cortex/apps/web/app/page.tsx"],"sourcesContent":["import Cta from \"@/components/cta\"\nimport DemoSection from \"@/components/demo-section\"\nimport Features from \"@/components/features\"\nimport Footer from \"@/components/footer\"\nimport GraphSection from \"@/components/graph-section\"\nimport Hero from \"@/components/hero\"\nimport Nav from \"@/components/nav\"\nimport Stats from \"@/components/stats\"\nimport Testimonials from \"@/components/testimonials\"\nimport UseCases from \"@/components/use-cases\"\n\nexport default function Home() {\n\treturn (\n\t\t<>\n\t\t\t<Nav />\n\t\t\t<Hero />\n\t\t\t<Features />\n\t\t\t<DemoSection />\n\t\t\t<UseCases />\n\t\t\t<GraphSection />\n\t\t\t<Stats />\n\t\t\t<Testimonials />\n\t\t\t<Cta />\n\t\t\t<Footer />\n\t\t</>\n\t)\n}\n"],"names":[],"mappings":";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;AAWe,SAAS;IACvB,qBACC;;0BACC,gSAAC;;;;;0BACD,gSAAC;;;;;0BACD,gSAAC;;;;;0BACD,gSAAC;;;;;0BACD,gSAAC;;;;;0BACD,gSAAC;;;;;0BACD,gSAAC;;;;;0BACD,gSAAC;;;;;0BACD,gSAAC;;;;;0BACD,gSAAC;;;;;;;AAGJ","debugId":null}}]
+}

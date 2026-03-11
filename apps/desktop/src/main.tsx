@@ -1,10 +1,10 @@
+import { tauriPlatform } from "@cortex/ipc"
 import { initPlatform } from "@cortex/platform"
-import { tauriPlatform } from "@cortex/platform/adapters/tauri"
 import { initThemeManager, WebThemeAdapter } from "@cortex/theme"
 import React from "react"
 import ReactDOM from "react-dom/client"
-import "./styles.css"
 import App from "./App"
+import "./styles.css"
 
 initPlatform(tauriPlatform)
 initThemeManager("ink", new WebThemeAdapter())

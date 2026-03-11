@@ -80,7 +80,7 @@ const lineNumbersCompartment = new Compartment()
 function typographyExtension(fontSize: number, lineHeight: number) {
 	return EditorView.theme({
 		"&": {
-			fontSize: `${fontSize}px`,
+			fontSize: `var(--editor-font-size, ${fontSize}px)`,
 			fontFamily: "var(--font-editor)",
 			background: "transparent",
 			height: "100%",

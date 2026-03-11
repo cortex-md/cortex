@@ -1,0 +1,646 @@
+import { useVaultStore, useWorkspaceStore } from "@cortex/core"
+import type { FileEntry } from "@cortex/platform"
+import { getPlatform } from "@cortex/platform"
+import {
+	ContextMenu,
+	ContextMenuContent,
+	ContextMenuItem,
+	ContextMenuSeparator,
+	ContextMenuShortcut,
+	ContextMenuSub,
+	ContextMenuSubContent,
+	ContextMenuSubTrigger,
+	ContextMenuTrigger,
+	Input,
+} from "@cortex/ui"
+import {
+	ChevronRightIcon,
+	ClipboardCopyIcon,
+	CopyIcon,
+	ExternalLinkIcon,
+	FileIcon,
+	FilePlusIcon,
+	FolderIcon,
+	FolderPlusIcon,
+	PencilIcon,
+	TrashIcon,
+} from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { NativeMenuActions } from "@/utils/context-menu"
+import { buildFileContextMenuItems, buildRootContextMenuItems } from "./NativeMenuActions"
+
+interface TreeNode {
+	name: string
+	path: string
+	isDir: boolean
+	children: TreeNode[]
+}
+
+function buildTree(entries: FileEntry[], parentPath: string): TreeNode[] {
+	const sep = "/"
+	const children = entries.filter((e) => {
+		const parent = e.path.substring(0, e.path.lastIndexOf(sep))
+		return parent === parentPath
+	})
+	children.sort((a, b) => {
+		if (a.isDir !== b.isDir) return a.isDir ? -1 : 1
+		return a.name.localeCompare(b.name)
+	})
+	return children.map((e) => ({
+		name: e.name,
+		path: e.path,
+		isDir: e.isDir,
+		children: e.isDir ? buildTree(entries, e.path) : [],
+	}))
+}
+
+interface InlineInputProps {
+	defaultValue: string
+	onConfirm: (value: string) => void
+	onCancel: () => void
+	selectBaseName?: boolean
+}
+
+function InlineInput({ defaultValue, onConfirm, onCancel, selectBaseName }: InlineInputProps) {
+	const inputRef = useRef<HTMLInputElement>(null)
+
+	useEffect(() => {
+		const input = inputRef.current
+		if (!input) return
+		input.focus()
+		if (selectBaseName) {
+			const dotIndex = defaultValue.lastIndexOf(".")
+			input.setSelectionRange(0, dotIndex > 0 ? dotIndex : defaultValue.length)
+		} else {
+			input.select()
+		}
+	}, [defaultValue, selectBaseName])
+
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+		if (e.key === "Enter") {
+			e.preventDefault()
+			const value = inputRef.current?.value.trim()
+			if (value) onConfirm(value)
+			else onCancel()
+		}
+		if (e.key === "Escape") {
+			e.preventDefault()
+			onCancel()
+		}
+	}
+
+	return (
+		<Input
+			ref={inputRef}
+			type="text"
+			defaultValue={defaultValue}
+			onKeyDown={handleKeyDown}
+			onBlur={() => {
+				const value = inputRef.current?.value.trim()
+				if (value && value !== defaultValue) onConfirm(value)
+				else onCancel()
+			}}
+			className="w-full h-[24px] px-1.5 text-xs bg-bg-primary border border-border-focus rounded-sm outline-none text-text-primary"
+		/>
+	)
+}
+
+const hasNativeMenu = () => getPlatform().capabilities.includes("menu")
+
+const nativeMenu = new NativeMenuActions()
+
+interface FileActions {
+	onOpenFile: (path: string) => void
+	onNewFile: (parentPath: string) => void
+	onNewFolder: (parentPath: string) => void
+	onStartRename: (path: string) => void
+	onDelete: (path: string, isDir: boolean) => void
+	onDuplicate: (path: string) => void
+	onReveal: (path: string) => void
+	onCopyPath: (path: string, kind: "relative" | "absolute") => void
+}
+
+function showNativeFileContextMenu(
+	node: TreeNode,
+	position: { x: number; y: number },
+	actions: FileActions,
+) {
+	const items = buildFileContextMenuItems(
+		{
+			path: node.path,
+			fileName: node.name,
+			isDirectory: node.isDir,
+			selectionCount: 1,
+			isMultiSelect: false,
+		},
+		{
+			createFile: (parentPath) => actions.onNewFile(parentPath ?? node.path),
+			createFolder: (parentPath) => actions.onNewFolder(parentPath ?? node.path),
+			openInNewTab: (path) => actions.onOpenFile(path),
+			rename: (path) => actions.onStartRename(path),
+			addBookmark: () => {},
+			delete: (path, isDir) => actions.onDelete(path, isDir),
+			copyFile: (path) => actions.onDuplicate(path),
+			copyPath: (path) => actions.onCopyPath(path, "absolute"),
+			copyRelativePath: (path) => actions.onCopyPath(path, "relative"),
+			showInExplorer: (path) => actions.onReveal(path),
+		},
+	)
+
+	nativeMenu.showContextMenu({ items, position })
+}
+
+interface TreeNodeRowProps {
+	node: TreeNode
+	depth: number
+	isActive: boolean
+	isExpanded: boolean
+	isRenaming: boolean
+	onToggle: (path: string) => void
+	onOpenFile: (path: string) => void
+	onStartRename: (path: string) => void
+	onConfirmRename: (oldPath: string, newName: string) => void
+	onCancelRename: () => void
+}
+
+function TreeNodeRow({
+	node,
+	depth,
+	isActive,
+	isExpanded,
+	isRenaming,
+	onToggle,
+	onOpenFile,
+	onStartRename,
+	onConfirmRename,
+	onCancelRename,
+}: TreeNodeRowProps) {
+	return (
+		<div
+			role="treeitem"
+			tabIndex={0}
+			className={`flex items-center gap-1 h-[26px] px-1.5 w-full rounded-sm cursor-pointer text-text-secondary text-xs hover:bg-bg-hover hover:text-text-primary select-none outline-none focus-visible:ring-1 focus-visible:ring-border-focus ${
+				isActive ? "bg-accent text-primary" : ""
+			}`}
+			style={{ paddingLeft: `${depth * 12 + 6}px` }}
+			onClick={() => {
+				if (isRenaming) return
+				if (node.isDir) onToggle(node.path)
+				else onOpenFile(node.path)
+			}}
+			onKeyDown={(e) => {
+				if (e.key === "Enter") {
+					if (node.isDir) onToggle(node.path)
+					else onOpenFile(node.path)
+				}
+				if (e.key === "F2") onStartRename(node.path)
+			}}
+		>
+			{node.isDir ? (
+				<ChevronRightIcon
+					size={12}
+					strokeWidth={2.5}
+					className={`text-text-muted flex-shrink-0 transition-transform duration-100 ${
+						isExpanded ? "rotate-90" : ""
+					}`}
+				/>
+			) : (
+				<FileIcon size={12} className="text-text-muted flex-shrink-0" />
+			)}
+			{isRenaming ? (
+				<InlineInput
+					defaultValue={node.name}
+					onConfirm={(newName) => onConfirmRename(node.path, newName)}
+					onCancel={onCancelRename}
+					selectBaseName={!node.isDir}
+				/>
+			) : (
+				<span className="overflow-hidden text-ellipsis whitespace-nowrap flex-1">
+					{node.isDir ? node.name : node.name.replace(/\.md$/, "")}
+				</span>
+			)}
+		</div>
+	)
+}
+
+interface TreeNodeProps {
+	node: TreeNode
+	depth: number
+	expanded: Set<string>
+	onToggle: (path: string) => void
+	activeFilePath: string | null
+	onOpenFile: (path: string) => void
+	renamingPath: string | null
+	onStartRename: (path: string) => void
+	onConfirmRename: (oldPath: string, newName: string) => void
+	onCancelRename: () => void
+	onDelete: (path: string, isDir: boolean) => void
+	onDuplicate: (path: string) => void
+	onReveal: (path: string) => void
+	onCopyPath: (path: string, kind: "relative" | "absolute") => void
+	onNewFile: (parentPath: string) => void
+	onNewFolder: (parentPath: string) => void
+	creatingIn: string | null
+	creatingType: "file" | "folder" | null
+	onConfirmCreate: (parentPath: string, name: string) => void
+	onCancelCreate: () => void
+}
+
+function TreeNodeView({
+	node,
+	depth,
+	expanded,
+	onToggle,
+	activeFilePath,
+	onOpenFile,
+	renamingPath,
+	onStartRename,
+	onConfirmRename,
+	onCancelRename,
+	onDelete,
+	onDuplicate,
+	onReveal,
+	onCopyPath,
+	onNewFile,
+	onNewFolder,
+	creatingIn,
+	creatingType,
+	onConfirmCreate,
+	onCancelCreate,
+}: TreeNodeProps) {
+	const isExpanded = expanded.has(node.path)
+	const isActive = !node.isDir && activeFilePath === node.path
+	const isRenaming = renamingPath === node.path
+	const isCreatingHere = creatingIn === node.path
+
+	const rowProps = {
+		node,
+		depth,
+		isActive,
+		isExpanded,
+		isRenaming,
+		onToggle,
+		onOpenFile,
+		onStartRename,
+		onConfirmRename,
+		onCancelRename,
+	}
+
+	const fileActions: FileActions = {
+		onOpenFile,
+		onNewFile,
+		onNewFolder,
+		onStartRename,
+		onDelete,
+		onDuplicate,
+		onReveal,
+		onCopyPath,
+	}
+
+	return (
+		<>
+			{hasNativeMenu() ? (
+				// biome-ignore lint/a11y/noStaticElementInteractions: wrapper for native context menu
+				<div
+					onContextMenu={(e) => {
+						e.preventDefault()
+						showNativeFileContextMenu(node, { x: e.clientX, y: e.clientY }, fileActions)
+					}}
+				>
+					<TreeNodeRow {...rowProps} />
+				</div>
+			) : (
+				<ContextMenu>
+					<ContextMenuTrigger asChild>
+						<TreeNodeRow {...rowProps} />
+					</ContextMenuTrigger>
+					<ContextMenuContent>
+						{!node.isDir && (
+							<>
+								<ContextMenuItem onSelect={() => onOpenFile(node.path)}>
+									<ExternalLinkIcon />
+									Open in new tab
+								</ContextMenuItem>
+								<ContextMenuSeparator />
+							</>
+						)}
+						{node.isDir && (
+							<>
+								<ContextMenuItem onSelect={() => onNewFile(node.path)}>
+									<FilePlusIcon />
+									New Note
+								</ContextMenuItem>
+								<ContextMenuItem onSelect={() => onNewFolder(node.path)}>
+									<FolderPlusIcon />
+									New Folder
+								</ContextMenuItem>
+								<ContextMenuSeparator />
+							</>
+						)}
+						{!node.isDir && (
+							<ContextMenuItem onSelect={() => onDuplicate(node.path)}>
+								<CopyIcon />
+								Duplicate
+							</ContextMenuItem>
+						)}
+						<ContextMenuSub>
+							<ContextMenuSubTrigger>
+								<ClipboardCopyIcon />
+								Copy path
+							</ContextMenuSubTrigger>
+							<ContextMenuSubContent>
+								<ContextMenuItem onSelect={() => onCopyPath(node.path, "relative")}>
+									Relative path
+								</ContextMenuItem>
+								<ContextMenuItem onSelect={() => onCopyPath(node.path, "absolute")}>
+									Absolute path
+								</ContextMenuItem>
+							</ContextMenuSubContent>
+						</ContextMenuSub>
+						<ContextMenuSeparator />
+						<ContextMenuItem onSelect={() => onReveal(node.path)}>
+							<FolderIcon />
+							Reveal in Finder
+						</ContextMenuItem>
+						<ContextMenuSeparator />
+						<ContextMenuItem onSelect={() => onStartRename(node.path)}>
+							<PencilIcon />
+							Rename
+							<ContextMenuShortcut>F2</ContextMenuShortcut>
+						</ContextMenuItem>
+						<ContextMenuItem variant="destructive" onSelect={() => onDelete(node.path, node.isDir)}>
+							<TrashIcon />
+							Delete
+						</ContextMenuItem>
+					</ContextMenuContent>
+				</ContextMenu>
+			)}
+
+			{node.isDir && isExpanded && (
+				<>
+					{isCreatingHere && creatingType && (
+						<div
+							className="flex items-center gap-1 h-[26px] px-1.5"
+							style={{ paddingLeft: `${(depth + 1) * 12 + 6}px` }}
+						>
+							{creatingType === "folder" ? (
+								<FolderPlusIcon size={12} className="text-text-muted flex-shrink-0" />
+							) : (
+								<FilePlusIcon size={12} className="text-text-muted flex-shrink-0" />
+							)}
+							<InlineInput
+								defaultValue={creatingType === "folder" ? "New Folder" : "Untitled.md"}
+								onConfirm={(name) => onConfirmCreate(node.path, name)}
+								onCancel={onCancelCreate}
+								selectBaseName={creatingType === "file"}
+							/>
+						</div>
+					)}
+					{node.children.map((child) => (
+						<TreeNodeView
+							key={child.path}
+							node={child}
+							depth={depth + 1}
+							expanded={expanded}
+							onToggle={onToggle}
+							activeFilePath={activeFilePath}
+							onOpenFile={onOpenFile}
+							renamingPath={renamingPath}
+							onStartRename={onStartRename}
+							onConfirmRename={onConfirmRename}
+							onCancelRename={onCancelRename}
+							onDelete={onDelete}
+							onDuplicate={onDuplicate}
+							onReveal={onReveal}
+							onCopyPath={onCopyPath}
+							onNewFile={onNewFile}
+							onNewFolder={onNewFolder}
+							creatingIn={creatingIn}
+							creatingType={creatingType}
+							onConfirmCreate={onConfirmCreate}
+							onCancelCreate={onCancelCreate}
+						/>
+					))}
+				</>
+			)}
+		</>
+	)
+}
+
+export function FileSidebar() {
+	const { vault, files, createFile, createFolder, deleteFile, renameFile, duplicateFile } =
+		useVaultStore()
+	const { openTab, closeTabsByPath, updateTabPath, activePaneId, panes } = useWorkspaceStore()
+	const [expanded, setExpanded] = useState<Set<string>>(new Set())
+	const [renamingPath, setRenamingPath] = useState<string | null>(null)
+	const [creatingIn, setCreatingIn] = useState<string | null>(null)
+	const [creatingType, setCreatingType] = useState<"file" | "folder" | null>(null)
+
+	const activePane = panes[activePaneId]
+	const activeTab = activePane?.tabs.find((t) => t.id === activePane.activeTabId)
+
+	const handleToggle = (path: string) => {
+		setExpanded((prev) => {
+			const next = new Set(prev)
+			if (next.has(path)) next.delete(path)
+			else next.add(path)
+			return next
+		})
+	}
+
+	const ensureExpanded = useCallback((path: string) => {
+		setExpanded((prev) => {
+			if (prev.has(path)) return prev
+			const next = new Set(prev)
+			next.add(path)
+			return next
+		})
+	}, [])
+
+	const handleNewFile = useCallback(
+		(parentPath: string) => {
+			ensureExpanded(parentPath)
+			setCreatingIn(parentPath)
+			setCreatingType("file")
+		},
+		[ensureExpanded],
+	)
+
+	const handleNewFolder = useCallback(
+		(parentPath: string) => {
+			ensureExpanded(parentPath)
+			setCreatingIn(parentPath)
+			setCreatingType("folder")
+		},
+		[ensureExpanded],
+	)
+
+	const handleConfirmCreate = useCallback(
+		async (parentPath: string, name: string) => {
+			try {
+				if (creatingType === "folder") {
+					await createFolder(parentPath, name)
+				} else {
+					const filePath = await createFile(parentPath, name)
+					openTab(filePath)
+				}
+			} catch (_e) {}
+			setCreatingIn(null)
+			setCreatingType(null)
+		},
+		[creatingType, createFile, createFolder, openTab],
+	)
+
+	const handleCancelCreate = useCallback(() => {
+		setCreatingIn(null)
+		setCreatingType(null)
+	}, [])
+
+	const handleConfirmRename = useCallback(
+		async (oldPath: string, newName: string) => {
+			try {
+				const newPath = await renameFile(oldPath, newName)
+				updateTabPath(oldPath, newPath)
+			} catch (_e) {}
+			setRenamingPath(null)
+		},
+		[renameFile, updateTabPath],
+	)
+
+	const handleDelete = useCallback(
+		async (filePath: string, _isDir: boolean) => {
+			const platform = getPlatform()
+			const name = filePath.split("/").pop() ?? filePath
+			const confirmed = await platform.dialog.showConfirm(
+				"Delete",
+				`Are you sure you want to delete "${name}"?`,
+			)
+			if (!confirmed) return
+			closeTabsByPath(filePath)
+			await deleteFile(filePath)
+		},
+		[deleteFile, closeTabsByPath],
+	)
+
+	const handleDuplicate = useCallback(
+		async (filePath: string) => {
+			try {
+				const newPath = await duplicateFile(filePath)
+				openTab(newPath)
+			} catch (_e) {}
+		},
+		[duplicateFile, openTab],
+	)
+
+	const handleReveal = useCallback(async (filePath: string) => {
+		const platform = getPlatform()
+		await platform.dialog.revealFolder(filePath)
+	}, [])
+
+	const handleCopyPath = useCallback(
+		(filePath: string, kind: "relative" | "absolute") => {
+			if (kind === "relative" && vault) {
+				const relative = filePath.replace(`${vault.path}/`, "")
+				navigator.clipboard.writeText(relative)
+			} else {
+				navigator.clipboard.writeText(filePath)
+			}
+		},
+		[vault],
+	)
+
+	if (!vault) {
+		return
+	}
+
+	const tree = buildTree(files, vault.path)
+	const isCreatingAtRoot = creatingIn === vault.path
+
+	const handleRootContextMenu = (e: React.MouseEvent) => {
+		if (!hasNativeMenu()) return
+		e.preventDefault()
+		const items = buildRootContextMenuItems(vault.path, {
+			createFile: (parentPath) => handleNewFile(parentPath ?? vault.path),
+			createFolder: (parentPath) => handleNewFolder(parentPath ?? vault.path),
+		})
+		nativeMenu.showContextMenu({ items, position: { x: e.clientX, y: e.clientY } })
+	}
+
+	return (
+		<div className="flex flex-col h-full overflow-hidden">
+			<div className="flex items-center justify-between px-2 py-1.5 flex-shrink-0">
+				<span className="text-[10px] font-bold text-text-muted uppercase tracking-wide">Files</span>
+				<div className="flex items-center gap-0.5">
+					<button
+						type="button"
+						onClick={() => handleNewFile(vault.path)}
+						className="p-1 rounded-sm text-text-muted hover:text-text-primary hover:bg-bg-hover cursor-pointer"
+						title="New Note"
+					>
+						<FilePlusIcon size={14} />
+					</button>
+					<button
+						type="button"
+						onClick={() => handleNewFolder(vault.path)}
+						className="p-1 rounded-sm text-text-muted hover:text-text-primary hover:bg-bg-hover cursor-pointer"
+						title="New Folder"
+					>
+						<FolderPlusIcon size={14} />
+					</button>
+				</div>
+			</div>
+			<div
+				className="flex-1 overflow-y-auto px-1 pb-1"
+				role="tree"
+				onContextMenu={handleRootContextMenu}
+			>
+				{isCreatingAtRoot && creatingType && (
+					<div className="flex items-center gap-1 h-[26px] px-1.5">
+						{creatingType === "folder" ? (
+							<FolderPlusIcon size={12} className="text-text-muted flex-shrink-0" />
+						) : (
+							<FilePlusIcon size={12} className="text-text-muted flex-shrink-0" />
+						)}
+						<InlineInput
+							defaultValue={creatingType === "folder" ? "New Folder" : "Untitled.md"}
+							onConfirm={(name) => handleConfirmCreate(vault.path, name)}
+							onCancel={handleCancelCreate}
+							selectBaseName={creatingType === "file"}
+						/>
+					</div>
+				)}
+				{tree.length === 0 && !isCreatingAtRoot ? (
+					<div className="flex items-center justify-center p-8 text-xs text-text-muted">
+						No files
+					</div>
+				) : (
+					tree.map((node) => (
+						<TreeNodeView
+							key={node.path}
+							node={node}
+							depth={0}
+							expanded={expanded}
+							onToggle={handleToggle}
+							activeFilePath={activeTab?.filePath ?? null}
+							onOpenFile={openTab}
+							renamingPath={renamingPath}
+							onStartRename={setRenamingPath}
+							onConfirmRename={handleConfirmRename}
+							onCancelRename={() => setRenamingPath(null)}
+							onDelete={handleDelete}
+							onDuplicate={handleDuplicate}
+							onReveal={handleReveal}
+							onCopyPath={handleCopyPath}
+							onNewFile={handleNewFile}
+							onNewFolder={handleNewFolder}
+							creatingIn={creatingIn}
+							creatingType={creatingType}
+							onConfirmCreate={handleConfirmCreate}
+							onCancelCreate={handleCancelCreate}
+						/>
+					))
+				)}
+			</div>
+		</div>
+	)
+}

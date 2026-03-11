@@ -1,20 +1,39 @@
 import {
 	noteCache,
+	useAppStore,
 	useEditorStore,
 	useUIStore,
 	useVaultStore,
 	useWorkspaceStore,
 } from "@cortex/core"
+import { useHotkey, useHotkeyListener, useHotkeysStore } from "@cortex/hotkeys"
+import { useSearchStore } from "@cortex/search"
 import { useSettingsStore } from "@cortex/settings"
+import { getThemeManager } from "@cortex/theme"
 import type { NavItem } from "@cortex/ui"
 import { SidebarNav, SplitPaneView, StatusBar } from "@cortex/ui"
 import { getCurrentWindow } from "@tauri-apps/api/window"
-import { BookmarkIcon, FolderClosed, SearchIcon, SettingsIcon, TagIcon } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
-import { FileSidebar } from "./components/FileSidebar"
-import { PaneView } from "./components/PaneView"
-import { SettingsModal } from "./components/SettingsModal"
+import {
+	BookmarkIcon,
+	FileIcon,
+	FolderClosed,
+	PanelLeftIcon,
+	SearchIcon,
+	SettingsIcon,
+	SunMoonIcon,
+	TagIcon,
+	TerminalIcon,
+} from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { CommandPalette } from "./features/command-palette/CommandPalette"
+import { registerCommand } from "./features/command-palette/commandRegistry"
+import { FileSidebar } from "./features/file-explorer/FileSidebar"
 import { EmptyVaultLayout } from "./features/layout/empty-vault-layout"
+import { QuickFinder } from "./features/quick-finder/QuickFinder"
+import { SearchSidebar } from "./features/search/SearchSidebar"
+import { applyAppearanceSettings } from "./features/settings/applyAppearance"
+import { SettingsModal } from "./features/settings/SettingsModal"
+import { PaneView } from "./features/split-view/PaneView"
 
 const NAV_ITEMS: NavItem[] = [
 	{ id: "files", icon: FolderClosed, label: "Files" },
@@ -27,7 +46,8 @@ const NAV_BOTTOM_ITEMS: NavItem[] = [{ id: "settings", icon: SettingsIcon, label
 
 export default function App() {
 	const [settingsOpen, setSettingsOpen] = useState(false)
-	const { vault } = useVaultStore()
+	const { vault, files, recentVaults, openVault, loadRecentVaults, createFile } = useVaultStore()
+	const { loadAppInfo } = useAppStore()
 	const { cursor, mode, setMode, flushActive } = useEditorStore()
 	const { activeFilePath } = useEditorStore()
 	const {
@@ -37,6 +57,7 @@ export default function App() {
 		goToTabIndex,
 		navigateMRU,
 		reopenLastClosed,
+		openTab,
 		panes,
 		activePaneId,
 		loadWorkspace,
@@ -51,11 +72,201 @@ export default function App() {
 		setLeftSidebarWidth,
 		setLeftSidebarView,
 		toggleLeftSidebar,
+		toggleQuickFinder,
+		toggleCommandPalette,
 	} = useUIStore()
-	const { loadSettings } = useSettingsStore()
+	const { settings, loadSettings } = useSettingsStore()
+	const loadOverrides = useHotkeysStore((s) => s.loadOverrides)
+	const indexVault = useSearchStore((s) => s.indexVault)
+	const resetSearch = useSearchStore((s) => s.reset)
 
 	const sidebarResizing = useRef(false)
 	const sidebarResizeStart = useRef({ x: 0, width: 0 })
+	const autoOpenAttempted = useRef(false)
+
+	useHotkeyListener()
+
+	useHotkey(
+		"file.new",
+		useCallback(() => {
+			if (vault) createFile(vault.path, "Untitled").then((filePath) => openTab(filePath))
+		}, [vault, createFile, openTab]),
+	)
+
+	useHotkey(
+		"file.close-tab",
+		useCallback(() => {
+			const pane = panes[activePaneId]
+			const activeTabId = pane?.activeTabId
+			if (activeTabId) closeTab(activeTabId, activePaneId)
+		}, [panes, activePaneId, closeTab]),
+	)
+
+	useHotkey("file.reopen-closed", reopenLastClosed)
+
+	useHotkey(
+		"navigate.quick-finder",
+		useCallback(() => {
+			toggleQuickFinder()
+		}, [toggleQuickFinder]),
+	)
+
+	useHotkey(
+		"navigate.command-palette",
+		useCallback(() => {
+			toggleCommandPalette()
+		}, [toggleCommandPalette]),
+	)
+
+	useHotkey(
+		"navigate.mru-next",
+		useCallback(() => navigateMRU(1), [navigateMRU]),
+	)
+
+	useHotkey(
+		"navigate.mru-prev",
+		useCallback(() => navigateMRU(-1), [navigateMRU]),
+	)
+
+	useHotkey(
+		"navigate.tab-1",
+		useCallback(() => goToTabIndex(0), [goToTabIndex]),
+	)
+	useHotkey(
+		"navigate.tab-2",
+		useCallback(() => goToTabIndex(1), [goToTabIndex]),
+	)
+	useHotkey(
+		"navigate.tab-3",
+		useCallback(() => goToTabIndex(2), [goToTabIndex]),
+	)
+	useHotkey(
+		"navigate.tab-4",
+		useCallback(() => goToTabIndex(3), [goToTabIndex]),
+	)
+	useHotkey(
+		"navigate.tab-5",
+		useCallback(() => goToTabIndex(4), [goToTabIndex]),
+	)
+	useHotkey(
+		"navigate.tab-6",
+		useCallback(() => goToTabIndex(5), [goToTabIndex]),
+	)
+	useHotkey(
+		"navigate.tab-7",
+		useCallback(() => goToTabIndex(6), [goToTabIndex]),
+	)
+	useHotkey(
+		"navigate.tab-8",
+		useCallback(() => goToTabIndex(7), [goToTabIndex]),
+	)
+	useHotkey(
+		"navigate.tab-9",
+		useCallback(() => goToTabIndex(8), [goToTabIndex]),
+	)
+
+	useHotkey("view.toggle-sidebar", toggleLeftSidebar)
+
+	useHotkey(
+		"editor.find-in-vault",
+		useCallback(() => {
+			if (leftSidebarCollapsed) toggleLeftSidebar()
+			setLeftSidebarView("search")
+		}, [leftSidebarCollapsed, toggleLeftSidebar, setLeftSidebarView]),
+	)
+
+	useHotkey(
+		"app.settings",
+		useCallback(() => setSettingsOpen(true), []),
+	)
+
+	useEffect(() => {
+		const unregister = [
+			registerCommand({
+				id: "file.new",
+				label: "New Note",
+				category: "File",
+				icon: FileIcon,
+				execute: () => {
+					if (vault) createFile(vault.path, "Untitled").then((fp) => openTab(fp))
+				},
+			}),
+			registerCommand({
+				id: "navigate.quick-finder",
+				label: "Quick Finder",
+				category: "Navigate",
+				icon: SearchIcon,
+				execute: toggleQuickFinder,
+			}),
+			registerCommand({
+				id: "editor.find-in-vault",
+				label: "Search in Vault",
+				category: "Navigate",
+				icon: SearchIcon,
+				execute: () => {
+					if (leftSidebarCollapsed) toggleLeftSidebar()
+					setLeftSidebarView("search")
+				},
+			}),
+			registerCommand({
+				id: "view.toggle-sidebar",
+				label: "Toggle Sidebar",
+				category: "View",
+				icon: PanelLeftIcon,
+				execute: toggleLeftSidebar,
+			}),
+			registerCommand({
+				id: "view.toggle-theme",
+				label: "Toggle Theme",
+				category: "View",
+				icon: SunMoonIcon,
+				execute: () => {
+					const tm = getThemeManager()
+					tm.setActiveTheme(tm.getActiveTheme().name === "ink" ? "paper" : "ink")
+				},
+			}),
+			registerCommand({
+				id: "app.settings",
+				label: "Open Settings",
+				category: "App",
+				icon: SettingsIcon,
+				execute: () => setSettingsOpen(true),
+			}),
+			registerCommand({
+				id: "navigate.command-palette",
+				label: "Command Palette",
+				category: "Navigate",
+				icon: TerminalIcon,
+				execute: toggleCommandPalette,
+			}),
+		]
+		return () => {
+			for (const fn of unregister) fn()
+		}
+	}, [
+		vault,
+		createFile,
+		openTab,
+		toggleQuickFinder,
+		toggleLeftSidebar,
+		toggleCommandPalette,
+		leftSidebarCollapsed,
+		setLeftSidebarView,
+	])
+
+	useEffect(() => {
+		loadAppInfo()
+		loadRecentVaults()
+	}, [loadAppInfo, loadRecentVaults])
+
+	useEffect(() => {
+		if (autoOpenAttempted.current || vault) return
+		if (recentVaults.length === 0) return
+		if (!settings.general.autoOpenLastVault) return
+		autoOpenAttempted.current = true
+		const lastVault = recentVaults[0]
+		openVault(lastVault.path, { name: lastVault.name })
+	}, [recentVaults, vault, settings.general.autoOpenLastVault, openVault])
 
 	useEffect(() => {
 		noteCache.start()
@@ -75,11 +286,32 @@ export default function App() {
 	useEffect(() => {
 		if (!vault) {
 			reset()
+			resetSearch()
 			return
 		}
 		loadWorkspace(vault.path)
 		loadSettings(vault.path)
-	}, [vault, loadWorkspace, reset, loadSettings])
+		loadOverrides(vault.path)
+	}, [vault, loadWorkspace, reset, resetSearch, loadSettings, loadOverrides])
+
+	useEffect(() => {
+		if (!vault || files.length === 0) return
+		indexVault(vault.path, files)
+	}, [vault, files, indexVault])
+
+	useEffect(() => {
+		if (!vault) return
+		applyAppearanceSettings(settings.appearance)
+
+		if (settings.appearance.colorscheme === "system") {
+			const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+			const handleSystemThemeChange = (e: MediaQueryListEvent) => {
+				getThemeManager().setActiveTheme(e.matches ? "ink" : "paper")
+			}
+			mediaQuery.addEventListener("change", handleSystemThemeChange)
+			return () => mediaQuery.removeEventListener("change", handleSystemThemeChange)
+		}
+	}, [vault, settings.appearance])
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: persist when workspace state changes
 	useEffect(() => {
@@ -97,54 +329,6 @@ export default function App() {
 
 		return () => clearInterval(suspensionInterval)
 	}, [suspendInactiveTabs])
-
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			const mod = e.metaKey || e.ctrlKey
-
-			if (mod && e.key === "w") {
-				e.preventDefault()
-				const pane = panes[activePaneId]
-				const activeTabId = pane?.activeTabId
-				if (activeTabId) closeTab(activeTabId, activePaneId)
-				return
-			}
-
-			if (mod && e.shiftKey && e.key === "t") {
-				e.preventDefault()
-				reopenLastClosed()
-				return
-			}
-
-			if (mod && e.key === "Tab") {
-				e.preventDefault()
-				navigateMRU(e.shiftKey ? -1 : 1)
-				return
-			}
-
-			if (mod && e.key === "[") {
-				e.preventDefault()
-				toggleLeftSidebar()
-				return
-			}
-
-			if (mod && /^[1-9]$/.test(e.key)) {
-				e.preventDefault()
-				goToTabIndex(Number.parseInt(e.key, 10) - 1)
-			}
-		}
-
-		window.addEventListener("keydown", handleKeyDown)
-		return () => window.removeEventListener("keydown", handleKeyDown)
-	}, [
-		panes,
-		activePaneId,
-		closeTab,
-		reopenLastClosed,
-		navigateMRU,
-		toggleLeftSidebar,
-		goToTabIndex,
-	])
 
 	const handleSidebarNavSelect = (id: string) => {
 		if (id === "settings") {
@@ -181,21 +365,21 @@ export default function App() {
 	}
 
 	return (
-		<div className="app">
+		<div className="flex flex-col h-screen bg-bg-primary text-text-primary">
 			{/* biome-ignore lint/a11y/noStaticElementInteractions: titlebar drag region requires mousedown on a presentational div */}
 			<div
-				className="titlebar"
+				className="h-10 pl-24 flex-shrink-0"
 				onMouseDown={(e) => {
 					if (e.button === 0) getCurrentWindow().startDragging()
 				}}
 			/>
-			<div className="app-body">
+			<div className="flex flex-1 overflow-hidden">
 				{!vault ? (
 					<EmptyVaultLayout />
 				) : (
 					<>
 						<aside
-							className="app-sidebar"
+							className="flex-shrink-0 bg-sidebar-bg border-r border-sidebar-border flex flex-col overflow-hidden min-w-[180px] max-w-[400px]"
 							style={{ width: leftSidebarWidth }}
 							aria-label="Sidebar panel"
 						>
@@ -205,32 +389,28 @@ export default function App() {
 								activeId={leftSidebarView}
 								onSelect={handleSidebarNavSelect}
 							/>
-							<div className="sidebar-content">
+							<div className="flex-1 overflow-hidden flex flex-col">
 								{leftSidebarView === "files" && <FileSidebar />}
-								{leftSidebarView === "search" && (
-									<div className="sidebar-placeholder">
-										<span>Search — coming soon</span>
-									</div>
-								)}
+								{leftSidebarView === "search" && <SearchSidebar />}
 								{leftSidebarView === "bookmarks" && (
-									<div className="sidebar-placeholder">
+									<div className="flex items-center justify-center p-8 text-xs text-text-muted">
 										<span>Bookmarks — coming soon</span>
 									</div>
 								)}
 								{leftSidebarView === "tags" && (
-									<div className="sidebar-placeholder">
+									<div className="flex items-center justify-center p-8 text-xs text-text-muted">
 										<span>Tags — coming soon</span>
 									</div>
 								)}
 							</div>
 						</aside>
 						<div
-							className="sidebar-resizer"
+							className="w-[3px] flex-shrink-0 cursor-col-resize bg-transparent hover:bg-accent transition-colors duration-150"
 							onMouseDown={handleSidebarResizeStart}
 							aria-hidden="true"
 						/>
 
-						<main className="app-editor-area">
+						<main className="flex-1 overflow-hidden flex flex-col min-w-0 bg-bg-primary">
 							<SplitPaneView
 								node={splitTree}
 								renderLeaf={(paneId) => <PaneView key={paneId} paneId={paneId} />}
@@ -243,7 +423,9 @@ export default function App() {
 
 			<StatusBar filePath={activeFilePath} cursor={cursor} mode={mode} onModeChange={setMode} />
 
-			{settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+			<SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
+			<QuickFinder />
+			<CommandPalette />
 		</div>
 	)
 }

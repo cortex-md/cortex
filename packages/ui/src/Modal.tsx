@@ -9,7 +9,6 @@ export function ModalOverlay({ onClose, children, className = "", ...rest }: Pro
 	return (
 		// biome-ignore lint/a11y/noStaticElementInteractions: modal overlay dismiss
 		<div className={`modal-overlay ${className}`} onClick={onClose} role="presentation" {...rest}>
-			{/* biome-ignore lint/a11y/useKeyWithClickEvents: stopPropagation only */}
 			{/* biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation only */}
 			<div className="modal" onClick={(e) => e.stopPropagation()}>
 				{children}

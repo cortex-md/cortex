@@ -78,11 +78,11 @@ export function generateCSSVariables(theme: Theme): Record<string, string> {
 	vars["--font-editor"] = t.fonts.editor
 	vars["--font-mono"] = t.fonts.mono
 
-	vars["--color-error"] = t.status.error
+	vars["--status-error"] = t.status.error
 	vars["--error-bg"] = t.status.errorBg
-	vars["--color-success"] = t.status.success
+	vars["--status-success"] = t.status.success
 	vars["--success-bg"] = t.status.successBg
-	vars["--color-warning"] = t.status.warning
+	vars["--status-warning"] = t.status.warning
 	vars["--warning-bg"] = t.status.warningBg
 
 	vars["--btn-primary-bg"] = t.component.btnPrimaryBg
@@ -112,6 +112,37 @@ export function generateCSSVariables(theme: Theme): Record<string, string> {
 	vars["--shadow-raised"] = t.component.shadowRaised
 	vars["--shadow-floating"] = t.component.shadowFloating
 	vars["--shadow-overlay"] = t.component.shadowOverlay
+
+	vars["--background"] = t.semantic.bg.primary
+	vars["--foreground"] = t.semantic.text.primary
+	vars["--card"] = t.semantic.bg.elevated
+	vars["--card-foreground"] = t.semantic.text.primary
+	vars["--popover"] = t.component.menuBg
+	vars["--popover-foreground"] = t.semantic.text.primary
+	vars["--primary"] = t.component.btnPrimaryBg
+	vars["--primary-foreground"] = t.component.btnPrimaryText
+	vars["--secondary"] = t.semantic.bg.secondary
+	vars["--secondary-foreground"] = t.semantic.text.primary
+	vars["--muted"] = t.semantic.bg.tertiary
+	vars["--muted-foreground"] = t.semantic.text.muted
+	vars["--destructive"] = t.status.error
+	vars["--destructive-foreground"] = "#ffffff"
+	vars["--input"] = t.component.inputBorder
+	vars["--ring"] = t.semantic.accent.default
+
+	vars["--chart-1"] = t.semantic.accent.default
+	vars["--chart-2"] = t.semantic.syntax.string
+	vars["--chart-3"] = t.semantic.syntax.function
+	vars["--chart-4"] = t.status.warning
+	vars["--chart-5"] = t.status.error
+
+	vars["--sidebar"] = t.component.sidebarBg
+	vars["--sidebar-foreground"] = t.semantic.text.primary
+	vars["--sidebar-primary"] = t.semantic.accent.default
+	vars["--sidebar-primary-foreground"] = t.semantic.text.onAccent
+	vars["--sidebar-accent"] = t.semantic.accent.subtle
+	vars["--sidebar-accent-foreground"] = t.semantic.accent.text
+	vars["--sidebar-ring"] = t.semantic.accent.default
 
 	return vars
 }

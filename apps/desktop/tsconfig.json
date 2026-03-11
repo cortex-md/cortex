@@ -15,7 +15,11 @@
 		"strict": true,
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
-		"noFallthroughCasesInSwitch": true
+		"noFallthroughCasesInSwitch": true,
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["./src/*"]
+		}
 	},
 	"include": ["src"],
 	"references": [
@@ -25,6 +29,8 @@
 		{ "path": "../../packages/editor" },
 		{ "path": "../../packages/ipc" },
 		{ "path": "../../packages/platform" },
-		{ "path": "../../packages/ui" }
+		{ "path": "../../packages/ui" },
+		{ "path": "../../packages/hotkeys" },
+		{ "path": "../../packages/search" }
 	]
 }

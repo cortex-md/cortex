@@ -23,6 +23,7 @@ pub fn run() {
             commands::registry::read_vault_registry,
             commands::registry::update_vault_registry,
             commands::dialog::pick_folder,
+            commands::font::list_system_fonts,
         ])
         .setup(|app| {
             commands::watcher::init(app);

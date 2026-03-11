@@ -14,6 +14,12 @@ export interface UIState {
 	setLeftSidebarWidth: (width: number) => void
 	setLeftSidebarView: (view: LeftSidebarView) => void
 	toggleRightSidebar: () => void
+
+	quickFinderOpen: boolean
+	toggleQuickFinder: () => void
+
+	commandPaletteOpen: boolean
+	toggleCommandPalette: () => void
 }
 
 const MIN_SIDEBAR_WIDTH = 180
@@ -45,6 +51,18 @@ export const useUIStore = create<UIState>()(
 			toggleRightSidebar: () =>
 				set((s) => {
 					s.rightSidebarCollapsed = !s.rightSidebarCollapsed
+				}),
+
+			toggleQuickFinder: () =>
+				set((s) => {
+					s.quickFinderOpen = !s.quickFinderOpen
+				}),
+
+			commandPaletteOpen: false,
+
+			toggleCommandPalette: () =>
+				set((s) => {
+					s.commandPaletteOpen = !s.commandPaletteOpen
 				}),
 		})),
 		{ name: "uiStore" },

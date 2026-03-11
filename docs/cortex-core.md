@@ -89,16 +89,16 @@ cortex/
 │   │       └── App.tsx             # Composição de layout, providers, workspace
 │   └── mobile/                     # (futuro) React Native — consome packages/core e packages/platform
 ├── packages/
-│   ├── core/                       # Lógica pura: vault, metadata, eventos, Note Cache, índice
+│   ├── core/                       # Lógica pura: vault, metadata, eventos, Note Cache, índice, utiliza o plataform que sera adaptado para cada sistema.
 │   ├── editor/                     # Motor de edição: CodeMirror 6 + extensões Markdown + Live Preview
 │   ├── ui/                         # Componentes React compartilhados, design system
 │   ├── plugin-api/                 # Contratos públicos que plugins podem importar
-│   ├── platform/                   # Abstração de plataforma: adapters para Tauri e RN
+│   ├── platform/                   # Abstração de plataforma: adapters para Tauri e RN, definição dos tipos principais do filesystem, dialogs e etc.
 │   ├── settings/                   # Engine de configurações, cache em memória, persistência
 │   ├── search/                     # MiniSearch: indexação, serialização, queries
 │   ├── theme/                      # Engine de temas, variáveis CSS, Theme Token Bridge (CSS→RN)
 │   ├── sync-client/                # Estado reativo do sync no frontend: status, conflitos, UI bridge
-│   └── ipc/                        # Tipos gerados pelo tauri-specta + wrappers tipados
+│   └── ipc/                        # Implementação do pacote plataform para o tauri, utilizando suas dependencias e implementações
 ├── plugins/                        # Plugins core bundled
 │   ├── file-explorer/
 │   ├── quick-switcher/
