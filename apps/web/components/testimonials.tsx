@@ -26,7 +26,7 @@ const testimonials = [
 
 export default function Testimonials() {
 	return (
-		<section className="bg-ink-900 py-24 px-10">
+		<section className="bg-primary py-24 px-10">
 			<div className="max-w-[1100px] mx-auto">
 				<ScrollReveal className="text-center max-w-[500px] mx-auto">
 					<div
@@ -36,7 +36,7 @@ export default function Testimonials() {
 						06 — Depoimentos
 					</div>
 					<h2
-						className="font-editor font-bold text-ink-50"
+						className="font-editor font-bold text-primary"
 						style={{
 							fontSize: "clamp(28px, 4vw, 42px)",
 							lineHeight: 1.15,
@@ -74,22 +74,22 @@ function TestimonialCard({
 }) {
 	return (
 		<div
-			className="bg-ink-800 border border-ink-400 p-7 transition-all duration-200 hover:-translate-y-[3px] hover:border-[rgba(232,168,60,0.3)] cursor-default"
+			className="bg-primary border border-border p-7 transition-all duration-200 hover:-translate-y-[3px] hover:border-[rgba(232,168,60,0.3)] cursor-default"
 			style={{ borderRadius: "14px" }}
 		>
 			<p
-				className="font-editor italic text-ink-100 mb-5"
+				className="font-editor italic text-muted mb-5"
 				style={{ fontSize: "15.5px", lineHeight: 1.65 }}
 			>
 				"{quote}"
 			</p>
 			<div className="flex items-center gap-2.5">
-				<div className="w-[34px] h-[34px] rounded-full bg-ink-600 border border-ink-400 flex items-center justify-center text-[13px] font-semibold text-accent flex-shrink-0">
+				<div className="w-[34px] h-[34px] rounded-full bg-secondary border border-border flex items-center justify-center text-[13px] font-semibold text-accent flex-shrink-0">
 					{initial}
 				</div>
 				<div>
-					<div className="text-[13.5px] font-semibold text-ink-50">{name}</div>
-					<div className="text-[12px] text-ink-300">{role}</div>
+					<div className="text-[13.5px] font-semibold text-primary">{name}</div>
+					<div className="text-[12px] text-muted">{role}</div>
 				</div>
 			</div>
 		</div>

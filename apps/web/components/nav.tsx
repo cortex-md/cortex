@@ -33,7 +33,7 @@ export default function Nav() {
 				transition: "background 0.3s",
 			}}
 		>
-			<a href="/" className="flex items-center gap-2.5 text-ink-50 no-underline">
+			<a href="/" className="flex items-center gap-2.5 text-primary no-underline">
 				<div
 					className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center bg-accent"
 					style={{ borderRadius: "7px" }}
@@ -48,7 +48,7 @@ export default function Nav() {
 					</svg>
 				</div>
 				<span
-					className="text-[15px] font-semibold text-ink-50"
+					className="text-[15px] font-semibold text-primary"
 					style={{ letterSpacing: "-0.02em" }}
 				>
 					Cortex
@@ -60,7 +60,7 @@ export default function Nav() {
 					<li key={link.href}>
 						<a
 							href={link.href}
-							className="block rounded-md px-3 py-[5px] text-[13.5px] text-ink-200 no-underline transition-colors duration-150 hover:bg-ink-500 hover:text-ink-50"
+							className="block rounded-md px-3 py-[5px] text-[13.5px] text-muted no-underline transition-colors duration-150 hover:bg-secondary hover:text-primary"
 						>
 							{link.label}
 						</a>
@@ -73,7 +73,7 @@ export default function Nav() {
 					asChild
 					variant="ghost"
 					size="sm"
-					className="hidden border border-transparent bg-transparent text-[13.5px] font-medium text-ink-200 shadow-none hover:border-ink-500 hover:bg-ink-500 hover:text-ink-50 sm:inline-flex"
+					className="hidden border border-transparent bg-transparent text-[13.5px] font-medium text-muted shadow-none hover:border-border hover:bg-secondary hover:text-primary sm:inline-flex"
 				>
 					<a href="/login">Entrar</a>
 				</Button>

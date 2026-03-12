@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { DM_Mono, DM_Sans, Lora } from "next/font/google"
 import "./globals.css"
+import { ThemeProvider } from "./providers/theme-provider"
 
 const dmSans = DM_Sans({
 	subsets: ["latin"],
@@ -36,8 +37,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="pt-BR" className={`${dmSans.variable} ${lora.variable} ${dmMono.variable}`}>
-			<body>{children}</body>
+		<html
+			lang="pt-BR"
+			className={`${dmSans.variable} ${lora.variable} ${dmMono.variable}`}
+			suppressHydrationWarning
+		>
+			<head />
+			<ThemeProvider defaultTheme="light">
+				<body>{children}</body>
+			</ThemeProvider>
 		</html>
 	)
 }

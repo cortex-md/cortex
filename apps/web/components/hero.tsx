@@ -37,7 +37,7 @@ export default function Hero() {
 				</Badge>
 
 				<h1
-					className="hero-title max-w-[800px] font-editor text-ink-50"
+					className="hero-title max-w-[800px] font-editor text-primary"
 					style={{
 						fontSize: "clamp(44px, 7vw, 76px)",
 						fontWeight: 700,
@@ -51,7 +51,7 @@ export default function Hero() {
 				</h1>
 
 				<p
-					className="hero-subtitle mt-5 max-w-[520px] text-[17px] text-ink-200"
+					className="hero-subtitle mt-5 max-w-[520px] text-[17px] text-muted"
 					style={{ lineHeight: 1.65 }}
 				>
 					Um segundo cérebro que cresce com você. Escreva, conecte ideias, navegue pelo grafo do seu
@@ -85,13 +85,13 @@ export default function Hero() {
 						asChild
 						size="lg"
 						variant="outline"
-						className="border-ink-400 bg-transparent px-[22px] text-[15px] font-semibold text-ink-50 hover:border-accent hover:bg-transparent hover:text-accent"
+						className="border-border bg-transparent px-[22px] text-[15px] font-semibold text-primary hover:border-accent hover:bg-transparent hover:text-accent"
 					>
 						<a href="#how">Ver demonstração</a>
 					</Button>
 				</div>
 
-				<p className="hero-meta mt-[18px] text-[12.5px] text-ink-300">
+				<p className="hero-meta mt-[18px] text-[12.5px] text-muted">
 					Gratuito para uso pessoal · Windows, macOS, Linux, iOS, Android
 				</p>
 

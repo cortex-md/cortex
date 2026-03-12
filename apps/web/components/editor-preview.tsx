@@ -2,13 +2,13 @@ export default function EditorPreview() {
 	return (
 		<div className="hero-preview mx-auto w-full max-w-[900px]">
 			<div
-				className="relative overflow-hidden border border-ink-400 bg-ink-700"
+				className="relative overflow-hidden border border-border bg-elevated"
 				style={{
 					borderRadius: "14px",
 					boxShadow: "0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)",
 				}}
 			>
-				<div className="flex h-[42px] items-center gap-3.5 border-b border-ink-400 bg-ink-600 px-4">
+				<div className="flex h-[42px] items-center gap-3.5 border-b border-border bg-secondary px-4">
 					<div className="flex gap-1.5">
 						<div className="h-[11px] w-[11px] rounded-full" style={{ background: "#FF5F57" }} />
 						<div className="h-[11px] w-[11px] rounded-full" style={{ background: "#FFBC2E" }} />
@@ -25,8 +25,8 @@ export default function EditorPreview() {
 								key={tab.label}
 								className={`relative top-px border border-b-0 px-3 py-1 text-[12px] transition-all duration-150 ${
 									tab.active
-										? "border-ink-400 bg-ink-700 text-ink-50"
-										: "border-transparent text-ink-300"
+										? "border-border bg-elevated text-primary"
+										: "border-transparent text-muted"
 								}`}
 								style={{ borderRadius: "var(--radius-md) var(--radius-md) 0 0" }}
 							>
@@ -43,7 +43,7 @@ export default function EditorPreview() {
 				</div>
 
 				<div className="grid min-h-[380px]" style={{ gridTemplateColumns: "220px 1fr" }}>
-					<div className="hidden overflow-hidden border-r border-ink-400 bg-ink-700 py-3.5 md:block">
+					<div className="hidden overflow-hidden border-r border-border bg-elevated py-3.5 md:block">
 						<SidebarSection title="Vault">
 							{[
 								{ label: "Projeto Alpha.md", active: true },
@@ -67,22 +67,22 @@ export default function EditorPreview() {
 						</SidebarSection>
 					</div>
 
-					<div className="relative overflow-hidden px-10 py-8 font-editor text-[15px] leading-[1.8] text-ink-100">
+					<div className="relative overflow-hidden px-10 py-8 font-editor text-[15px] leading-[1.8] text-muted">
 						<div
-							className="mb-[18px] font-ui text-[26px] font-semibold text-ink-50"
+							className="mb-[18px] font-ui text-[26px] font-semibold text-primary"
 							style={{ letterSpacing: "-0.025em" }}
 						>
 							Projeto Alpha — Visão Geral
 						</div>
 
-						<p className="mb-3.5 text-[14.5px] text-ink-100">
+						<p className="mb-3.5 text-[14.5px] text-muted">
 							Este projeto se originou das conversas em <WikiLink>Reunião 2025-03</WikiLink> sobre
 							restruturar o fluxo de entrega. As dependências principais estão documentadas em{" "}
 							<WikiLink>Stack Técnica</WikiLink>.
 						</p>
 
 						<blockquote
-							className="my-4 font-editor text-[14px] text-ink-200 italic"
+							className="my-4 font-editor text-[14px] text-muted italic"
 							style={{
 								borderLeft: "3px solid var(--accent)",
 								background: "rgba(232,168,60,0.05)",
@@ -94,7 +94,7 @@ export default function EditorPreview() {
 							Nota de <WikiLink>Arquitetura de Sistemas</WikiLink>
 						</blockquote>
 
-						<p className="mb-3.5 text-[14.5px] text-ink-100">
+						<p className="mb-3.5 text-[14.5px] text-muted">
 							Próximas ações: checklist de entregáveis em <WikiLink>Sprint 07</WikiLink>.
 							Referências de leitura em <WikiLink>Leituras Q1</WikiLink>.
 						</p>
@@ -106,11 +106,11 @@ export default function EditorPreview() {
 						</p>
 
 						<div
-							className="absolute top-8 right-4 w-[180px] border border-ink-400 bg-ink-600 p-3 font-ui"
+							className="absolute top-8 right-4 w-[180px] border border-border bg-secondary p-3 font-ui"
 							style={{ borderRadius: "var(--radius-lg)" }}
 						>
 							<div
-								className="mb-2.5 text-[10.5px] font-semibold text-ink-300 uppercase"
+								className="mb-2.5 text-[10.5px] font-semibold text-muted uppercase"
 								style={{ letterSpacing: "0.07em" }}
 							>
 								Backlinks (4)
@@ -119,7 +119,7 @@ export default function EditorPreview() {
 								<a
 									key={link}
 									href="/"
-									className="block rounded-md px-1.5 py-[5px] text-[12.5px] text-accent-light no-underline transition-colors duration-100 hover:bg-ink-500"
+									className="block rounded-md px-1.5 py-[5px] text-[12.5px] text-accent-light no-underline transition-colors duration-100 hover:bg-secondary"
 								>
 									<span className="flex items-center gap-1.5">
 										<FileIconSm />
@@ -147,7 +147,7 @@ function SidebarSection({
 	return (
 		<div className={`px-3 pt-1.5 pb-0.5 ${className}`}>
 			<div
-				className="px-1.5 pb-1.5 text-[10.5px] font-semibold text-ink-300 uppercase"
+				className="px-1.5 pb-1.5 text-[10.5px] font-semibold text-muted uppercase"
 				style={{ letterSpacing: "0.07em" }}
 			>
 				{title}
@@ -169,7 +169,7 @@ function SidebarItem({
 			className={`my-px flex items-center gap-2 rounded-md px-2.5 py-[5px] text-[13px] transition-all duration-100 ${
 				active
 					? "bg-[rgba(232,168,60,0.12)] text-accent-light"
-					: "text-ink-200 hover:bg-ink-500 hover:text-ink-50"
+					: "text-muted hover:bg-secondary hover:text-primary"
 			}`}
 		>
 			{children}

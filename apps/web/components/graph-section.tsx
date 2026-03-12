@@ -265,7 +265,7 @@ export default function GraphSection() {
 	]
 
 	return (
-		<section className="bg-ink-900 py-24 px-10 overflow-hidden" id="graph">
+		<section className="bg-primary py-24 px-10 overflow-hidden" id="graph">
 			<div className="max-w-[1100px] mx-auto">
 				<div className="grid gap-20 items-center" style={{ gridTemplateColumns: "1fr 1fr" }}>
 					<ScrollReveal>
@@ -276,7 +276,7 @@ export default function GraphSection() {
 							04 — Graph View
 						</div>
 						<h2
-							className="font-editor font-bold text-ink-50 mb-7"
+							className="font-editor font-bold text-primary mb-7"
 							style={{
 								fontSize: "clamp(28px, 4vw, 42px)",
 								lineHeight: 1.15,
@@ -290,7 +290,7 @@ export default function GraphSection() {
 							<em className="not-italic text-accent">ganhar forma.</em>
 						</h2>
 						<p
-							className="text-[16px] text-ink-200 mb-7"
+							className="text-[16px] text-muted mb-7"
 							style={{ lineHeight: 1.7, maxWidth: "540px" }}
 						>
 							Cada nota é um nó. Cada link é uma aresta. O grafo revela padrões, clusters temáticos
@@ -298,7 +298,7 @@ export default function GraphSection() {
 						</p>
 						<ul className="list-none flex flex-col gap-2.5" style={{ maxWidth: "380px" }}>
 							{graphPoints.map((point) => (
-								<li key={point} className="flex items-start gap-2.5 text-[13.5px] text-ink-100">
+								<li key={point} className="flex items-start gap-2.5 text-[13.5px] text-muted">
 									<span className="w-[5px] h-[5px] rounded-full bg-accent flex-shrink-0 mt-[7px]" />
 									{point}
 								</li>
@@ -308,10 +308,10 @@ export default function GraphSection() {
 
 					<ScrollReveal delay={0.2}>
 						<div
-							className="relative border border-ink-400 overflow-hidden"
+							className="relative border border-border overflow-hidden"
 							style={{
 								height: "440px",
-								background: "var(--color-ink-800)",
+								background: "var(--color-bg-primary)",
 								borderRadius: "14px",
 							}}
 						>
@@ -328,7 +328,7 @@ export default function GraphSection() {
 										key={label}
 										type="button"
 										onClick={action}
-										className="w-7 h-7 border border-ink-400 bg-ink-600 text-ink-200 cursor-pointer text-[16px] flex items-center justify-center transition-colors duration-150 hover:bg-ink-500 hover:text-ink-50"
+										className="w-7 h-7 border border-border bg-secondary text-muted cursor-pointer text-[16px] flex items-center justify-center transition-colors duration-150 hover:bg-secondary hover:text-primary"
 										style={{ borderRadius: "var(--radius-md)" }}
 									>
 										{label}

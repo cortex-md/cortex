@@ -33,7 +33,7 @@ export default function DemoSection() {
 	}
 
 	return (
-		<section className="bg-ink-900 py-24 px-10" id="how">
+		<section className="bg-primary py-24 px-10" id="how">
 			<div className="max-w-[1100px] mx-auto">
 				<div className="reveal">
 					<div
@@ -43,7 +43,7 @@ export default function DemoSection() {
 						02 — Como funciona
 					</div>
 					<h2
-						className="font-editor font-bold text-ink-50"
+						className="font-editor font-bold text-primary"
 						style={{
 							fontSize: "clamp(28px, 4vw, 42px)",
 							lineHeight: 1.15,
@@ -61,7 +61,7 @@ export default function DemoSection() {
 						{steps.map((step) => (
 							<div
 								key={step.num}
-								className="flex gap-5 py-7 border-b border-ink-500 cursor-pointer transition-all duration-200 last:border-b-0"
+								className="flex gap-5 py-7 border-b border-border cursor-pointer transition-all duration-200 last:border-b-0"
 								onClick={() => handleStepClick(step.num)}
 							>
 								<div
@@ -71,11 +71,11 @@ export default function DemoSection() {
 											? {
 													background: "var(--color-accent)",
 													borderColor: "var(--color-accent)",
-													color: "var(--color-ink-900)",
+													color: "var(--color-bg-primary)",
 												}
 											: {
-													borderColor: "var(--color-ink-400)",
-													color: "var(--color-ink-300)",
+													borderColor: "var(--color-border)",
+													color: "var(--color-text-muted)",
 												}
 									}
 								>
@@ -87,12 +87,14 @@ export default function DemoSection() {
 										style={{
 											letterSpacing: "-0.01em",
 											color:
-												activeStep === step.num ? "var(--color-accent)" : "var(--color-ink-50)",
+												activeStep === step.num
+													? "var(--color-accent)"
+													: "var(--color-text-primary)",
 										}}
 									>
 										{step.title}
 									</div>
-									<div className="text-[13.5px] text-ink-200" style={{ lineHeight: 1.6 }}>
+									<div className="text-[13.5px] text-muted" style={{ lineHeight: 1.6 }}>
 										{step.num === 2 ? (
 											<>
 												Digite{" "}
@@ -132,19 +134,19 @@ export default function DemoSection() {
 function MockWindow({ title, children }: { title: string; children: React.ReactNode }) {
 	return (
 		<div
-			className="bg-ink-700 border border-ink-400 overflow-hidden"
+			className="bg-elevated border border-border overflow-hidden"
 			style={{
 				borderRadius: "14px",
 				boxShadow: "0 20px 25px rgba(0,0,0,.40), 0 10px 10px rgba(0,0,0,.28)",
 			}}
 		>
-			<div className="h-[38px] bg-ink-600 border-b border-ink-400 flex items-center px-3.5 gap-2.5">
+			<div className="h-[38px] bg-secondary border-b border-border flex items-center px-3.5 gap-2.5">
 				<div className="flex gap-[5px]">
 					<div className="w-[9px] h-[9px] rounded-full" style={{ background: "#FF5F57" }} />
 					<div className="w-[9px] h-[9px] rounded-full" style={{ background: "#FFBC2E" }} />
 					<div className="w-[9px] h-[9px] rounded-full" style={{ background: "#28C840" }} />
 				</div>
-				<span className="text-[12px] text-ink-300 ml-2">{title}</span>
+				<span className="text-[12px] text-muted ml-2">{title}</span>
 			</div>
 			<div className="p-6">{children}</div>
 		</div>
@@ -155,25 +157,25 @@ function StepFrameCapture() {
 	return (
 		<MockWindow title="Nova nota — Quick Capture">
 			<div
-				className="bg-ink-800 border border-ink-400 p-3 mb-3.5"
+				className="bg-primary border border-border p-3 mb-3.5"
 				style={{ borderRadius: "var(--radius-md)" }}
 			>
-				<div className="flex items-center gap-2 border-b border-ink-500 pb-2.5 mb-2.5">
+				<div className="flex items-center gap-2 border-b border-border pb-2.5 mb-2.5">
 					<svg
 						width="14"
 						height="14"
 						viewBox="0 0 24 24"
 						fill="none"
-						stroke="var(--color-ink-300)"
+						stroke="var(--color-text-muted)"
 						strokeWidth="2"
 						strokeLinecap="round"
 					>
 						<circle cx="11" cy="11" r="8" />
 						<line x1="21" y1="21" x2="16.65" y2="16.65" />
 					</svg>
-					<span className="text-[13px] text-ink-300">Pesquisar ou criar nota...</span>
+					<span className="text-[13px] text-muted">Pesquisar ou criar nota...</span>
 				</div>
-				<div className="text-[13px] text-ink-200 mb-1.5">Templates recentes:</div>
+				<div className="text-[13px] text-muted mb-1.5">Templates recentes:</div>
 				<div className="flex flex-col gap-1">
 					{[
 						{ emoji: "📝", label: "Nota diária", active: true },
@@ -185,9 +187,9 @@ function StepFrameCapture() {
 							className="px-2.5 py-1.5 text-[12.5px] cursor-pointer"
 							style={{
 								borderRadius: "var(--radius-md)",
-								background: item.active ? "rgba(232,168,60,0.08)" : "var(--color-ink-600)",
+								background: item.active ? "rgba(232,168,60,0.08)" : "var(--color-bg-secondary)",
 								border: item.active ? "1px solid rgba(232,168,60,0.15)" : "1px solid transparent",
-								color: item.active ? "var(--color-accent-light)" : "var(--color-ink-200)",
+								color: item.active ? "var(--color-accent-light)" : "var(--color-text-muted)",
 							}}
 						>
 							{item.emoji} {item.label}
@@ -195,7 +197,7 @@ function StepFrameCapture() {
 					))}
 				</div>
 			</div>
-			<div className="text-[12px] text-ink-300 text-center">
+			<div className="text-[12px] text-muted text-center">
 				⌘ + N para nova nota &nbsp;·&nbsp; ⌘ + O para abrir
 			</div>
 		</MockWindow>
@@ -205,7 +207,7 @@ function StepFrameCapture() {
 function StepFrameWikilinks() {
 	return (
 		<MockWindow title="Conexões automáticas">
-			<div className="font-editor text-[14px] leading-[1.75] text-ink-100">
+			<div className="font-editor text-[14px] leading-[1.75] text-muted">
 				<p className="mb-3">
 					Esta ideia surgiu durante{" "}
 					<span
@@ -232,14 +234,14 @@ function StepFrameWikilinks() {
 					.
 				</p>
 				<div
-					className="border border-ink-400 p-2.5 mt-3.5"
+					className="border border-border p-2.5 mt-3.5"
 					style={{
 						background: "rgba(65,64,64,0.5)",
 						borderRadius: "var(--radius-md)",
 					}}
 				>
 					<div
-						className="text-[11px] font-semibold uppercase text-ink-300 mb-2"
+						className="text-[11px] font-semibold uppercase text-muted mb-2"
 						style={{ letterSpacing: "0.06em" }}
 					>
 						Sugestões de link
@@ -264,7 +266,7 @@ function StepFrameWikilinks() {
 								<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
 							</svg>
 							<span className="text-[12px] text-accent-light">Sprint 08</span>
-							<span className="text-[11px] text-ink-300 ml-auto">↩ Enter</span>
+							<span className="text-[11px] text-muted ml-auto">↩ Enter</span>
 						</div>
 						<div
 							className="flex items-center gap-2 px-2 py-[5px] cursor-pointer"
@@ -275,13 +277,13 @@ function StepFrameWikilinks() {
 								height="12"
 								viewBox="0 0 24 24"
 								fill="none"
-								stroke="var(--color-ink-300)"
+								stroke="var(--color-text-muted)"
 								strokeWidth="2"
 								strokeLinecap="round"
 							>
 								<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
 							</svg>
-							<span className="text-[12px] text-ink-200">Roadmap 2025</span>
+							<span className="text-[12px] text-muted">Roadmap 2025</span>
 						</div>
 					</div>
 				</div>
@@ -363,7 +365,7 @@ function StepFrameGraph() {
 
 	return (
 		<MockWindow title="Graph View — Local">
-			<div className="relative" style={{ height: "220px", background: "var(--color-ink-800)" }}>
+			<div className="relative" style={{ height: "220px", background: "var(--color-bg-primary)" }}>
 				<canvas ref={canvasRef} className="w-full h-full" />
 			</div>
 		</MockWindow>
@@ -431,7 +433,7 @@ function StepFrameSync() {
 	return (
 		<MockWindow title="Cortex Sync — Status">
 			<div className="flex items-center justify-between mb-4">
-				<span className="text-[13px] font-semibold text-ink-50">Vault: Trabalho</span>
+				<span className="text-[13px] font-semibold text-primary">Vault: Trabalho</span>
 				<span className="flex items-center gap-[5px] text-[12px]" style={{ color: "#4A9B6F" }}>
 					<span
 						className="w-1.5 h-1.5 rounded-full inline-block"
@@ -444,18 +446,18 @@ function StepFrameSync() {
 				{devices.map((device) => (
 					<div
 						key={device.label}
-						className="flex justify-between items-center px-2.5 py-2 border border-ink-400 bg-ink-600"
+						className="flex justify-between items-center px-2.5 py-2 border border-border bg-secondary"
 						style={{ borderRadius: "var(--radius-md)" }}
 					>
-						<div className="flex items-center gap-2 text-[12.5px] text-ink-100">
+						<div className="flex items-center gap-2 text-[12.5px] text-muted">
 							{device.icon}
 							{device.label}
 						</div>
-						<span className="text-[11px] text-ink-300">{device.time}</span>
+						<span className="text-[11px] text-muted">{device.time}</span>
 					</div>
 				))}
 			</div>
-			<div className="mt-3.5 text-[12px] text-ink-300 text-center">
+			<div className="mt-3.5 text-[12px] text-muted text-center">
 				🔒 Criptografia end-to-end ativa
 			</div>
 		</MockWindow>

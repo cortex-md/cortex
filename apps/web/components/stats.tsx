@@ -29,7 +29,7 @@ const stats = [
 
 export default function Stats() {
 	return (
-		<section className="bg-ink-800 py-24 px-10" id="pricing">
+		<section className="bg-primary py-24 px-10" id="pricing">
 			<div className="max-w-[1100px] mx-auto">
 				<ScrollReveal className="text-center max-w-[500px] mx-auto">
 					<div
@@ -39,7 +39,7 @@ export default function Stats() {
 						05 — Comunidade
 					</div>
 					<h2
-						className="font-editor font-bold text-ink-50 mb-4"
+						className="font-editor font-bold text-primary mb-4"
 						style={{
 							fontSize: "clamp(28px, 4vw, 42px)",
 							lineHeight: 1.15,
@@ -53,7 +53,7 @@ export default function Stats() {
 				</ScrollReveal>
 
 				<div
-					className="grid bg-ink-400 border border-ink-400 overflow-hidden mt-16"
+					className="grid bg-secondary border border-border overflow-hidden mt-16"
 					style={{
 						gridTemplateColumns: "repeat(4, 1fr)",
 						gap: "1px",
@@ -64,11 +64,11 @@ export default function Stats() {
 						<ScrollReveal
 							key={index}
 							delay={index * 0.1}
-							className="bg-ink-800 hover:bg-ink-700 transition-colors duration-200"
+							className="bg-primary hover:bg-secondary transition-colors duration-200"
 						>
 							<div style={{ padding: "36px 28px" }}>
 								<div
-									className="font-editor font-bold text-ink-50 mb-2"
+									className="font-editor font-bold text-primary mb-2"
 									style={{
 										fontSize: "42px",
 										letterSpacing: "-0.04em",
@@ -81,7 +81,7 @@ export default function Stats() {
 										</span>
 									))}
 								</div>
-								<div className="text-[13.5px] text-ink-200" style={{ lineHeight: 1.45 }}>
+								<div className="text-[13.5px] text-muted" style={{ lineHeight: 1.45 }}>
 									{stat.label}
 								</div>
 							</div>

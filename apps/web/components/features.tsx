@@ -44,7 +44,7 @@ const features = [
 				<code
 					className="font-mono text-[12px] px-[5px] py-px"
 					style={{
-						background: "var(--color-ink-600)",
+						background: "var(--color-bg-secondary)",
 						borderRadius: "3px",
 					}}
 				>
@@ -128,7 +128,7 @@ const features = [
 
 export default function Features() {
 	return (
-		<section className="bg-ink-800 py-24 px-10" id="features">
+		<section className="bg-primary py-24 px-10" id="features">
 			<div className="max-w-[1100px] mx-auto">
 				<ScrollReveal>
 					<div
@@ -138,7 +138,7 @@ export default function Features() {
 						01 — Fundação
 					</div>
 					<h2
-						className="font-editor font-bold text-ink-50 mb-[18px]"
+						className="font-editor font-bold text-primary mb-[18px]"
 						style={{
 							fontSize: "clamp(28px, 4vw, 42px)",
 							lineHeight: 1.15,
@@ -149,17 +149,17 @@ export default function Features() {
 						<br />
 						<em className="not-italic text-accent">Feito para pensar.</em>
 					</h2>
-					<p className="text-[16px] text-ink-200 max-w-[540px]" style={{ lineHeight: 1.7 }}>
+					<p className="text-[16px] text-muted max-w-[540px]" style={{ lineHeight: 1.7 }}>
 						Markdown puro. Arquivos locais. Nenhum lock-in. Seu conhecimento é seu — e o Cortex
 						garante que ele permaneça assim por décadas.
 					</p>
 				</ScrollReveal>
 
 				<div
-					className="grid gap-px border border-ink-400 overflow-hidden mt-16"
+					className="grid gap-px border border-border overflow-hidden mt-16"
 					style={{
 						gridTemplateColumns: "repeat(3, 1fr)",
-						background: "var(--color-ink-400)",
+						background: "var(--color-bg-secondary)",
 						borderRadius: "14px",
 					}}
 				>
@@ -185,7 +185,7 @@ function FeatureCard({
 }) {
 	return (
 		<div
-			className="bg-ink-800 p-8 transition-colors duration-200 relative overflow-hidden cursor-default group hover:bg-ink-700"
+			className="bg-primary p-8 transition-colors duration-200 relative overflow-hidden cursor-default group hover:bg-secondary"
 			style={{ padding: "32px 28px" }}
 		>
 			<div
@@ -206,12 +206,12 @@ function FeatureCard({
 				{icon}
 			</div>
 			<div
-				className="text-[15px] font-semibold text-ink-50 mb-2"
+				className="text-[15px] font-semibold text-primary mb-2"
 				style={{ letterSpacing: "-0.01em" }}
 			>
 				{name}
 			</div>
-			<div className="text-[13.5px] text-ink-200" style={{ lineHeight: 1.65 }}>
+			<div className="text-[13.5px] text-muted" style={{ lineHeight: 1.65 }}>
 				{desc}
 			</div>
 		</div>

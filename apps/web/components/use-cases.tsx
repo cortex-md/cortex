@@ -132,7 +132,7 @@ const studyCards = [
 
 export default function UseCases() {
 	return (
-		<section className="bg-ink-800 px-6 py-24 md:px-10" id="cases">
+		<section className="bg-primary px-6 py-24 md:px-10" id="cases">
 			<div className="mx-auto max-w-[1100px]">
 				<div className="reveal">
 					<div
@@ -142,7 +142,7 @@ export default function UseCases() {
 						03 — Casos de uso
 					</div>
 					<h2
-						className="font-editor text-ink-50 font-bold"
+						className="font-editor text-primary font-bold"
 						style={{
 							fontSize: "clamp(28px, 4vw, 42px)",
 							lineHeight: 1.15,
@@ -157,14 +157,14 @@ export default function UseCases() {
 
 				<Tabs defaultValue="researcher" className="mt-12 gap-8">
 					<TabsList
-						className="h-auto w-fit flex-wrap border border-ink-400 bg-ink-700 p-1"
+						className="h-auto w-fit flex-wrap border border-border bg-elevated p-1"
 						style={{ borderRadius: "var(--radius-lg)" }}
 					>
 						{caseTabs.map((tab) => (
 							<TabsTrigger
 								key={tab.id}
 								value={tab.id}
-								className="h-auto px-[18px] py-[7px] font-ui text-[13.5px] data-[state=active]:bg-ink-600 data-[state=active]:text-ink-50"
+								className="h-auto px-[18px] py-[7px] font-ui text-[13.5px] data-[state=active]:bg-secondary data-[state=active]:text-primary"
 							>
 								{tab.label}
 							</TabsTrigger>
@@ -201,17 +201,17 @@ function CaseText({
 	return (
 		<div>
 			<div
-				className="mb-3.5 font-editor text-ink-50 font-bold"
+				className="mb-3.5 font-editor text-primary font-bold"
 				style={{ fontSize: "26px", letterSpacing: "-0.02em", lineHeight: 1.25 }}
 			>
 				{title}
 			</div>
-			<p className="mb-6 text-[15px] text-ink-200" style={{ lineHeight: 1.7 }}>
+			<p className="mb-6 text-[15px] text-muted" style={{ lineHeight: 1.7 }}>
 				{description}
 			</p>
 			<ul className="flex list-none flex-col gap-2.5">
 				{points.map((point) => (
-					<li key={point} className="flex items-start gap-2.5 text-[13.5px] text-ink-100">
+					<li key={point} className="flex items-start gap-2.5 text-[13.5px] text-muted">
 						<span className="mt-[7px] h-[5px] w-[5px] shrink-0 rounded-full bg-accent" />
 						{point}
 					</li>
@@ -224,19 +224,19 @@ function CaseText({
 function MockWindow({ title, children }: { title: string; children: React.ReactNode }) {
 	return (
 		<div
-			className="overflow-hidden border border-ink-400 bg-ink-700"
+			className="overflow-hidden border border-border bg-elevated"
 			style={{
 				borderRadius: "14px",
 				boxShadow: "0 20px 25px rgba(0,0,0,.40), 0 10px 10px rgba(0,0,0,.28)",
 			}}
 		>
-			<div className="flex h-[38px] items-center gap-2.5 border-b border-ink-400 bg-ink-600 px-3.5">
+			<div className="flex h-[38px] items-center gap-2.5 border-b border-border bg-secondary px-3.5">
 				<div className="flex gap-[5px]">
 					<div className="h-[9px] w-[9px] rounded-full" style={{ background: "#FF5F57" }} />
 					<div className="h-[9px] w-[9px] rounded-full" style={{ background: "#FFBC2E" }} />
 					<div className="h-[9px] w-[9px] rounded-full" style={{ background: "#28C840" }} />
 				</div>
-				<span className="ml-2 text-[12px] text-ink-300">{title}</span>
+				<span className="ml-2 text-[12px] text-muted">{title}</span>
 			</div>
 			<div className="p-5">{children}</div>
 		</div>
@@ -329,7 +329,7 @@ function ResearcherMock() {
 						textAnchor="middle"
 						fontSize="9"
 						fill="#E8A83C"
-						fontFamily="DM Sans"
+						style={{ fontFamily: "var(--font-ui)" }}
 					>
 						Hipótese A
 					</text>
@@ -378,9 +378,9 @@ function DevlogMock() {
 		<MockWindow title="devlog / 2025-03-11.md">
 			<div>
 				{devlogEntries.map((entry) => (
-					<div key={entry.id} className="border-b border-ink-500 py-3.5 last:border-b-0">
-						<div className="mb-1 font-mono text-[11px] text-ink-300">{entry.date}</div>
-						<div className="text-[13.5px] text-ink-100" style={{ lineHeight: 1.55 }}>
+					<div key={entry.id} className="border-b border-border py-3.5 last:border-b-0">
+						<div className="mb-1 font-mono text-[11px] text-muted">{entry.date}</div>
+						<div className="text-[13.5px] text-muted" style={{ lineHeight: 1.55 }}>
 							{entry.content}
 						</div>
 						<div>
@@ -402,10 +402,10 @@ function StudentMock() {
 				{studyCards.map((card) => (
 					<div
 						key={card.title}
-						className="mb-2.5 border border-ink-400 bg-ink-600 p-3 last:mb-0"
+						className="mb-2.5 border border-border bg-secondary p-3 last:mb-0"
 						style={{ borderRadius: "var(--radius-md)" }}
 					>
-						<div className="mb-1.5 text-[13px] font-semibold text-ink-50">{card.title}</div>
+						<div className="mb-1.5 text-[13px] font-semibold text-primary">{card.title}</div>
 						<div className="flex flex-col gap-1">
 							{card.links.map((link) => (
 								<a
@@ -428,7 +428,7 @@ function StudentMock() {
 function WriterMock() {
 	return (
 		<MockWindow title="Personagem — Elena Voss.md">
-			<div className="font-editor text-[13.5px] text-ink-100" style={{ lineHeight: 1.7 }}>
+			<div className="font-editor text-[13.5px] text-muted" style={{ lineHeight: 1.7 }}>
 				<p className="mb-2.5">
 					Elena aparece pela primeira vez no <WikiLink>Capítulo 3 — O Trem</WikiLink>. Sua motivação
 					central está em <WikiLink>Backstory — Guerra de 2041</WikiLink>.
@@ -439,7 +439,7 @@ function WriterMock() {
 					<WikiLink>Pesquisa — Resistência Polonesa</WikiLink>.
 				</p>
 				<div
-					className="font-editor text-[13px] italic text-ink-200"
+					className="font-editor text-[13px] italic text-muted"
 					style={{
 						background: "rgba(232,168,60,0.05)",
 						borderLeft: "2px solid var(--accent)",
