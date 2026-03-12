@@ -5,3 +5,5 @@ target
 *.tsbuildinfo
 bun.lock
 sync/
+.next/
+docs/internal/

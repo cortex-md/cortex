@@ -37,7 +37,7 @@ export class SearchEngine {
 	constructor() {
 		this.miniSearch = new MiniSearch<SearchDocument>({
 			fields: ["title", "content", "tags", "aliases"],
-			storeFields: ["title", "folder", "content"],
+			storeFields: ["title", "folder", "content", "tags"],
 			searchOptions: {
 				boost: { title: 3, aliases: 2, tags: 2, content: 1 },
 				fuzzy: 0.2,
@@ -76,9 +76,20 @@ export class SearchEngine {
 
 		const searchOptions: Record<string, unknown> = {}
 
-		if (options?.folder) {
-			searchOptions.filter = (result: SearchDocument) =>
-				result.folder.startsWith(options.folder ?? "")
+		const hasTagFilter = options?.tags && options.tags.length > 0
+
+		if (options?.folder || hasTagFilter) {
+			searchOptions.filter = (result: SearchDocument) => {
+				if (options?.folder && !result.folder.startsWith(options.folder)) return false
+				if (hasTagFilter) {
+					const docTags = (result as unknown as { tags?: string[] }).tags ?? []
+					const matchesTag = options.tags!.some((filterTag) =>
+						docTags.some((docTag) => docTag.toLowerCase().includes(filterTag.toLowerCase())),
+					)
+					if (!matchesTag) return false
+				}
+				return true
+			}
 		}
 
 		const raw = this.miniSearch.search(query, searchOptions)
@@ -124,7 +135,7 @@ export class SearchEngine {
 	deserialize(json: string): void {
 		this.miniSearch = MiniSearch.loadJSON<SearchDocument>(json, {
 			fields: ["title", "content", "tags", "aliases"],
-			storeFields: ["title", "folder", "content"],
+			storeFields: ["title", "folder", "content", "tags"],
 			searchOptions: {
 				boost: { title: 3, aliases: 2, tags: 2, content: 1 },
 				fuzzy: 0.2,

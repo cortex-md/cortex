@@ -2,6 +2,7 @@ import {
 	noteCache,
 	useAppStore,
 	useEditorStore,
+	useTagsStore,
 	useUIStore,
 	useVaultStore,
 	useWorkspaceStore,
@@ -10,8 +11,9 @@ import { useHotkey, useHotkeyListener, useHotkeysStore } from "@cortex/hotkeys"
 import { useSearchStore } from "@cortex/search"
 import { useSettingsStore } from "@cortex/settings"
 import { getThemeManager } from "@cortex/theme"
-import type { NavItem } from "@cortex/ui"
-import { SidebarNav, SplitPaneView, StatusBar } from "@cortex/ui"
+import { SidebarNav } from "./features/file-explorer/SidebarNav"
+import { StatusBar } from "./features/statusbar/StatusBar"
+import { SplitPaneView } from "./features/layout/SplitPane"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import {
 	BookmarkIcon,
@@ -34,6 +36,7 @@ import { SearchSidebar } from "./features/search/SearchSidebar"
 import { applyAppearanceSettings } from "./features/settings/applyAppearance"
 import { SettingsModal } from "./features/settings/SettingsModal"
 import { PaneView } from "./features/split-view/PaneView"
+import { TagsSidebar } from "./features/tags/TagsSidebar"
 
 const NAV_ITEMS: NavItem[] = [
 	{ id: "files", icon: FolderClosed, label: "Files" },
@@ -79,6 +82,7 @@ export default function App() {
 	const loadOverrides = useHotkeysStore((s) => s.loadOverrides)
 	const indexVault = useSearchStore((s) => s.indexVault)
 	const resetSearch = useSearchStore((s) => s.reset)
+	const buildTagIndex = useTagsStore((s) => s.buildIndex)
 
 	const sidebarResizing = useRef(false)
 	const sidebarResizeStart = useRef({ x: 0, width: 0 })
@@ -297,7 +301,9 @@ export default function App() {
 	useEffect(() => {
 		if (!vault || files.length === 0) return
 		indexVault(vault.path, files)
-	}, [vault, files, indexVault])
+		const filePaths = files.filter((f) => !f.isDir).map((f) => f.path)
+		buildTagIndex(vault.path, filePaths)
+	}, [vault, files, indexVault, buildTagIndex])
 
 	useEffect(() => {
 		if (!vault) return
@@ -397,11 +403,7 @@ export default function App() {
 										<span>Bookmarks — coming soon</span>
 									</div>
 								)}
-								{leftSidebarView === "tags" && (
-									<div className="flex items-center justify-center p-8 text-xs text-text-muted">
-										<span>Tags — coming soon</span>
-									</div>
-								)}
+								{leftSidebarView === "tags" && <TagsSidebar />}
 							</div>
 						</aside>
 						<div

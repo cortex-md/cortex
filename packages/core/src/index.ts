@@ -12,6 +12,11 @@ export {
 	type EditorState,
 	useEditorStore,
 } from "./stores/editorStore"
+export {
+	type TagEntry,
+	type TagsState,
+	useTagsStore,
+} from "./stores/tagsStore"
 export { type LeftSidebarView, type UIState, useUIStore } from "./stores/uiStore"
 export {
 	useVaultStore,

@@ -1,5 +1,5 @@
 import type { Tab } from "@cortex/core"
-import { noteCache, useEditorStore, useWorkspaceStore } from "@cortex/core"
+import { noteCache, useEditorStore, useTagsStore, useWorkspaceStore } from "@cortex/core"
 import type { CursorInfo, EditorConfig } from "@cortex/editor"
 import { EditorView } from "@cortex/editor"
 import { getPlatform } from "@cortex/platform"
@@ -11,12 +11,13 @@ import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuShortcut,
-	TabBar,
 } from "@cortex/ui"
-import { ClipboardCopyIcon, FolderIcon, PinIcon, PinOffIcon, XIcon } from "lucide-react"
+import { ClipboardCopyIcon, FolderIcon, PinIcon, PinOffIcon, TagIcon, XIcon } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import type { MenuItem } from "@/utils/context-menu"
 import { NativeMenuActions } from "@/utils/context-menu"
+
+import { TabBar } from "../tabs/TabBar"
 
 const hasNativeMenu = () => getPlatform().capabilities.includes("menu")
 const nativeMenu = new NativeMenuActions()
@@ -89,6 +90,31 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 					onCursorChange={isActive ? onCursorChange : undefined}
 				/>
 			)}
+		</div>
+	)
+}
+
+interface FileTagsStripProps {
+	filePath: string
+}
+
+function FileTagsStrip({ filePath }: FileTagsStripProps) {
+	const getTagsForFile = useTagsStore((s) => s.getTagsForFile)
+	const tags = getTagsForFile(filePath)
+
+	if (tags.length === 0) return null
+
+	return (
+		<div className="flex items-center gap-1.5 px-3 py-1 border-b border-border/50 bg-bg-primary flex-wrap">
+			<TagIcon className="size-3 text-muted-foreground flex-shrink-0" />
+			{tags.map((tag) => (
+				<span
+					key={tag}
+					className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-brand/10 text-brand border border-brand/20"
+				>
+					{tag}
+				</span>
+			))}
 		</div>
 	)
 }
@@ -244,6 +270,12 @@ export function PaneView({ paneId }: Props) {
 				onPin={handlePin}
 				onContextMenu={handleTabContextMenu}
 			/>
+
+			{pane.activeTabId &&
+				(() => {
+					const activeTab = pane.tabs.find((t) => t.id === pane.activeTabId)
+					return activeTab ? <FileTagsStrip filePath={activeTab.filePath} /> : null
+				})()}
 
 			{!hasNativeMenu() && fallbackTab && fallbackMenu && (
 				<DropdownMenu

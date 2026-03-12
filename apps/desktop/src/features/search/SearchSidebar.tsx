@@ -1,7 +1,7 @@
-import { useVaultStore, useWorkspaceStore } from "@cortex/core"
+import { useTagsStore, useVaultStore, useWorkspaceStore } from "@cortex/core"
 import { useSearchStore } from "@cortex/search"
 import { Button, Input } from "@cortex/ui"
-import { FileIcon, FolderIcon, SearchIcon } from "lucide-react"
+import { FileIcon, FolderIcon, SearchIcon, TagIcon, XIcon } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 function highlightSnippet(snippet: string, query: string): React.ReactNode {
@@ -35,26 +35,49 @@ function folderFromPath(filePath: string): string {
 }
 
 export function SearchSidebar() {
-	const { query, results, setQuery, indexing, documentCount } = useSearchStore()
+	const { query, results, search, setQuery, indexing, documentCount } = useSearchStore()
 	const { openTab } = useWorkspaceStore()
 	const vault = useVaultStore((s) => s.vault)
+	const getAllTags = useTagsStore((s) => s.getAllTags)
 	const inputRef = useRef<HTMLInputElement>(null)
 	const [localQuery, setLocalQuery] = useState(query)
+	const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null)
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+	const allTags = getAllTags()
 
 	useEffect(() => {
 		inputRef.current?.focus()
 	}, [])
+
+	const runSearch = useCallback(
+		(queryValue: string, tag: string | null) => {
+			if (tag) {
+				search(queryValue, { tags: [tag] })
+			} else {
+				setQuery(queryValue)
+			}
+		},
+		[search, setQuery],
+	)
 
 	const handleQueryChange = useCallback(
 		(value: string) => {
 			setLocalQuery(value)
 			if (debounceRef.current) clearTimeout(debounceRef.current)
 			debounceRef.current = setTimeout(() => {
-				setQuery(value)
+				runSearch(value, activeTagFilter)
 			}, 150)
 		},
-		[setQuery],
+		[runSearch, activeTagFilter],
+	)
+
+	const handleTagFilterSelect = useCallback(
+		(tag: string | null) => {
+			setActiveTagFilter(tag)
+			runSearch(localQuery, tag)
+		},
+		[runSearch, localQuery],
 	)
 
 	const handleResultClick = useCallback(
@@ -79,17 +102,52 @@ export function SearchSidebar() {
 						className="w-full h-8 pl-8 pr-3 text-sm bg-input rounded-md border border-border focus:border-ring focus:outline-none placeholder:text-muted-foreground"
 					/>
 				</div>
-				<div className="mt-1.5 text-[10px] text-muted-foreground">
-					{indexing
-						? "Indexing..."
-						: query
-							? `${results.length} result${results.length !== 1 ? "s" : ""}`
-							: `${documentCount} notes indexed`}
+
+				{allTags.length > 0 && (
+					<div className="mt-2 flex flex-wrap gap-1">
+						{allTags.slice(0, 8).map((entry) => (
+							<button
+								key={entry.tag}
+								type="button"
+								onClick={() =>
+									handleTagFilterSelect(activeTagFilter === entry.tag ? null : entry.tag)
+								}
+								className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
+									activeTagFilter === entry.tag
+										? "bg-brand/20 border-brand/40 text-brand"
+										: "bg-transparent border-border/60 text-muted-foreground hover:border-border hover:text-text-primary"
+								}`}
+							>
+								<TagIcon className="size-2.5" />
+								{entry.tag}
+							</button>
+						))}
+					</div>
+				)}
+
+				<div className="mt-1.5 flex items-center justify-between">
+					<span className="text-[10px] text-muted-foreground">
+						{indexing
+							? "Indexing..."
+							: query || activeTagFilter
+								? `${results.length} result${results.length !== 1 ? "s" : ""}`
+								: `${documentCount} notes indexed`}
+					</span>
+					{activeTagFilter && (
+						<button
+							type="button"
+							onClick={() => handleTagFilterSelect(null)}
+							className="inline-flex items-center gap-1 text-[10px] text-brand hover:text-brand/70 transition-colors"
+						>
+							<XIcon className="size-3" />
+							Clear filter
+						</button>
+					)}
 				</div>
 			</div>
 
 			<div className="flex-1 overflow-y-auto">
-				{results.length === 0 && query && !indexing && (
+				{results.length === 0 && (query || activeTagFilter) && !indexing && (
 					<div className="flex items-center justify-center p-8 text-xs text-muted-foreground">
 						No results found
 					</div>
@@ -98,8 +156,8 @@ export function SearchSidebar() {
 				{results.map((result) => {
 					const folder = folderFromPath(result.id)
 					return (
-            <Button
-              variant={"ghost"}
+						<Button
+							variant={"ghost"}
 							type="button"
 							key={result.id}
 							className="w-full text-left px-3 py-2 hover:bg-accent border-b border-border/50 transition-colors"
@@ -117,7 +175,7 @@ export function SearchSidebar() {
 							)}
 							{result.snippet && (
 								<p className="mt-1 ml-5 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-									{highlightSnippet(result.snippet, query)}
+									{highlightSnippet(result.snippet, localQuery)}
 								</p>
 							)}
 						</Button>
