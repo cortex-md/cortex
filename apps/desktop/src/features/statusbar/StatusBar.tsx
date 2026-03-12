@@ -1,4 +1,4 @@
-type EditorMode = "source" | "live-preview" | "reading"
+import type { EditorMode } from "@cortex/core"
 
 interface CursorPosition {
 	line: number
@@ -9,12 +9,14 @@ const MODE_LABELS: Record<EditorMode, string> = {
 	source: "Source",
 	"live-preview": "Preview",
 	reading: "Reading",
+	"side-by-side": "Side by Side",
 }
 
 const NEXT_MODE: Record<EditorMode, EditorMode> = {
 	source: "live-preview",
 	"live-preview": "reading",
-	reading: "source",
+	reading: "side-by-side",
+	"side-by-side": "source",
 }
 
 interface StatusItem {
@@ -85,7 +87,7 @@ export function StatusBar({ filePath, cursor, mode, onModeChange, leftItems, rig
 					type="button"
 					className="statusbar-item statusbar-btn"
 					onClick={() => onModeChange(NEXT_MODE[mode])}
-					title="Cycle editor mode (Source → Preview → Reading)"
+					title="Cycle editor mode"
 				>
 					{MODE_LABELS[mode]}
 				</button>

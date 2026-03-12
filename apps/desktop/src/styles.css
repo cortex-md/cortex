@@ -477,6 +477,350 @@ body {
 	background: var(--scrollbar-hover);
 }
 
+/* ─── Status Bar ─────────────────────────────────────────────────────────── */
+
+.app-statusbar {
+	display: flex;
+	align-items: center;
+	height: 24px;
+	background: var(--statusbar-bg);
+	border-top: 1px solid var(--statusbar-border);
+	padding: 0 12px;
+	flex-shrink: 0;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--text-muted);
+}
+
+.statusbar-left {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.statusbar-right {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-left: auto;
+}
+
+.statusbar-sep {
+	flex: 1;
+}
+
+.statusbar-item {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.statusbar-btn {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 6px;
+	background: transparent;
+	border: none;
+	border-radius: 3px;
+	color: var(--text-muted);
+	font-family: inherit;
+	font-size: inherit;
+	cursor: pointer;
+	transition:
+		background-color 0.1s,
+		color 0.1s;
+}
+
+.statusbar-btn:hover {
+	background: var(--bg-hover);
+	color: var(--text-primary);
+}
+
+.statusbar-filename {
+	color: var(--text-primary);
+}
+
+.statusbar-cursor {
+	font-variant-numeric: tabular-nums;
+}
+
+/* ─── Split Pane ────────────────────────────────────────────────────────── */
+
+.split-leaf {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.split-container {
+	display: flex;
+	height: 100%;
+	width: 100%;
+}
+
+.split-container--horizontal {
+	flex-direction: row;
+}
+
+.split-container--vertical {
+	flex-direction: column;
+}
+
+.split-child {
+	overflow: hidden;
+	min-width: 0;
+	min-height: 0;
+}
+
+.split-resizer {
+	flex-shrink: 0;
+	background: transparent;
+}
+
+.split-resizer--horizontal {
+	width: 4px;
+	cursor: col-resize;
+}
+
+.split-resizer--horizontal:hover {
+	background: var(--accent-subtle);
+}
+
+.split-resizer--vertical {
+	height: 4px;
+	cursor: row-resize;
+}
+
+.split-resizer--vertical:hover {
+	background: var(--accent-subtle);
+}
+
+/* ─── Reading View ─────────────────────────────────────────────────────── */
+
+.reading-view {
+	height: 100%;
+	overflow-y: auto;
+	padding: 24px 40px;
+	max-width: 720px;
+	margin-inline: auto;
+	font-family: var(--font-editor);
+	font-size: var(--editor-font-size, 16px);
+	line-height: 1.7;
+	color: var(--text-primary);
+}
+
+.reading-view h1,
+.reading-view h2,
+.reading-view h3,
+.reading-view h4,
+.reading-view h5,
+.reading-view h6 {
+	color: var(--text-primary);
+	font-weight: 600;
+	line-height: 1.3;
+	margin-top: 1.5em;
+	margin-bottom: 0.5em;
+}
+
+.reading-view h1 {
+	font-size: 1.8em;
+}
+.reading-view h2 {
+	font-size: 1.4em;
+}
+.reading-view h3 {
+	font-size: 1.2em;
+}
+.reading-view h4 {
+	font-size: 1.05em;
+}
+.reading-view h5,
+.reading-view h6 {
+	font-size: 1em;
+}
+
+.reading-view p {
+	margin-top: 0;
+	margin-bottom: 1em;
+}
+
+.reading-view a {
+	color: var(--link);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.reading-view a:hover {
+	color: var(--link-hover);
+}
+
+.reading-view a[data-wiki-link] {
+	color: var(--accent);
+	cursor: pointer;
+}
+
+.reading-view strong {
+	font-weight: 700;
+}
+.reading-view em {
+	font-style: italic;
+}
+
+.reading-view code {
+	font-family: var(--font-mono);
+	font-size: 0.875em;
+	background: var(--bg-code);
+	color: var(--text-primary);
+	padding: 0.1em 0.3em;
+	border-radius: 3px;
+}
+
+.reading-view pre {
+	background: var(--bg-code);
+	border-radius: 6px;
+	padding: 1em 1.25em;
+	overflow-x: auto;
+	margin-bottom: 1.25em;
+}
+
+.reading-view pre code {
+	background: none;
+	padding: 0;
+	font-size: 0.875em;
+	color: var(--text-primary);
+}
+
+.reading-view blockquote {
+	border-left: 3px solid var(--border-strong);
+	padding-left: 1em;
+	margin-left: 0;
+	color: var(--text-secondary);
+}
+
+.reading-view ul,
+.reading-view ol {
+	padding-left: 1.5em;
+	margin-bottom: 1em;
+}
+
+.reading-view li {
+	margin-bottom: 0.25em;
+}
+
+.reading-view li[data-task-item] {
+	list-style: none;
+	margin-left: -1.5em;
+	padding-left: 0.25em;
+}
+
+.reading-view li[data-task-item] input[type="checkbox"] {
+	margin-right: 0.5em;
+	vertical-align: middle;
+	cursor: default;
+	accent-color: var(--accent);
+}
+
+.reading-view table {
+	border-collapse: collapse;
+	width: 100%;
+	margin-bottom: 1em;
+}
+
+.reading-view th,
+.reading-view td {
+	border: 1px solid var(--border-default);
+	padding: 0.4em 0.75em;
+	text-align: left;
+}
+
+.reading-view th {
+	background: var(--bg-secondary);
+	font-weight: 600;
+}
+
+.reading-view hr {
+	border: none;
+	border-top: 1px solid var(--border-subtle);
+	margin: 2em 0;
+}
+
+.reading-view img {
+	max-width: 100%;
+	border-radius: 4px;
+}
+
+/* Syntax highlight token mapping (hljs → --syntax-* CSS vars) */
+.reading-view .hljs-keyword,
+.reading-view .hljs-selector-tag,
+.reading-view .hljs-built_in,
+.reading-view .hljs-name,
+.reading-view .hljs-tag {
+	color: var(--syntax-keyword);
+}
+
+.reading-view .hljs-string,
+.reading-view .hljs-attr,
+.reading-view .hljs-selector-attr,
+.reading-view .hljs-template-tag,
+.reading-view .hljs-template-variable,
+.reading-view .hljs-addition {
+	color: var(--syntax-string);
+}
+
+.reading-view .hljs-comment,
+.reading-view .hljs-quote {
+	color: var(--syntax-comment);
+	font-style: italic;
+}
+
+.reading-view .hljs-number,
+.reading-view .hljs-literal {
+	color: var(--syntax-number);
+}
+
+.reading-view .hljs-title,
+.reading-view .hljs-section,
+.reading-view .hljs-selector-id,
+.reading-view .hljs-function {
+	color: var(--syntax-function);
+}
+
+.reading-view .hljs-type,
+.reading-view .hljs-class {
+	color: var(--syntax-type);
+}
+
+.reading-view .hljs-operator,
+.reading-view .hljs-punctuation {
+	color: var(--syntax-operator);
+}
+
+.reading-view .hljs-property,
+.reading-view .hljs-attribute {
+	color: var(--syntax-property);
+}
+
+/* ─── Side-by-Side View ──────────────────────────────────────────────── */
+
+.side-by-side-view {
+	display: flex;
+	height: 100%;
+	overflow: hidden;
+}
+
+.side-by-side-editor {
+	flex: 1;
+	overflow: hidden;
+	border-right: 1px solid var(--border-subtle);
+}
+
+.side-by-side-preview {
+	flex: 1;
+	overflow-y: auto;
+}
+
 body:not([data-platform="macos"]) .titlebar {
 	height: 0;
 }

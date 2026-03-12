@@ -1,9 +1,5 @@
 export interface Http {
-  fetch(
-    url: string,
-    options?: RequestInit,
-  ): Promise<Response>;
+	fetch(url: string, options?: RequestInit): Promise<Response>
 
-  download(url: string): Promise<string>;
-
+	download(url: string): Promise<string>
 }

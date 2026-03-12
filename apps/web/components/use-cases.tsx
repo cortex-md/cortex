@@ -96,8 +96,8 @@ const devlogEntries = [
 		date: "2025-03-10 · 16:15",
 		content: (
 			<>
-				Bug no pipeline de <WikiLink>CI/CD</WikiLink> — variável de env não propagando no step
-				de build. Corrigido, doc em <WikiLink>Runbook - CI Issues</WikiLink>.
+				Bug no pipeline de <WikiLink>CI/CD</WikiLink> — variável de env não propagando no step de
+				build. Corrigido, doc em <WikiLink>Runbook - CI Issues</WikiLink>.
 			</>
 		),
 		tags: ["#bugfix", "#devops"],
@@ -107,8 +107,8 @@ const devlogEntries = [
 		date: "2025-03-10 · 10:00",
 		content: (
 			<>
-				Sprint planning feito. Backlog atualizado em <WikiLink>Sprint 08 Planning</WikiLink>.
-				Foco em auth refactor esta semana.
+				Sprint planning feito. Backlog atualizado em <WikiLink>Sprint 08 Planning</WikiLink>. Foco
+				em auth refactor esta semana.
 			</>
 		),
 		tags: ["#planejamento"],
@@ -126,10 +126,7 @@ const studyCards = [
 	},
 	{
 		title: "Redes de Computadores",
-		links: [
-			"TCP/IP Stack — protocolo por camada",
-			"Algoritmos de roteamento → Grafos",
-		],
+		links: ["TCP/IP Stack — protocolo por camada", "Algoritmos de roteamento → Grafos"],
 	},
 ]
 
@@ -224,13 +221,7 @@ function CaseText({
 	)
 }
 
-function MockWindow({
-	title,
-	children,
-}: {
-	title: string
-	children: React.ReactNode
-}) {
+function MockWindow({ title, children }: { title: string; children: React.ReactNode }) {
 	return (
 		<div
 			className="overflow-hidden border border-ink-400 bg-ink-700"
@@ -316,7 +307,14 @@ function ResearcherMock() {
 						stroke="#414040"
 						strokeWidth="1"
 					/>
-					<circle cx="40" cy="90" r="8" fill="rgba(44,43,42,0.8)" stroke="#2C2B2A" strokeWidth="1" />
+					<circle
+						cx="40"
+						cy="90"
+						r="8"
+						fill="rgba(44,43,42,0.8)"
+						stroke="#2C2B2A"
+						strokeWidth="1"
+					/>
 					<circle
 						cx="370"
 						cy="100"
@@ -325,7 +323,14 @@ function ResearcherMock() {
 						stroke="#2C2B2A"
 						strokeWidth="1"
 					/>
-					<text x="200" y="114" textAnchor="middle" fontSize="9" fill="#E8A83C" fontFamily="DM Sans">
+					<text
+						x="200"
+						y="114"
+						textAnchor="middle"
+						fontSize="9"
+						fill="#E8A83C"
+						fontFamily="DM Sans"
+					>
 						Hipótese A
 					</text>
 					<text x="90" y="54" textAnchor="middle" fontSize="8" fill="#9E9C99">
@@ -425,8 +430,8 @@ function WriterMock() {
 		<MockWindow title="Personagem — Elena Voss.md">
 			<div className="font-editor text-[13.5px] text-ink-100" style={{ lineHeight: 1.7 }}>
 				<p className="mb-2.5">
-					Elena aparece pela primeira vez no <WikiLink>Capítulo 3 — O Trem</WikiLink>. Sua
-					motivação central está em <WikiLink>Backstory — Guerra de 2041</WikiLink>.
+					Elena aparece pela primeira vez no <WikiLink>Capítulo 3 — O Trem</WikiLink>. Sua motivação
+					central está em <WikiLink>Backstory — Guerra de 2041</WikiLink>.
 				</p>
 				<p className="mb-2.5">
 					Conflito principal com <WikiLink>Personagem — Marcus</WikiLink> se resolve no{" "}

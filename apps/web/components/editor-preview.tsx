@@ -95,8 +95,8 @@ export default function EditorPreview() {
 						</blockquote>
 
 						<p className="mb-3.5 text-[14.5px] text-ink-100">
-							Próximas ações: checklist de entregáveis em <WikiLink>Sprint 07</WikiLink>. Referências
-							de leitura em <WikiLink>Leituras Q1</WikiLink>.
+							Próximas ações: checklist de entregáveis em <WikiLink>Sprint 07</WikiLink>.
+							Referências de leitura em <WikiLink>Leituras Q1</WikiLink>.
 						</p>
 
 						<p className="text-[14.5px]">

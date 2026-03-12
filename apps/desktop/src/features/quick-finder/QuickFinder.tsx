@@ -1,13 +1,13 @@
 import { useUIStore, useVaultStore, useWorkspaceStore } from "@cortex/core"
 import { useSearchStore } from "@cortex/search"
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Input,
-  Kbd,
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	Input,
+	Kbd,
 } from "@cortex/ui"
 import { useCallback, useMemo } from "react"
 
@@ -26,8 +26,8 @@ function parentFolder(relPath: string): string {
 }
 
 export function QuickFinder() {
-  const { query, results, setQuery, indexing, documentCount } = useSearchStore()
-  const { quickFinderOpen, toggleQuickFinder } = useUIStore()
+	const { query, results, setQuery, indexing, documentCount } = useSearchStore()
+	const { quickFinderOpen, toggleQuickFinder } = useUIStore()
 	const { vault, files, createFile } = useVaultStore()
 	const { openTab, panes, recentlyClosed } = useWorkspaceStore()
 
@@ -82,75 +82,62 @@ export function QuickFinder() {
 	const vaultPath = vault.path
 
 	return (
-  <Dialog open={quickFinderOpen} onOpenChange={() => toggleQuickFinder}>
-      <DialogContent
-        className="p-10 max-h-[600px]  md:max-w-[500px] lg:max-w-[700px]"
-      >
-      <DialogHeader>
-          <DialogTitle>
-            <Input
-              placeholder="Search or create note..."
-              onChange={(e) => handleQueryChange(e.target.value)}
-            />
-          </DialogTitle>
-      </DialogHeader>
-      {results ? (
-        <>
-          {recentFilePaths.map((filePath: string) => {
-            const relPath = relativePath(filePath, vaultPath)
-            const folder = parentFolder(relPath)
+		<Dialog open={quickFinderOpen} onOpenChange={() => toggleQuickFinder}>
+			<DialogContent className="p-10 max-h-[600px]  md:max-w-[500px] lg:max-w-[700px]">
+				<DialogHeader>
+					<DialogTitle>
+						<Input
+							placeholder="Search or create note..."
+							onChange={(e) => handleQueryChange(e.target.value)}
+						/>
+					</DialogTitle>
+				</DialogHeader>
+				{results ? (
+					<>
+						{recentFilePaths.map((filePath: string) => {
+							const relPath = relativePath(filePath, vaultPath)
+							const folder = parentFolder(relPath)
 
-            return (
-              <div key={filePath} value={relPath} onClick={() => handleSelect(filePath)}>
-                <span className="flex-1 truncate">
-                  {titleFromPath(filePath)}
-                </span>
+							return (
+								<div key={filePath} value={relPath} onClick={() => handleSelect(filePath)}>
+									<span className="flex-1 truncate">{titleFromPath(filePath)}</span>
 
-                {folder && (
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                    {folder}
-                  </span>
-                )}
-              </div>
-            )
-          })}
+									{folder && (
+										<span className="flex items-center gap-1 text-xs text-muted-foreground">
+											{folder}
+										</span>
+									)}
+								</div>
+							)
+						})}
 
-          {noteFiles.map((file) => {
-            const relPath = relativePath(file.path, vaultPath)
-            const folder = parentFolder(relPath)
+						{noteFiles.map((file) => {
+							const relPath = relativePath(file.path, vaultPath)
+							const folder = parentFolder(relPath)
 
-            return (
-              <div key={file.path} value={relPath} onClick={() => handleSelect(file.path)}>
-                <span className="flex-1 truncate">
-                  {titleFromPath(file.path)}
-                </span>
+							return (
+								<div key={file.path} value={relPath} onClick={() => handleSelect(file.path)}>
+									<span className="flex-1 truncate">{titleFromPath(file.path)}</span>
 
-                {folder && (
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                    {folder}
-                  </span>
-                )}
-              </div>
-            )
-          })}
-        </>
-      ) : (
-        <span>
-          No results found
-        </span>
-      )}
+									{folder && (
+										<span className="flex items-center gap-1 text-xs text-muted-foreground">
+											{folder}
+										</span>
+									)}
+								</div>
+							)
+						})}
+					</>
+				) : (
+					<span>No results found</span>
+				)}
 
-      <DialogFooter className="flex items-center justify-center w-full text-xs">
-        <Kbd>
-          Shift + Enter
-        </Kbd>
-        to create a new note
-        <Kbd>
-           Cntrl + Enter to open the note in a new tab
-        </Kbd>
-      </DialogFooter>
-
-    </DialogContent>
-  </Dialog>
+				<DialogFooter className="flex items-center justify-center w-full text-xs">
+					<Kbd>Shift + Enter</Kbd>
+					to create a new note
+					<Kbd>Cntrl + Enter to open the note in a new tab</Kbd>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	)
 }

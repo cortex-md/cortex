@@ -1,7 +1,7 @@
 import type { Tab } from "@cortex/core"
 import { noteCache, useEditorStore, useTagsStore, useWorkspaceStore } from "@cortex/core"
 import type { CursorInfo, EditorConfig } from "@cortex/editor"
-import { EditorView } from "@cortex/editor"
+import { EditorView, ReadingView, SideBySideView } from "@cortex/editor"
 import { getPlatform } from "@cortex/platform"
 import { useSettingsStore } from "@cortex/settings"
 import {
@@ -55,10 +55,19 @@ interface TabEditorProps {
 function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabEditorProps) {
 	const [content, setContent] = useState<string | null>(null)
 	const { markTabDirty } = useWorkspaceStore()
+	const mode = useEditorStore((s) => s.mode)
 
 	useEffect(() => {
 		noteCache.read(tab.filePath).then(setContent)
 	}, [tab.filePath])
+
+	const handleChange = useCallback(
+		(newContent: string) => {
+			noteCache.write(tab.filePath, newContent)
+			markTabDirty(tab.id, true)
+		},
+		[tab.filePath, tab.id, markTabDirty],
+	)
 
 	return (
 		<div
@@ -78,15 +87,22 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 				</Button>
 			) : content === null ? (
 				<div className="flex-1 bg-bg-primary" />
+			) : mode === "reading" ? (
+				<ReadingView content={content} />
+			) : mode === "side-by-side" ? (
+				<SideBySideView
+					content={content}
+					filePath={tab.filePath}
+					editorConfig={editorConfig}
+					onChange={handleChange}
+				/>
 			) : (
 				<EditorView
 					content={content}
 					filePath={tab.filePath}
 					editorConfig={editorConfig}
-					onChange={(c) => {
-						noteCache.write(tab.filePath, c)
-						markTabDirty(tab.id, true)
-					}}
+					livePreview={mode === "live-preview"}
+					onChange={handleChange}
 					onCursorChange={isActive ? onCursorChange : undefined}
 				/>
 			)}

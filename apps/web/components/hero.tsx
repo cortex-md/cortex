@@ -4,9 +4,7 @@ import EditorPreview from "@/components/editor-preview"
 
 export default function Hero() {
 	return (
-		<section
-			className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-10 pt-[120px] pb-20 text-center"
-		>
+		<section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-10 pt-[120px] pb-20 text-center">
 			<div className="pointer-events-none absolute inset-0 overflow-hidden">
 				<div className="hero-bg-grain" />
 				<div
@@ -56,8 +54,8 @@ export default function Hero() {
 					className="hero-subtitle mt-5 max-w-[520px] text-[17px] text-ink-200"
 					style={{ lineHeight: 1.65 }}
 				>
-					Um segundo cérebro que cresce com você. Escreva, conecte ideias, navegue pelo
-					grafo do seu conhecimento — tudo em arquivos Markdown que são seus para sempre.
+					Um segundo cérebro que cresce com você. Escreva, conecte ideias, navegue pelo grafo do seu
+					conhecimento — tudo em arquivos Markdown que são seus para sempre.
 				</p>
 
 				<div className="hero-actions mt-9 flex flex-wrap justify-center gap-3">

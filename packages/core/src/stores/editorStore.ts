@@ -3,7 +3,7 @@ import { devtools } from "zustand/middleware"
 import { immer } from "zustand/middleware/immer"
 import { noteCache } from "../noteCache"
 
-export type EditorMode = "source" | "live-preview" | "reading"
+export type EditorMode = "source" | "live-preview" | "reading" | "side-by-side"
 
 export interface CursorPosition {
 	line: number

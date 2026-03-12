@@ -113,9 +113,14 @@ function typographyExtension(fontSize: number, lineHeight: number) {
 	})
 }
 
+export interface BaseExtensionsOptions {
+	livePreview?: boolean
+}
+
 export function baseExtensions(
 	syntaxTokens: SyntaxTokens,
 	config: EditorConfig = DEFAULT_EDITOR_CONFIG,
+	{ livePreview = true }: BaseExtensionsOptions = {},
 ) {
 	return [
 		history(),
@@ -130,7 +135,7 @@ export function baseExtensions(
 		EditorState.allowMultipleSelections.of(true),
 		keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap, ...searchKeymap]),
 		buildHighlightStyle(syntaxTokens),
-		livePreviewExtension(),
+		...(livePreview ? [livePreviewExtension()] : []),
 		markdown({
 			base: markdownLanguage,
 			codeLanguages,

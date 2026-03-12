@@ -12,9 +12,9 @@ export type { Capabilities } from "./interfaces/Capabilities"
 export type { Dialog } from "./interfaces/Dialog"
 export type { FileEntry, FileSystem, WatchEvent } from "./interfaces/FileSystem"
 export type { Font, FontInfo } from "./interfaces/Font"
+export type { Http } from "./interfaces/Http"
 export type { Storage } from "./interfaces/Storage"
 export type { Vault, VaultMetadata, VaultRegistryEntry } from "./interfaces/Vault"
-export type { Http } from "./interfaces/Http"
 
 export interface Platform {
 	fs: FileSystem
@@ -22,7 +22,7 @@ export interface Platform {
 	storage: Storage
 	vault: Vault
 	app: App
-  font: Font
+	font: Font
 	http: Http
 	capabilities: Capabilities[]
 }

@@ -1,24 +1,24 @@
 {
-  "name": "cortex",
-  "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*",
-    "plugins/*"
-  ],
-  "scripts": {
-    "dev:desktop": "bun run --cwd apps/desktop tauri dev",
-    "dev:web": "bun run --cwd apps/web dev",
-    "lint": "biome lint .",
-    "lint:fix": "biome lint --fix .",
-    "format": "biome format .",
-    "format:fix": "biome format --fix .",
-    "check": "biome check .",
-    "check:fix": "biome check --fix .",
-    "typecheck": "tsc -b"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "2.4.6",
-    "typescript": "~5.8.3"
-  }
+	"name": "cortex",
+	"private": true,
+	"workspaces": [
+		"apps/*",
+		"packages/*",
+		"plugins/*"
+	],
+	"scripts": {
+		"dev:desktop": "bun run --cwd apps/desktop tauri dev",
+		"dev:web": "bun run --cwd apps/web dev",
+		"lint": "biome lint .",
+		"lint:fix": "biome lint --fix .",
+		"format": "biome format .",
+		"format:fix": "biome format --fix .",
+		"check": "biome check .",
+		"check:fix": "biome check --fix .",
+		"typecheck": "tsc -b"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.6",
+		"typescript": "~5.8.3"
+	}
 }
