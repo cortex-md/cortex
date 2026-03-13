@@ -20,6 +20,9 @@ export interface UIState {
 
 	commandPaletteOpen: boolean
 	toggleCommandPalette: () => void
+
+	tagPickerOpen: boolean
+	toggleTagPicker: () => void
 }
 
 const MIN_SIDEBAR_WIDTH = 180
@@ -63,6 +66,13 @@ export const useUIStore = create<UIState>()(
 			toggleCommandPalette: () =>
 				set((s) => {
 					s.commandPaletteOpen = !s.commandPaletteOpen
+				}),
+
+			tagPickerOpen: false,
+
+			toggleTagPicker: () =>
+				set((s) => {
+					s.tagPickerOpen = !s.tagPickerOpen
 				}),
 		})),
 		{ name: "uiStore" },

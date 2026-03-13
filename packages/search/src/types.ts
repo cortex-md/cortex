@@ -20,5 +20,6 @@ export interface SearchResult {
 export interface SearchOptions {
 	folder?: string
 	tags?: string[]
+	files?: string[]
 	limit?: number
 }

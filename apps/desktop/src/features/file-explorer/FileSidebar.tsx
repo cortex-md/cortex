@@ -1,7 +1,8 @@
-import { useVaultStore, useWorkspaceStore } from "@cortex/core"
+import { useTagsStore, useVaultStore, useWorkspaceStore } from "@cortex/core"
 import type { FileEntry } from "@cortex/platform"
 import { getPlatform } from "@cortex/platform"
 import {
+	Button,
 	ContextMenu,
 	ContextMenuContent,
 	ContextMenuItem,
@@ -156,6 +157,7 @@ interface TreeNodeRowProps {
 	isActive: boolean
 	isExpanded: boolean
 	isRenaming: boolean
+	tagColors: Array<{ tag: string; color: string | null }>
 	onToggle: (path: string) => void
 	onOpenFile: (path: string) => void
 	onStartRename: (path: string) => void
@@ -169,6 +171,7 @@ function TreeNodeRow({
 	isActive,
 	isExpanded,
 	isRenaming,
+	tagColors,
 	onToggle,
 	onOpenFile,
 	onStartRename,
@@ -176,10 +179,12 @@ function TreeNodeRow({
 	onCancelRename,
 }: TreeNodeRowProps) {
 	return (
-		<div
+		<Button
+			variant={"ghost"}
 			role="treeitem"
 			tabIndex={0}
-			className={`flex items-center gap-1 h-[26px] px-1.5 w-full rounded-sm cursor-pointer text-text-secondary text-xs hover:bg-bg-hover hover:text-text-primary select-none outline-none focus-visible:ring-1 focus-visible:ring-border-focus ${
+			size={"sm"}
+			className={`flex items-center text-left gap-1 px-1.5 w-full rounded-sm cursor-pointer text-text-secondary text-xs hover:bg-bg-hover hover:text-text-primary select-none outline-none focus-visible:ring-1 focus-visible:ring-border-focus ${
 				isActive ? "bg-accent text-primary" : ""
 			}`}
 			style={{ paddingLeft: `${depth * 12 + 6}px` }}
@@ -219,7 +224,19 @@ function TreeNodeRow({
 					{node.isDir ? node.name : node.name.replace(/\.md$/, "")}
 				</span>
 			)}
-		</div>
+			{!node.isDir && tagColors.length > 0 && (
+				<span className="flex items-center gap-0.5 flex-shrink-0">
+					{tagColors.map((tc) => (
+						<span
+							key={tc.tag}
+							className="inline-block size-2 rounded-full"
+							style={{ backgroundColor: tc.color ?? "var(--brand)" }}
+							title={tc.tag}
+						/>
+					))}
+				</span>
+			)}
+		</Button>
 	)
 }
 
@@ -268,10 +285,14 @@ function TreeNodeView({
 	onConfirmCreate,
 	onCancelCreate,
 }: TreeNodeProps) {
+	const getTagsForFile = useTagsStore((s) => s.getTagsForFile)
+	const getTagColor = useTagsStore((s) => s.getTagColor)
 	const isExpanded = expanded.has(node.path)
 	const isActive = !node.isDir && activeFilePath === node.path
 	const isRenaming = renamingPath === node.path
 	const isCreatingHere = creatingIn === node.path
+	const fileTags = !node.isDir ? getTagsForFile(node.path) : []
+	const tagColors = fileTags.map((tag) => ({ tag, color: getTagColor(tag) }))
 
 	const rowProps = {
 		node,
@@ -279,6 +300,7 @@ function TreeNodeView({
 		isActive,
 		isExpanded,
 		isRenaming,
+		tagColors,
 		onToggle,
 		onOpenFile,
 		onStartRename,
@@ -567,7 +589,7 @@ export function FileSidebar() {
 	}
 
 	return (
-		<div className="flex flex-col h-full overflow-hidden">
+		<div className="flex flex-col h-full px-1.5 overflow-hidden">
 			<div className="flex items-center justify-between px-2 py-1.5 flex-shrink-0">
 				<span className="text-[10px] font-bold text-text-muted uppercase tracking-wide">Files</span>
 				<div className="flex items-center gap-0.5">

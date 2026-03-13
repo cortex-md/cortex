@@ -77,8 +77,9 @@ export class SearchEngine {
 		const searchOptions: Record<string, unknown> = {}
 
 		const hasTagFilter = options?.tags && options.tags.length > 0
+		const hasFileFilter = options?.files && options.files.length > 0
 
-		if (options?.folder || hasTagFilter) {
+		if (options?.folder || hasTagFilter || hasFileFilter) {
 			searchOptions.filter = (result: SearchDocument) => {
 				if (options?.folder && !result.folder.startsWith(options.folder)) return false
 				if (hasTagFilter) {
@@ -87,6 +88,11 @@ export class SearchEngine {
 						docTags.some((docTag) => docTag.toLowerCase().includes(filterTag.toLowerCase())),
 					)
 					if (!matchesTag) return false
+				}
+				if (hasFileFilter) {
+					const title = (result as unknown as { title: string }).title?.toLowerCase() ?? ""
+					const matchesFile = options.files!.some((f) => title.includes(f.toLowerCase()))
+					if (!matchesFile) return false
 				}
 				return true
 			}

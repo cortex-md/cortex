@@ -1,46 +1,33 @@
+import type { OpenTabOptions } from "@cortex/core"
 import { useUIStore, useVaultStore, useWorkspaceStore } from "@cortex/core"
 import { useSearchStore } from "@cortex/search"
 import {
+	Button,
 	Dialog,
 	DialogContent,
-	DialogFooter,
-	DialogHeader,
+	DialogDescription,
 	DialogTitle,
 	Input,
 	Kbd,
 } from "@cortex/ui"
-import { useCallback, useMemo } from "react"
-
-function relativePath(filePath: string, vaultPath: string): string {
-	return filePath.startsWith(vaultPath) ? filePath.slice(vaultPath.length + 1) : filePath
-}
+import { XIcon } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 function titleFromPath(filePath: string): string {
 	const name = filePath.split("/").pop() ?? filePath
 	return name.endsWith(".md") ? name.slice(0, -3) : name
 }
 
-function parentFolder(relPath: string): string {
-	const parts = relPath.split("/")
-	return parts.length > 1 ? parts.slice(0, -1).join("/") : ""
-}
-
 export function QuickFinder() {
-	const { query, results, setQuery, indexing, documentCount } = useSearchStore()
 	const { quickFinderOpen, toggleQuickFinder } = useUIStore()
-	const { vault, files, createFile } = useVaultStore()
-	const { openTab, panes, recentlyClosed } = useWorkspaceStore()
+	const { vault, createFile } = useVaultStore()
+	const { openTab, panes, recentlyClosed, splitPane } = useWorkspaceStore()
+	const { searchTitles } = useSearchStore()
 
-	const noteFiles = useMemo(() => {
-		return files.filter((f) => !f.isDir)
-	}, [files])
-
-	const handleQueryChange = useCallback(
-		(value: string) => {
-			setQuery(value)
-		},
-		[setQuery],
-	)
+	const [query, setQuery] = useState("")
+	const [selectedIndex, setSelectedIndex] = useState(0)
+	const inputRef = useRef<HTMLInputElement>(null)
+	const resultsRef = useRef<HTMLDivElement>(null)
 
 	const recentFilePaths = useMemo(() => {
 		const paths: string[] = []
@@ -59,84 +46,206 @@ export function QuickFinder() {
 		return paths.slice(0, 15)
 	}, [panes, recentlyClosed])
 
+	const searchResults = useMemo(() => {
+		if (!query.trim()) return []
+		return searchTitles(query.trim()).slice(0, 20)
+	}, [query, searchTitles])
+
+	const displayItems = useMemo(() => {
+		const items: Array<{
+			type: "recent" | "search"
+			id: string
+			title: string
+			folder: string
+			filePath: string
+		}> = []
+
+		if (!query.trim()) {
+			for (const filePath of recentFilePaths) {
+				const folderParts = filePath
+					.replace(vault?.path ?? "", "")
+					.split("/")
+					.filter(Boolean)
+				folderParts.pop()
+				items.push({
+					type: "recent",
+					id: filePath,
+					title: titleFromPath(filePath),
+					folder: folderParts.join("/"),
+					filePath,
+				})
+			}
+		} else {
+			for (const result of searchResults) {
+				items.push({
+					type: "search",
+					id: result.id,
+					title: result.title,
+					folder: result.folder,
+					filePath: `${vault?.path}/${result.id}`,
+				})
+			}
+		}
+
+		return items
+	}, [query, recentFilePaths, searchResults, vault?.path])
+
+	useEffect(() => {
+		if (quickFinderOpen) {
+			setQuery("")
+			setSelectedIndex(0)
+			setTimeout(() => inputRef.current?.focus(), 50)
+		}
+	}, [quickFinderOpen])
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: resetting selection when query changes
+	useEffect(() => {
+		setSelectedIndex(0)
+	}, [query])
+
+	const handleCreateNote = useCallback(async () => {
+		if (!vault || !query.trim()) return
+		const filePath = await createFile(vault.path, query.trim())
+		openTab(filePath)
+		toggleQuickFinder()
+	}, [vault, query, createFile, openTab, toggleQuickFinder])
+
 	const handleSelect = useCallback(
-		(filePath: string) => {
-			openTab(filePath)
+		(filePath: string, newTab: boolean = false, split: boolean = false) => {
+			if (split && vault) {
+				splitPane(useWorkspaceStore.getState().activePaneId ?? "", "horizontal")
+			}
+			const opts: OpenTabOptions | undefined =
+				newTab || split
+					? { paneId: useWorkspaceStore.getState().activePaneId ?? undefined }
+					: undefined
+			openTab(filePath, opts)
 			toggleQuickFinder()
 		},
-		[openTab, toggleQuickFinder],
+		[openTab, splitPane, toggleQuickFinder, vault],
 	)
 
-	const handleCreateNote = useCallback(
-		async (name: string) => {
-			if (!vault || !name.trim()) return
-			const filePath = await createFile(vault.path, name.trim())
-			openTab(filePath)
-			toggleQuickFinder()
+	const handleKeyDown = useCallback(
+		(e: React.KeyboardEvent) => {
+			if (e.key === "ArrowDown") {
+				e.preventDefault()
+				setSelectedIndex((i) => Math.min(i + 1, displayItems.length - 1))
+			} else if (e.key === "ArrowUp") {
+				e.preventDefault()
+				setSelectedIndex((i) => Math.max(i - 1, 0))
+			} else if (e.key === "Enter") {
+				e.preventDefault()
+				const item = displayItems[selectedIndex]
+				if (item) {
+					const newTab = e.metaKey || e.ctrlKey
+					const split = e.metaKey && e.shiftKey
+					handleSelect(item.filePath, newTab, split)
+				}
+			}
 		},
-		[vault, createFile, openTab, toggleQuickFinder],
+		[displayItems, selectedIndex, handleSelect],
+	)
+
+	const handleInputKeyDown = useCallback(
+		(e: React.KeyboardEvent) => {
+			if (e.key === "Enter" && e.shiftKey) {
+				e.preventDefault()
+				handleCreateNote()
+			} else {
+				handleKeyDown(e)
+			}
+		},
+		[handleKeyDown, handleCreateNote],
+	)
+
+	const handleItemClick = useCallback(
+		(filePath: string) => {
+			handleSelect(filePath)
+		},
+		[handleSelect],
 	)
 
 	if (!vault) return null
 
-	const vaultPath = vault.path
-
 	return (
-		<Dialog open={quickFinderOpen} onOpenChange={() => toggleQuickFinder}>
-			<DialogContent className="p-10 max-h-[600px]  md:max-w-[500px] lg:max-w-[700px]">
-				<DialogHeader>
-					<DialogTitle>
-						<Input
-							placeholder="Search or create note..."
-							onChange={(e) => handleQueryChange(e.target.value)}
-						/>
-					</DialogTitle>
-				</DialogHeader>
-				{results ? (
-					<>
-						{recentFilePaths.map((filePath: string) => {
-							const relPath = relativePath(filePath, vaultPath)
-							const folder = parentFolder(relPath)
+		<Dialog open={quickFinderOpen} onOpenChange={() => toggleQuickFinder()}>
+			<DialogContent
+				className="p-2 max-h-[900px] w-[1000px] gap-0"
+				showCloseButton={false}
+				onKeyDown={handleInputKeyDown}
+			>
+				<DialogTitle className="sr-only">Quick Finder</DialogTitle>
+				<DialogDescription className="sr-only">
+					Search and open files in your vault
+				</DialogDescription>
 
-							return (
-								<div key={filePath} value={relPath} onClick={() => handleSelect(filePath)}>
-									<span className="flex-1 truncate">{titleFromPath(filePath)}</span>
+				<div className="flex items-center border-b border-border px-1 pb-2">
+					<Input
+						ref={inputRef}
+						type="text"
+						value={query}
+						onChange={(e) => setQuery(e.target.value)}
+						placeholder="Search files..."
+						className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+					/>
+					<Button
+						type="button"
+						variant="ghost"
+						size="sm"
+						onClick={() => toggleQuickFinder()}
+						className="p-1 h-auto hover:bg-transparent hover:text-foreground"
+					>
+						<XIcon className="size-4 text-muted-foregound" />
+					</Button>
+				</div>
 
-									{folder && (
-										<span className="flex items-center gap-1 text-xs text-muted-foreground">
-											{folder}
-										</span>
-									)}
+				<div ref={resultsRef} className="overflow-y-auto max-h-[350px] py-1">
+					{displayItems.length === 0 ? (
+						<div className="px-3 py-8 text-center text-sm text-muted-foreground">
+							No results found
+						</div>
+					) : (
+						displayItems.map((item, index) => (
+							<Button
+								variant="ghost"
+								key={`${item.type}-${item.id}`}
+								type="button"
+								onClick={() => handleItemClick(item.filePath)}
+								className={`flex items-center justify-between w-full px-3 py-2 cursor-pointer text-left ${
+									index === selectedIndex ? "bg-accent/10" : "hover:bg-muted"
+								}`}
+							>
+								<div className="flex items-center gap-2 min-w-0">
+									<span className="truncate text-sm">{item.title}</span>
 								</div>
-							)
-						})}
+								{item.folder && (
+									<span className="text-xs text-muted-foreground truncate ml-2">{item.folder}</span>
+								)}
+							</Button>
+						))
+					)}
+				</div>
 
-						{noteFiles.map((file) => {
-							const relPath = relativePath(file.path, vaultPath)
-							const folder = parentFolder(relPath)
-
-							return (
-								<div key={file.path} value={relPath} onClick={() => handleSelect(file.path)}>
-									<span className="flex-1 truncate">{titleFromPath(file.path)}</span>
-
-									{folder && (
-										<span className="flex items-center gap-1 text-xs text-muted-foreground">
-											{folder}
-										</span>
-									)}
-								</div>
-							)
-						})}
-					</>
-				) : (
-					<span>No results found</span>
-				)}
-
-				<DialogFooter className="flex items-center justify-center w-full text-xs">
-					<Kbd>Shift + Enter</Kbd>
-					to create a new note
-					<Kbd>Cntrl + Enter to open the note in a new tab</Kbd>
-				</DialogFooter>
+				<div className="flex items-center justify-between px-3 py-2 text-xs text-muted-foreground bg-muted/30">
+					<div className="flex items-center gap-1">
+						<Kbd className="px-1.5 py-0.5 text-[10px]">↑</Kbd>
+						<Kbd className="px-1.5 py-0.5 text-[10px]">↓</Kbd>
+						<span>to navigate</span>
+					</div>
+					<div className="flex items-center gap-1">
+						<Kbd className="px-1.5 py-0.5 text-[10px]">Enter</Kbd>
+						<span>open</span>
+					</div>
+					<div className="flex items-center gap-1">
+						<Kbd className="px-1.5 py-0.5 text-[10px]">Shift+Enter</Kbd>
+						<span>create</span>
+					</div>
+					<div className="flex items-center gap-1">
+						<Kbd className="px-1.5 py-0.5 text-[10px]">⌘</Kbd>
+						<Kbd className="px-1.5 py-0.5 text-[10px]">Enter</Kbd>
+						<span>new tab</span>
+					</div>
+				</div>
 			</DialogContent>
 		</Dialog>
 	)

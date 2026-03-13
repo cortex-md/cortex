@@ -1,7 +1,14 @@
-import { useTagsStore, useVaultStore, useWorkspaceStore } from "@cortex/core"
+import { useVaultStore, useWorkspaceStore } from "@cortex/core"
 import { useSearchStore } from "@cortex/search"
-import { Button, Input } from "@cortex/ui"
-import { FileIcon, FolderIcon, SearchIcon, TagIcon, XIcon } from "lucide-react"
+import {
+	Button,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+	Input,
+} from "@cortex/ui"
+import { FileIcon, FilterIcon, FolderIcon, SearchIcon, TagIcon } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 function highlightSnippet(snippet: string, query: string): React.ReactNode {
@@ -34,29 +41,70 @@ function folderFromPath(filePath: string): string {
 	return parts.length > 1 ? parts.slice(0, -1).join("/") : ""
 }
 
+interface ParsedQuery {
+	text: string
+	tags: string[]
+	paths: string[]
+	files: string[]
+}
+
+function parseSearchQuery(raw: string): ParsedQuery {
+	const result: ParsedQuery = { text: "", tags: [], paths: [], files: [] }
+	const parts: string[] = []
+
+	const regex = /(tag|path|file):(\S+)/gi
+	let lastIndex = 0
+	let match: RegExpExecArray | null = null
+
+	match = regex.exec(raw)
+	while (match !== null) {
+		if (match.index > lastIndex) {
+			parts.push(raw.slice(lastIndex, match.index))
+		}
+		const prefix = match[1].toLowerCase()
+		const value = match[2]
+		if (prefix === "tag") result.tags.push(value)
+		else if (prefix === "path") result.paths.push(value)
+		else if (prefix === "file") result.files.push(value)
+		lastIndex = regex.lastIndex
+		match = regex.exec(raw)
+	}
+
+	if (lastIndex < raw.length) {
+		parts.push(raw.slice(lastIndex))
+	}
+
+	result.text = parts.join("").trim()
+	return result
+}
+
 export function SearchSidebar() {
 	const { query, results, search, setQuery, indexing, documentCount } = useSearchStore()
 	const { openTab } = useWorkspaceStore()
 	const vault = useVaultStore((s) => s.vault)
-	const getAllTags = useTagsStore((s) => s.getAllTags)
 	const inputRef = useRef<HTMLInputElement>(null)
 	const [localQuery, setLocalQuery] = useState(query)
-	const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null)
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-
-	const allTags = getAllTags()
 
 	useEffect(() => {
 		inputRef.current?.focus()
 	}, [])
 
 	const runSearch = useCallback(
-		(queryValue: string, tag: string | null) => {
-			if (tag) {
-				search(queryValue, { tags: [tag] })
-			} else {
-				setQuery(queryValue)
+		(rawQuery: string) => {
+			const parsed = parseSearchQuery(rawQuery)
+
+			if (!parsed.text && parsed.tags.length === 0 && parsed.files.length === 0) {
+				setQuery("")
+				return
 			}
+
+			const searchText = parsed.text || parsed.files.join(" ") || parsed.tags.join(" ") || " "
+
+			search(searchText, {
+				tags: parsed.tags.length > 0 ? parsed.tags : undefined,
+				folder: parsed.paths.length > 0 ? parsed.paths[0] : undefined,
+			})
 		},
 		[search, setQuery],
 	)
@@ -66,18 +114,19 @@ export function SearchSidebar() {
 			setLocalQuery(value)
 			if (debounceRef.current) clearTimeout(debounceRef.current)
 			debounceRef.current = setTimeout(() => {
-				runSearch(value, activeTagFilter)
+				runSearch(value)
 			}, 150)
 		},
-		[runSearch, activeTagFilter],
+		[runSearch],
 	)
 
-	const handleTagFilterSelect = useCallback(
-		(tag: string | null) => {
-			setActiveTagFilter(tag)
-			runSearch(localQuery, tag)
+	const handleInsertFilter = useCallback(
+		(prefix: string) => {
+			const newQuery = `${localQuery} ${prefix}`.trimStart()
+			setLocalQuery(newQuery)
+			inputRef.current?.focus()
 		},
-		[runSearch, localQuery],
+		[localQuery],
 	)
 
 	const handleResultClick = useCallback(
@@ -88,66 +137,79 @@ export function SearchSidebar() {
 		[vault, openTab],
 	)
 
+	const parsed = parseSearchQuery(localQuery)
+	const hasFilters = parsed.tags.length > 0 || parsed.paths.length > 0 || parsed.files.length > 0
+
 	return (
 		<div className="flex flex-col h-full">
 			<div className="px-3 py-2 border-b border-border">
-				<div className="relative">
-					<SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-					<Input
-						ref={inputRef}
-						type="text"
-						value={localQuery}
-						onChange={(e) => handleQueryChange(e.target.value)}
-						placeholder="Search in vault..."
-						className="w-full h-8 pl-8 pr-3 text-sm bg-input rounded-md border border-border focus:border-ring focus:outline-none placeholder:text-muted-foreground"
-					/>
-				</div>
-
-				{allTags.length > 0 && (
-					<div className="mt-2 flex flex-wrap gap-1">
-						{allTags.slice(0, 8).map((entry) => (
-							<button
-								key={entry.tag}
-								type="button"
-								onClick={() =>
-									handleTagFilterSelect(activeTagFilter === entry.tag ? null : entry.tag)
-								}
-								className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
-									activeTagFilter === entry.tag
-										? "bg-brand/20 border-brand/40 text-brand"
-										: "bg-transparent border-border/60 text-muted-foreground hover:border-border hover:text-text-primary"
-								}`}
-							>
-								<TagIcon className="size-2.5" />
-								{entry.tag}
-							</button>
-						))}
+				<div className="flex items-center gap-1">
+					<div className="relative flex-1">
+						<SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+						<Input
+							ref={inputRef}
+							type="text"
+							value={localQuery}
+							onChange={(e) => handleQueryChange(e.target.value)}
+							placeholder="Search in vault..."
+							className="w-full h-8 pl-8 pr-3 text-sm bg-input rounded-md border border-border focus:border-ring focus:outline-none placeholder:text-muted-foreground"
+						/>
 					</div>
-				)}
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button
+								variant="ghost"
+								size="sm"
+								className="h-8 w-8 p-0 flex-shrink-0"
+								title="Add filter"
+							>
+								<FilterIcon className="size-3.5" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DropdownMenuItem onSelect={() => handleInsertFilter("tag:")}>
+								<TagIcon />
+								Filter by tag
+								<span className="ml-auto text-[10px] text-muted-foreground">tag:name</span>
+							</DropdownMenuItem>
+							<DropdownMenuItem onSelect={() => handleInsertFilter("path:")}>
+								<FolderIcon />
+								Filter by path
+								<span className="ml-auto text-[10px] text-muted-foreground">path:folder</span>
+							</DropdownMenuItem>
+							<DropdownMenuItem onSelect={() => handleInsertFilter("file:")}>
+								<FileIcon />
+								Filter by file name
+								<span className="ml-auto text-[10px] text-muted-foreground">file:name</span>
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</div>
 
 				<div className="mt-1.5 flex items-center justify-between">
 					<span className="text-[10px] text-muted-foreground">
 						{indexing
 							? "Indexing..."
-							: query || activeTagFilter
+							: localQuery.trim()
 								? `${results.length} result${results.length !== 1 ? "s" : ""}`
 								: `${documentCount} notes indexed`}
 					</span>
-					{activeTagFilter && (
-						<button
-							type="button"
-							onClick={() => handleTagFilterSelect(null)}
-							className="inline-flex items-center gap-1 text-[10px] text-brand hover:text-brand/70 transition-colors"
-						>
-							<XIcon className="size-3" />
-							Clear filter
-						</button>
+					{hasFilters && (
+						<span className="text-[10px] text-brand">
+							{parsed.tags.map((t) => `tag:${t}`).join(" ")}
+							{parsed.paths.map((p) => ` path:${p}`).join("")}
+							{parsed.files.map((f) => ` file:${f}`).join("")}
+						</span>
 					)}
 				</div>
+
+				<p className="mt-1 text-[9px] text-muted-foreground/70">
+					Use tag: path: or file: to filter results
+				</p>
 			</div>
 
 			<div className="flex-1 overflow-y-auto">
-				{results.length === 0 && (query || activeTagFilter) && !indexing && (
+				{results.length === 0 && localQuery.trim() && !indexing && (
 					<div className="flex items-center justify-center p-8 text-xs text-muted-foreground">
 						No results found
 					</div>
@@ -175,7 +237,7 @@ export function SearchSidebar() {
 							)}
 							{result.snippet && (
 								<p className="mt-1 ml-5 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-									{highlightSnippet(result.snippet, localQuery)}
+									{highlightSnippet(result.snippet, parsed.text)}
 								</p>
 							)}
 						</Button>

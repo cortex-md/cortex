@@ -6,6 +6,7 @@ export {
 	type SnapshotTrigger,
 } from "./noteCache"
 export { type AppState, useAppStore } from "./stores/appStore"
+export { type BookmarksState, useBookmarksStore } from "./stores/bookmarksStore"
 export {
 	type CursorPosition,
 	type EditorMode,
@@ -13,6 +14,7 @@ export {
 	useEditorStore,
 } from "./stores/editorStore"
 export {
+	type TagColor,
 	type TagEntry,
 	type TagsState,
 	useTagsStore,

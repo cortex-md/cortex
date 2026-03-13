@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react"
 
 function TagRow({
 	tag,
+	color,
 	filePaths,
 	vaultPath,
 	isExpanded,
@@ -12,6 +13,7 @@ function TagRow({
 	onOpenFile,
 }: {
 	tag: string
+	color: string | null
 	filePaths: string[]
 	vaultPath: string
 	isExpanded: boolean
@@ -28,7 +30,14 @@ function TagRow({
 				<ChevronRightIcon
 					className={`size-3 text-muted-foreground flex-shrink-0 transition-transform duration-150 ${isExpanded ? "rotate-90" : ""}`}
 				/>
-				<TagIcon className="size-3 text-muted-foreground flex-shrink-0" />
+				{color ? (
+					<span
+						className="inline-block size-2.5 rounded-full flex-shrink-0"
+						style={{ backgroundColor: color }}
+					/>
+				) : (
+					<TagIcon className="size-3 text-muted-foreground flex-shrink-0" />
+				)}
 				<span className="flex-1 text-xs font-medium truncate">{tag}</span>
 				<Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 min-w-[20px]">
 					{filePaths.length}
@@ -162,6 +171,7 @@ export function TagsSidebar() {
 						<TagRow
 							key={entry.tag}
 							tag={entry.tag}
+							color={entry.color}
 							filePaths={entry.filePaths}
 							vaultPath={vault.path}
 							isExpanded={expandedTags.has(entry.tag)}

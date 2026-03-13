@@ -1,4 +1,4 @@
-import type { Tab } from "@cortex/core"
+import type { Pane, Tab } from "@cortex/core"
 import { noteCache, useEditorStore, useTagsStore, useWorkspaceStore } from "@cortex/core"
 import type { CursorInfo, EditorConfig } from "@cortex/editor"
 import { EditorView, ReadingView, SideBySideView } from "@cortex/editor"
@@ -11,6 +11,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuShortcut,
+	Kbd,
 } from "@cortex/ui"
 import { ClipboardCopyIcon, FolderIcon, PinIcon, PinOffIcon, TagIcon, XIcon } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -116,6 +117,7 @@ interface FileTagsStripProps {
 
 function FileTagsStrip({ filePath }: FileTagsStripProps) {
 	const getTagsForFile = useTagsStore((s) => s.getTagsForFile)
+	const getTagColor = useTagsStore((s) => s.getTagColor)
 	const tags = getTagsForFile(filePath)
 
 	if (tags.length === 0) return null
@@ -123,14 +125,23 @@ function FileTagsStrip({ filePath }: FileTagsStripProps) {
 	return (
 		<div className="flex items-center gap-1.5 px-3 py-1 border-b border-border/50 bg-bg-primary flex-wrap">
 			<TagIcon className="size-3 text-muted-foreground flex-shrink-0" />
-			{tags.map((tag) => (
-				<span
-					key={tag}
-					className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-brand/10 text-brand border border-brand/20"
-				>
-					{tag}
-				</span>
-			))}
+			{tags.map((tag) => {
+				const color = getTagColor(tag)
+				return (
+					<span
+						key={tag}
+						className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-brand/10 text-brand border border-brand/20"
+					>
+						{color && (
+							<span
+								className="inline-block size-2 rounded-full flex-shrink-0"
+								style={{ backgroundColor: color }}
+							/>
+						)}
+						{tag}
+					</span>
+				)
+			})}
 		</div>
 	)
 }
@@ -143,7 +154,11 @@ export function PaneView({ paneId }: Props) {
 	const { panes, activePaneId, activateTab, closeTab, pinTab } = useWorkspaceStore()
 	const { updateCursor, setActiveFile } = useEditorStore()
 	const editorConfig = useEditorConfig()
-	const pane = panes[paneId]
+
+	const rawPane = panes[paneId]
+	const paneActiveTabId = rawPane?.activeTabId ?? null
+	const pane: Pane | null = rawPane ? { ...rawPane, activeTabId: paneActiveTabId } : null
+
 	const [fallbackMenu, setFallbackMenu] = useState<{
 		tabId: string
 		x: number
@@ -339,8 +354,18 @@ export function PaneView({ paneId }: Props) {
 
 			<div className="flex-1 overflow-hidden relative">
 				{pane.tabs.length === 0 ? (
-					<div className="flex items-center justify-center h-full text-xs text-text-muted">
+					<div className="flex flex-col items-center justify-center gap-5 h-full text-sm text-text-muted">
 						<p>No open files</p>
+						<p className="flex gap-1 items-center">
+							<Kbd>⌘</Kbd>
+							<Kbd>n</Kbd>
+							<span>New File</span>
+						</p>
+						<p className="flex gap-1 items-center">
+							<Kbd>⌘</Kbd>
+							<Kbd>o</Kbd>
+							<span>Search notes</span>
+						</p>
 					</div>
 				) : (
 					pane.tabs.map((tab) => (

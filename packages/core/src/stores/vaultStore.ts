@@ -26,6 +26,7 @@ export interface VaultState {
 	deleteFile: (filePath: string) => Promise<void>
 	renameFile: (oldPath: string, newName: string) => Promise<string>
 	duplicateFile: (filePath: string) => Promise<string>
+	openDailyNote: () => Promise<string | null>
 }
 
 export const useVaultStore = create<VaultState>((set, get) => ({
@@ -141,5 +142,29 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 		await platform.fs.writeFile(newPath, content)
 		await get().refreshFiles()
 		return newPath
+	},
+
+	openDailyNote: async () => {
+		const { vault, files } = get()
+		if (!vault) return null
+
+		const platform = getPlatform()
+		const today = new Date()
+		const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`
+		const dailyDir = `${vault.path}/Daily`
+		const filePath = `${dailyDir}/${dateStr}.md`
+
+		const existingFile = files.find((f) => f.path === filePath)
+		if (existingFile) return filePath
+
+		const dailyDirExists = files.some((f) => f.isDir && f.path === dailyDir)
+		if (!dailyDirExists) {
+			await platform.fs.createDir(dailyDir)
+		}
+
+		const frontmatter = `---\ndate: ${dateStr}\ntags:\n  - daily\n---\n\n# ${dateStr}\n\n`
+		await platform.fs.writeFile(filePath, frontmatter)
+		await get().refreshFiles()
+		return filePath
 	},
 }))

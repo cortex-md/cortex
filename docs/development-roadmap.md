@@ -75,14 +75,14 @@ Fix broken features and wire up settings that exist in schema but don't work.
 
 ---
 
-## Phase 9 — Search & Discovery
+## Phase 9 — Search & Discovery ✅
 
 | Task | Status | Description |
 |------|--------|-------------|
 | 9A: Search package + indexing | ✅ | `@cortex/search` with MiniSearch, preprocessor, vault indexing |
-| 9B: Search sidebar UI | ✅ | Search input with debounce, highlighted snippets, results list |
+| 9B: Search sidebar UI | ✅ | Search input with debounce, highlighted snippets, tag filter chips |
 | 9C: Vault-wide search (Cmd+Shift+F) | ✅ | Hotkey focuses search sidebar, indexed full-text search |
-| 9D: Bookmarks system | — | BookmarkStore, `.cortex/bookmarks.json` |
+| 9D: Bookmarks system | ✅ | BookmarksStore with `.cortex/bookmarks.json`, sidebar with remove |
 
 **Spec sections**: Search, Bookmarks
 
@@ -92,10 +92,10 @@ Fix broken features and wire up settings that exist in schema but don't work.
 
 | Task | Status | Description |
 |------|--------|-------------|
-| 10A: TagsStore + persistence | — | `tags.json` in `.cortex/` |
-| 10B: Tag Manager sidebar | — | Browse/manage tags |
-| 10C: Tag Picker (Cmd+T) | — | Quick-add tags to notes |
-| 10D: Tag chips in UI | — | Tags in file tree + editor |
+| 10A: TagsStore + in-memory index | ✅ | Extracts from frontmatter YAML + inline `#tags`, builds on vault open |
+| 10B: Tag Manager sidebar | ✅ | Browse tags with filter, expandable file lists, active tag filter |
+| 10C: Tag Picker (Cmd+T) | ✅ | Quick-add tags to notes via modal |
+| 10D: Tag chips in UI | ✅ | Tags in file tree + editor |
 
 **Spec sections**: Tags
 
@@ -105,10 +105,10 @@ Fix broken features and wire up settings that exist in schema but don't work.
 
 | Task | Status | Description |
 |------|--------|-------------|
-| 11A: Reading View | — | Markdown → styled HTML rendering |
-| 11B: Hotkeys customization | — | UI for rebinding shortcuts |
-| 11C: macOS Menubar | — | Native Rust menu |
-| 11D: Editor font family | — | Separate from UI font |
+| 11A: Reading View | ✅ | Markdown → styled HTML rendering |
+| 11B: Hotkeys customization | ✅ | UI for rebinding shortcuts |
+| 11C: macOS Menubar | ✅ | Native Rust menu |
+| 11D: Editor font family | ✅ | Separate from UI font (uiFontFamily + editorFontFamily) |
 
 **Spec sections**: Editor Modes, Keyboard Shortcuts, System Integration
 
@@ -136,5 +136,5 @@ Fix broken features and wire up settings that exist in schema but don't work.
 | Export | PDF, HTML export |
 | Version history | File revision tracking |
 | Backlinks | Bidirectional link graph |
-| Daily notes | Date-based note creation |
+| Daily notes | ✅ Date-based note creation (Cmd+D, Daily/ folder) |
 | Templates | Note templates system |

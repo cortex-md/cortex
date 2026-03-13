@@ -1,6 +1,7 @@
 import {
 	noteCache,
 	useAppStore,
+	useBookmarksStore,
 	useEditorStore,
 	useTagsStore,
 	useUIStore,
@@ -14,6 +15,7 @@ import { getThemeManager } from "@cortex/theme"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import {
 	BookmarkIcon,
+	CalendarIcon,
 	FileIcon,
 	FolderClosed,
 	PanelLeftIcon,
@@ -24,10 +26,11 @@ import {
 	TerminalIcon,
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { BookmarksSidebar } from "./features/bookmarks/BookmarksSidebar"
 import { CommandPalette } from "./features/command-palette/CommandPalette"
 import { registerCommand } from "./features/command-palette/commandRegistry"
 import { FileSidebar } from "./features/file-explorer/FileSidebar"
-import { SidebarNav } from "./features/file-explorer/SidebarNav"
+import { type NavItem, SidebarNav } from "./features/file-explorer/SidebarNav"
 import { EmptyVaultLayout } from "./features/layout/empty-vault-layout"
 import { SplitPaneView } from "./features/layout/SplitPane"
 import { QuickFinder } from "./features/quick-finder/QuickFinder"
@@ -36,6 +39,7 @@ import { applyAppearanceSettings } from "./features/settings/applyAppearance"
 import { SettingsModal } from "./features/settings/SettingsModal"
 import { PaneView } from "./features/split-view/PaneView"
 import { StatusBar } from "./features/statusbar/StatusBar"
+import { TagPicker } from "./features/tags/TagPicker"
 import { TagsSidebar } from "./features/tags/TagsSidebar"
 
 const NAV_ITEMS: NavItem[] = [
@@ -49,7 +53,8 @@ const NAV_BOTTOM_ITEMS: NavItem[] = [{ id: "settings", icon: SettingsIcon, label
 
 export default function App() {
 	const [settingsOpen, setSettingsOpen] = useState(false)
-	const { vault, files, recentVaults, openVault, loadRecentVaults, createFile } = useVaultStore()
+	const { vault, files, recentVaults, openVault, loadRecentVaults, createFile, openDailyNote } =
+		useVaultStore()
 	const { loadAppInfo } = useAppStore()
 	const { cursor, mode, setMode, flushActive } = useEditorStore()
 	const { activeFilePath } = useEditorStore()
@@ -77,12 +82,16 @@ export default function App() {
 		toggleLeftSidebar,
 		toggleQuickFinder,
 		toggleCommandPalette,
+		toggleTagPicker,
 	} = useUIStore()
 	const { settings, loadSettings } = useSettingsStore()
 	const loadOverrides = useHotkeysStore((s) => s.loadOverrides)
 	const indexVault = useSearchStore((s) => s.indexVault)
 	const resetSearch = useSearchStore((s) => s.reset)
 	const buildTagIndex = useTagsStore((s) => s.buildIndex)
+	const loadTagColors = useTagsStore((s) => s.loadTagColors)
+	const loadBookmarks = useBookmarksStore((s) => s.loadBookmarks)
+	const resetBookmarks = useBookmarksStore((s) => s.reset)
 
 	const sidebarResizing = useRef(false)
 	const sidebarResizeStart = useRef({ x: 0, width: 0 })
@@ -184,6 +193,22 @@ export default function App() {
 		useCallback(() => setSettingsOpen(true), []),
 	)
 
+	useHotkey(
+		"tags.toggle-picker",
+		useCallback(() => {
+			toggleTagPicker()
+		}, [toggleTagPicker]),
+	)
+
+	useHotkey(
+		"navigate.daily-note",
+		useCallback(() => {
+			openDailyNote().then((filePath) => {
+				if (filePath) openTab(filePath)
+			})
+		}, [openDailyNote, openTab]),
+	)
+
 	useEffect(() => {
 		const unregister = [
 			registerCommand({
@@ -243,6 +268,24 @@ export default function App() {
 				icon: TerminalIcon,
 				execute: toggleCommandPalette,
 			}),
+			registerCommand({
+				id: "tags.toggle-picker",
+				label: "Tag Picker",
+				category: "Tags",
+				icon: TagIcon,
+				execute: toggleTagPicker,
+			}),
+			registerCommand({
+				id: "navigate.daily-note",
+				label: "Open Daily Note",
+				category: "Navigate",
+				icon: CalendarIcon,
+				execute: () => {
+					openDailyNote().then((filePath) => {
+						if (filePath) openTab(filePath)
+					})
+				},
+			}),
 		]
 		return () => {
 			for (const fn of unregister) fn()
@@ -251,9 +294,11 @@ export default function App() {
 		vault,
 		createFile,
 		openTab,
+		openDailyNote,
 		toggleQuickFinder,
 		toggleLeftSidebar,
 		toggleCommandPalette,
+		toggleTagPicker,
 		leftSidebarCollapsed,
 		setLeftSidebarView,
 	])
@@ -291,12 +336,25 @@ export default function App() {
 		if (!vault) {
 			reset()
 			resetSearch()
+			resetBookmarks()
 			return
 		}
 		loadWorkspace(vault.path)
 		loadSettings(vault.path)
 		loadOverrides(vault.path)
-	}, [vault, loadWorkspace, reset, resetSearch, loadSettings, loadOverrides])
+		loadBookmarks(vault.path)
+		loadTagColors(vault.path)
+	}, [
+		vault,
+		loadWorkspace,
+		reset,
+		resetSearch,
+		resetBookmarks,
+		loadSettings,
+		loadOverrides,
+		loadBookmarks,
+		loadTagColors,
+	])
 
 	useEffect(() => {
 		if (!vault || files.length === 0) return
@@ -398,11 +456,7 @@ export default function App() {
 							<div className="flex-1 overflow-hidden flex flex-col">
 								{leftSidebarView === "files" && <FileSidebar />}
 								{leftSidebarView === "search" && <SearchSidebar />}
-								{leftSidebarView === "bookmarks" && (
-									<div className="flex items-center justify-center p-8 text-xs text-text-muted">
-										<span>Bookmarks — coming soon</span>
-									</div>
-								)}
+								{leftSidebarView === "bookmarks" && <BookmarksSidebar />}
 								{leftSidebarView === "tags" && <TagsSidebar />}
 							</div>
 						</aside>
@@ -428,6 +482,7 @@ export default function App() {
 			<SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
 			<QuickFinder />
 			<CommandPalette />
+			<TagPicker />
 		</div>
 	)
 }
