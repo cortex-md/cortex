@@ -21,31 +21,28 @@ function TagRow({
 	onOpenFile: (filePath: string) => void
 }) {
 	return (
-		<div className="border-b border-border/50 last:border-0">
-			<button
-				type="button"
-				className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-accent/50 transition-colors cursor-pointer"
+		<div>
+			<Button
+  			size={"sm"}
+  			variant={"ghost"}
+  			className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-accent/50 transition-colors cursor-pointer"
 				onClick={() => onToggle(tag)}
 			>
 				<ChevronRightIcon
 					className={`size-3 text-muted-foreground flex-shrink-0 transition-transform duration-150 ${isExpanded ? "rotate-90" : ""}`}
 				/>
-				{color ? (
-					<span
-						className="inline-block size-2.5 rounded-full flex-shrink-0"
-						style={{ backgroundColor: color }}
-					/>
-				) : (
-					<TagIcon className="size-3 text-muted-foreground flex-shrink-0" />
-				)}
+				<span
+					className="inline-block size-2.5 rounded-full flex-shrink-0"
+					style={{ backgroundColor: color ? color : "var(--accent)"}}
+				/>
 				<span className="flex-1 text-xs font-medium truncate">{tag}</span>
 				<Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 min-w-[20px]">
 					{filePaths.length}
 				</Badge>
-			</button>
+			</Button>
 
 			{isExpanded && (
-				<div className="pb-1">
+				<div className="pb-1 px-2">
 					{filePaths.map((filePath) => {
 						const relPath = filePath.startsWith(vaultPath)
 							? filePath.slice(vaultPath.length + 1)
@@ -53,15 +50,16 @@ function TagRow({
 						const fileName = relPath.split("/").pop()?.replace(/\.md$/, "") ?? relPath
 
 						return (
-							<button
-								key={filePath}
-								type="button"
-								className="w-full flex items-center gap-2 pl-8 pr-3 py-1 text-left hover:bg-accent/50 transition-colors cursor-pointer"
+							<Button
+  							size={"sm"}
+  							variant={"ghost"}
+  							key={filePath}
+								className="w-full flex items-center justify-start! gap-2 pl-20 pr-3 py-1 text-left hover:bg-accent/50 transition-colors cursor-pointer"
 								onClick={() => onOpenFile(filePath)}
 							>
 								<FileIcon className="size-3 text-muted-foreground flex-shrink-0" />
 								<span className="text-xs text-muted-foreground truncate">{fileName}</span>
-							</button>
+							</Button>
 						)
 					})}
 				</div>
@@ -122,7 +120,7 @@ export function TagsSidebar() {
 						value={filterQuery}
 						onChange={(e) => setFilterQuery(e.target.value)}
 						placeholder="Filter tags..."
-						className="w-full h-8 pl-8 pr-3 text-sm bg-input rounded-md border border-border focus:border-ring focus:outline-none placeholder:text-muted-foreground"
+						className="w-full h-8 pl-8 pr-3 text-sm rounded-md border border-border focus:border-ring focus:outline-none placeholder:text-muted-foreground"
 					/>
 				</div>
 				<div className="mt-1.5 text-[10px] text-muted-foreground">
@@ -167,19 +165,22 @@ export function TagsSidebar() {
 						)}
 					</div>
 				) : (
-					filteredTags.map((entry) => (
-						<TagRow
-							key={entry.tag}
-							tag={entry.tag}
-							color={entry.color}
-							filePaths={entry.filePaths}
-							vaultPath={vault.path}
-							isExpanded={expandedTags.has(entry.tag)}
-							onToggle={handleToggleExpand}
-							onOpenFile={handleOpenFile}
-						/>
-					))
-				)}
+
+  				<div className="flex flex-col gap-1 px-1 pt-2">
+              {filteredTags.map((entry) => (
+                <TagRow
+                  key={entry.tag}
+                  tag={entry.tag}
+                  color={entry.color}
+                  filePaths={entry.filePaths}
+                  vaultPath={vault.path}
+                  isExpanded={expandedTags.has(entry.tag)}
+                  onToggle={handleToggleExpand}
+                  onOpenFile={handleOpenFile}
+                />
+              ))}
+  				</div>
+					)}
 			</div>
 		</div>
 	)

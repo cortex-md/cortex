@@ -4,6 +4,6 @@ target
 .DS_Store
 *.tsbuildinfo
 bun.lock
-sync/
 .next/
 docs/internal/
+sync/

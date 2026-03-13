@@ -5,10 +5,11 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuLabel,
 	DropdownMenuTrigger,
 	Input,
 } from "@cortex/ui"
-import { FileIcon, FilterIcon, FolderIcon, SearchIcon, TagIcon } from "lucide-react"
+import { FileIcon, FilterIcon, FolderIcon, SearchIcon } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 function highlightSnippet(snippet: string, query: string): React.ReactNode {
@@ -152,7 +153,7 @@ export function SearchSidebar() {
 							value={localQuery}
 							onChange={(e) => handleQueryChange(e.target.value)}
 							placeholder="Search in vault..."
-							className="w-full h-8 pl-8 pr-3 text-sm bg-input rounded-md border border-border focus:border-ring focus:outline-none placeholder:text-muted-foreground"
+							className="w-full h-8 pl-8 pr-3 text-sm rounded-md border border-border focus:border-ring focus:outline-none placeholder:text-muted-foreground"
 						/>
 					</div>
 					<DropdownMenu>
@@ -166,21 +167,21 @@ export function SearchSidebar() {
 								<FilterIcon className="size-3.5" />
 							</Button>
 						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end">
-							<DropdownMenuItem onSelect={() => handleInsertFilter("tag:")}>
-								<TagIcon />
-								Filter by tag
-								<span className="ml-auto text-[10px] text-muted-foreground">tag:name</span>
+						<DropdownMenuContent align="start" className="w-60">
+              <DropdownMenuLabel>
+                Filter options
+  						</DropdownMenuLabel>
+						<DropdownMenuItem className="text-sm" onSelect={() => handleInsertFilter("tag:")}>
+								<span>tag</span>
+								<span className="ml-auto text-muted-foreground">tag:name</span>
 							</DropdownMenuItem>
-							<DropdownMenuItem onSelect={() => handleInsertFilter("path:")}>
-								<FolderIcon />
-								Filter by path
-								<span className="ml-auto text-[10px] text-muted-foreground">path:folder</span>
+							<DropdownMenuItem className="text-sm" onSelect={() => handleInsertFilter("path:")}>
+								<span>path</span>
+								<span className="ml-auto text-muted-foreground">path:folder</span>
 							</DropdownMenuItem>
-							<DropdownMenuItem onSelect={() => handleInsertFilter("file:")}>
-								<FileIcon />
-								Filter by file name
-								<span className="ml-auto text-[10px] text-muted-foreground">file:name</span>
+							<DropdownMenuItem className="text-sm" onSelect={() => handleInsertFilter("file:")}>
+								<span>file name</span>
+								<span className="ml-auto text-muted-foreground">file:name</span>
 							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
@@ -188,11 +189,7 @@ export function SearchSidebar() {
 
 				<div className="mt-1.5 flex items-center justify-between">
 					<span className="text-[10px] text-muted-foreground">
-						{indexing
-							? "Indexing..."
-							: localQuery.trim()
-								? `${results.length} result${results.length !== 1 ? "s" : ""}`
-								: `${documentCount} notes indexed`}
+							{results.length !== 0 && `${results.length} result${results.length !== 1 ? "s" : ""}`}
 					</span>
 					{hasFilters && (
 						<span className="text-[10px] text-brand">
@@ -214,15 +211,15 @@ export function SearchSidebar() {
 						No results found
 					</div>
 				)}
-
-				{results.map((result) => {
+        <div className="px-1 pt-2 flex flex-col gap-1">
+          {results.map((result) => {
 					const folder = folderFromPath(result.id)
 					return (
 						<Button
-							variant={"ghost"}
-							type="button"
+  						size={"sm"}
+  						variant={"ghost"}
 							key={result.id}
-							className="w-full text-left px-3 py-2 hover:bg-accent border-b border-border/50 transition-colors"
+							className="w-full text-left px-3 py-2 hover:bg-accent transition-colors"
 							onClick={() => handleResultClick(result.id)}
 						>
 							<div className="flex items-center gap-1.5">
@@ -243,6 +240,7 @@ export function SearchSidebar() {
 						</Button>
 					)
 				})}
+				</div>
 			</div>
 		</div>
 	)

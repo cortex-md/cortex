@@ -66,6 +66,7 @@
 
 .cm-hr-line {
 	border-bottom: 1px solid var(--border);
+	padding: 0 40px !important;
 	min-height: 1px;
 }
 
@@ -77,7 +78,7 @@
 
 .cm-codeblock-line {
 	background: var(--bg-code);
-	padding-left: 16px;
+	padding-left: 40px;
 	padding-right: 40px;
 	position: relative;
 	font-family: var(--font-mono);
