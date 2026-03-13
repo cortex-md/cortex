@@ -1,37 +1,40 @@
 import { useAuthStore } from "@cortex/core"
-import { Button } from "@cortex/ui"
 import {
+	Button,
 	Card,
 	CardContent,
 	CardDescription,
 	CardHeader,
 	CardTitle,
+	Field,
+	FieldDescription,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
+	Input,
+	Separator,
 } from "@cortex/ui"
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@cortex/ui"
-import { Input } from "@cortex/ui"
 import { type FormEvent, useState } from "react"
-
-const DEFAULT_SERVER_URL = "http://localhost:8080"
 
 interface LoginPageProps {
 	onSwitchToRegister: () => void
+	onStayOffline: () => void
 }
 
-export function LoginPage({ onSwitchToRegister }: LoginPageProps) {
+export function LoginPage({ onSwitchToRegister, onStayOffline }: LoginPageProps) {
 	const { login, loading, error, clearError } = useAuthStore()
-	const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER_URL)
 	const [email, setEmail] = useState("")
 	const [password, setPassword] = useState("")
 
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault()
 		clearError()
-		await login(serverUrl, email, password).catch(() => {})
+		await login(email, password).catch(() => {})
 	}
 
 	return (
-		<div className="flex items-center justify-center flex-1">
-			<div className="w-full max-w-sm">
+		<div className="flex h-screen items-center justify-center bg-bg-primary text-text-primary">
+			<div className="w-full max-w-sm px-4 flex flex-col gap-5">
 				<Card>
 					<CardHeader>
 						<CardTitle>Login to Cortex</CardTitle>
@@ -40,16 +43,6 @@ export function LoginPage({ onSwitchToRegister }: LoginPageProps) {
 					<CardContent>
 						<form onSubmit={handleSubmit}>
 							<FieldGroup>
-								<Field>
-									<FieldLabel htmlFor="server-url">Server URL</FieldLabel>
-									<Input
-										id="server-url"
-										type="url"
-										value={serverUrl}
-										onChange={(e) => setServerUrl(e.target.value)}
-										disabled={loading}
-									/>
-								</Field>
 								<Field>
 									<FieldLabel htmlFor="email">Email</FieldLabel>
 									<Input
@@ -93,6 +86,10 @@ export function LoginPage({ onSwitchToRegister }: LoginPageProps) {
 						</form>
 					</CardContent>
 				</Card>
+				<Separator />
+				<Button onClick={onStayOffline} variant="outline">
+					Stay offline
+				</Button>
 			</div>
 		</div>
 	)

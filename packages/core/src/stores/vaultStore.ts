@@ -22,6 +22,7 @@ export interface VaultState {
 	closeVault: () => Promise<void>
 	refreshFiles: () => Promise<void>
 	loadRecentVaults: () => Promise<void>
+	removeRecentVault: (uuid: string) => Promise<void>
 	createFile: (parentPath: string, name: string) => Promise<string>
 	createFolder: (parentPath: string, name: string) => Promise<string>
 	deleteFile: (filePath: string) => Promise<void>
@@ -67,6 +68,8 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 				loading: false,
 				stopWatcher,
 			})
+
+			await get().loadRecentVaults()
 		} catch (e) {
 			set({ loading: false, error: String(e) })
 		}
@@ -95,9 +98,18 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
 	loadRecentVaults: async () => {
 		try {
-			const entries = await getPlatform().vault.readVaultRegistry()
+			const platform = getPlatform()
+			const entries = await platform.vault.readVaultRegistry()
 			const sorted = [...entries].sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0))
 			set({ recentVaults: sorted })
+			await platform.vault.refreshMenuRecents().catch(() => {})
+		} catch (_e) {}
+	},
+
+	removeRecentVault: async (uuid) => {
+		try {
+			await getPlatform().vault.removeFromVaultRegistry(uuid)
+			await get().loadRecentVaults()
 		} catch (_e) {}
 	},
 

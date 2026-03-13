@@ -60,6 +60,12 @@ impl<'a> Uploader<'a> {
             return Err(format!("Upload failed: HTTP {}: {}", status.as_u16(), body));
         }
 
+        let response_body: serde_json::Value =
+            response.json().await.map_err(|e| e.to_string())?;
+        let snapshot_id = response_body["snapshot_id"]
+            .as_str()
+            .map(|s| s.to_string());
+
         let mtime = std::fs::metadata(&full_path)
             .ok()
             .and_then(|m| m.modified().ok())
@@ -69,8 +75,8 @@ impl<'a> Uploader<'a> {
         self.db.upsert_sync_state(&SyncState {
             file_path: file_path.to_string(),
             local_hash: Some(local_hash.clone()),
-            remote_hash: Some(local_hash),
-            ancestor_hash: None,
+            remote_hash: Some(local_hash.clone()),
+            ancestor_hash: Some(local_hash),
             local_mtime: mtime,
             remote_mtime: mtime,
             sync_status: "synced".to_string(),
@@ -80,7 +86,7 @@ impl<'a> Uploader<'a> {
                     .unwrap()
                     .as_secs() as i64,
             ),
-            server_version_id: None,
+            server_version_id: snapshot_id,
         })?;
 
         Ok(())

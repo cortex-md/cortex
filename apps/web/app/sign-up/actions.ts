@@ -1,8 +1,8 @@
 "use server"
 
-import { apiFetch } from "@/lib/api"
 import { redirect } from "next/navigation"
 import { z } from "zod"
+import { apiFetch } from "@/lib/api"
 
 const signupSchema = z
 	.object({

@@ -23,9 +23,9 @@ cortex/
 │   │   │   │   │   ├── window.rs   # open_vault_in_new_window, get_window_label
 │   │   │   │   │   ├── dialog.rs   # pick_folder, show_confirm_dialog
 │   │   │   │   │   ├── shell.rs    # open_in_system_explorer, reveal_file
-│   │   │   │   │   ├── registry.rs # update_vault_registry, read_vault_registry
+│   │   │   │   │   ├── registry.rs # update_vault_registry, read_vault_registry, remove_from_vault_registry
 │   │   │   │   │   ├── auth.rs     # keychain read/write para tokens e device identity
-│   │   │   │   │   └── menu.rs     # show_context_menu, update_menu_item, menubar setup
+│   │   │   │   │   └── menu.rs     # macOS native menubar: build_menu, refresh_menu_recents, File > Recents submenu
 │   │   │   │   ├── sync/           # Engine de sync — roda em thread Rust separada
 │   │   │   │   │   ├── engine.rs   # Loop principal: detecta mudanças, enfileira ops, executa
 │   │   │   │   │   ├── uploader.rs # Upload de arquivos via HTTP POST com retry e backoff

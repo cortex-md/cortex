@@ -1,11 +1,5 @@
 import { useSyncStore } from "@cortex/core"
-import {
-	CheckCircleIcon,
-	CloudIcon,
-	CloudOffIcon,
-	LoaderIcon,
-	RefreshCwIcon,
-} from "lucide-react"
+import { CheckCircleIcon, CloudIcon, CloudOffIcon, LoaderIcon, RefreshCwIcon } from "lucide-react"
 
 export function SyncIndicator() {
 	const { engineState, syncingFiles } = useSyncStore()

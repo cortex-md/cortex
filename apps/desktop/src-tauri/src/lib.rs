@@ -25,6 +25,7 @@ pub fn run() {
             commands::watcher::stop_watching,
             commands::registry::read_vault_registry,
             commands::registry::update_vault_registry,
+            commands::registry::remove_from_vault_registry,
             commands::dialog::pick_folder,
             commands::font::list_system_fonts,
             commands::keychain::keychain_set,
@@ -40,6 +41,32 @@ pub fn run() {
             commands::sync::sync_start,
             commands::sync::sync_stop,
             commands::sync::sync_force_sync_file,
+            commands::sync::sync_resolve_conflict,
+            commands::sync::sync_get_conflicts,
+            commands::sync::sync_get_version_history,
+            commands::sync::sync_restore_version,
+            commands::menu::refresh_menu_recents,
+            commands::remote_vault::remote_vault_create,
+            commands::remote_vault::remote_vault_list,
+            commands::remote_vault::remote_vault_get,
+            commands::remote_vault::remote_vault_update,
+            commands::remote_vault::remote_vault_delete,
+            commands::remote_vault::remote_vault_link,
+            commands::remote_vault::remote_vault_unlink,
+            commands::remote_vault::remote_vault_get_link,
+            commands::members::vault_members_list,
+            commands::members::vault_member_update_role,
+            commands::members::vault_member_remove,
+            commands::members::vault_invite_create,
+            commands::members::vault_invites_list,
+            commands::members::vault_invite_delete,
+            commands::members::vault_my_invites,
+            commands::members::vault_invite_accept,
+            commands::devices::devices_list,
+            commands::devices::device_get,
+            commands::devices::device_rename,
+            commands::devices::device_revoke,
+            commands::devices::device_update_sync_cursor,
         ])
         .setup(|app| {
             commands::watcher::init(app);
@@ -60,6 +87,11 @@ pub fn run() {
             {
                 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
                 let _ = apply_vibrancy(&window, NSVisualEffectMaterial::Sidebar, None, None);
+
+                let menu = commands::menu::build_menu(app.handle())
+                    .expect("Failed to build menu");
+                app.set_menu(menu).expect("Failed to set menu");
+                commands::menu::setup_menu_event_handler(app.handle());
             }
 
             Ok(())

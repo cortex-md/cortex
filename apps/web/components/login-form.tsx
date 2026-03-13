@@ -1,22 +1,24 @@
 "use client"
 
-import { login } from "@/app/login/actions"
-import { Button, cn } from "@cortex/ui"
 import {
+	Button,
 	Card,
 	CardContent,
 	CardDescription,
 	CardHeader,
 	CardTitle,
+	cn,
+	Field,
+	FieldDescription,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
+	Input,
 } from "@cortex/ui"
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@cortex/ui"
-import { Input } from "@cortex/ui"
 import { useActionState } from "react"
+import { login } from "@/app/login/actions"
 
-export function LoginForm({
-	className,
-	...props
-}: React.ComponentProps<"div">) {
+export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
 	const [state, action, isPending] = useActionState(login, undefined)
 
 	return (
@@ -39,9 +41,7 @@ export function LoginForm({
 									required
 									disabled={isPending}
 								/>
-								{state?.errors?.email && (
-									<FieldError>{state.errors.email.join(", ")}</FieldError>
-								)}
+								{state?.errors?.email && <FieldError>{state.errors.email.join(", ")}</FieldError>}
 							</Field>
 							<Field>
 								<div className="flex items-center justify-between">

@@ -1,22 +1,24 @@
 "use client"
 
-import { signup } from "@/app/sign-up/actions"
-import { Button, cn } from "@cortex/ui"
 import {
+	Button,
 	Card,
 	CardContent,
 	CardDescription,
 	CardHeader,
 	CardTitle,
+	cn,
+	Field,
+	FieldDescription,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
+	Input,
 } from "@cortex/ui"
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@cortex/ui"
-import { Input } from "@cortex/ui"
 import { useActionState } from "react"
+import { signup } from "@/app/sign-up/actions"
 
-export function SignupForm({
-	className,
-	...props
-}: React.ComponentProps<"div">) {
+export function SignupForm({ className, ...props }: React.ComponentProps<"div">) {
 	const [state, action, isPending] = useActionState(signup, undefined)
 
 	return (
@@ -24,9 +26,7 @@ export function SignupForm({
 			<Card>
 				<CardHeader className="text-center">
 					<CardTitle className="text-xl">Create your account</CardTitle>
-					<CardDescription>
-						Enter your email below to create your account
-					</CardDescription>
+					<CardDescription>Enter your email below to create your account</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<form action={action}>
@@ -55,9 +55,7 @@ export function SignupForm({
 									required
 									disabled={isPending}
 								/>
-								{state?.errors?.email && (
-									<FieldError>{state.errors.email.join(", ")}</FieldError>
-								)}
+								{state?.errors?.email && <FieldError>{state.errors.email.join(", ")}</FieldError>}
 							</Field>
 							<Field>
 								<div className="grid grid-cols-2 gap-4">
@@ -75,9 +73,7 @@ export function SignupForm({
 										)}
 									</Field>
 									<Field>
-										<FieldLabel htmlFor="confirmPassword">
-											Confirm Password
-										</FieldLabel>
+										<FieldLabel htmlFor="confirmPassword">Confirm Password</FieldLabel>
 										<Input
 											id="confirmPassword"
 											name="confirmPassword"
@@ -90,9 +86,7 @@ export function SignupForm({
 										)}
 									</Field>
 								</div>
-								<FieldDescription>
-									Must be at least 8 characters long.
-								</FieldDescription>
+								<FieldDescription>Must be at least 8 characters long.</FieldDescription>
 							</Field>
 							{state?.message && <FieldError className="text-center">{state.message}</FieldError>}
 							<Field>

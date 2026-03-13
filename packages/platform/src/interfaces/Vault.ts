@@ -30,4 +30,6 @@ export interface Vault {
 		icon?: string | null,
 		color?: string | null,
 	): Promise<void>
+	removeFromVaultRegistry(uuid: string): Promise<void>
+	refreshMenuRecents(): Promise<void>
 }

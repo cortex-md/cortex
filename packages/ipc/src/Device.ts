@@ -1,4 +1,4 @@
-import type { Device as IDevice, DeviceInfo } from "@cortex/platform"
+import type { DeviceInfo, Device as IDevice } from "@cortex/platform"
 import { invoke } from "@tauri-apps/api/core"
 
 export class Device implements IDevice {

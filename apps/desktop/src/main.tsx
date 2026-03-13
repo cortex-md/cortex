@@ -4,6 +4,7 @@ import { initThemeManager, WebThemeAdapter } from "@cortex/theme"
 import React from "react"
 import ReactDOM from "react-dom/client"
 import App from "./App"
+import { AuthGuard } from "./features/auth/AuthGuard"
 import "./styles.css"
 
 initPlatform(tauriPlatform)
@@ -15,6 +16,8 @@ document.body.setAttribute("data-platform", platform)
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
 	<React.StrictMode>
-		<App />
+		<AuthGuard>
+			<App />
+		</AuthGuard>
 	</React.StrictMode>,
 )

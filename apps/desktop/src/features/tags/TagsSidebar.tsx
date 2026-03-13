@@ -23,9 +23,9 @@ function TagRow({
 	return (
 		<div>
 			<Button
-  			size={"sm"}
-  			variant={"ghost"}
-  			className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-accent/50 transition-colors cursor-pointer"
+				size={"sm"}
+				variant={"ghost"}
+				className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-accent/50 transition-colors cursor-pointer"
 				onClick={() => onToggle(tag)}
 			>
 				<ChevronRightIcon
@@ -33,7 +33,7 @@ function TagRow({
 				/>
 				<span
 					className="inline-block size-2.5 rounded-full flex-shrink-0"
-					style={{ backgroundColor: color ? color : "var(--accent)"}}
+					style={{ backgroundColor: color ? color : "var(--accent)" }}
 				/>
 				<span className="flex-1 text-xs font-medium truncate">{tag}</span>
 				<Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 min-w-[20px]">
@@ -51,9 +51,9 @@ function TagRow({
 
 						return (
 							<Button
-  							size={"sm"}
-  							variant={"ghost"}
-  							key={filePath}
+								size={"sm"}
+								variant={"ghost"}
+								key={filePath}
 								className="w-full flex items-center justify-start! gap-2 pl-20 pr-3 py-1 text-left hover:bg-accent/50 transition-colors cursor-pointer"
 								onClick={() => onOpenFile(filePath)}
 							>
@@ -165,22 +165,21 @@ export function TagsSidebar() {
 						)}
 					</div>
 				) : (
-
-  				<div className="flex flex-col gap-1 px-1 pt-2">
-              {filteredTags.map((entry) => (
-                <TagRow
-                  key={entry.tag}
-                  tag={entry.tag}
-                  color={entry.color}
-                  filePaths={entry.filePaths}
-                  vaultPath={vault.path}
-                  isExpanded={expandedTags.has(entry.tag)}
-                  onToggle={handleToggleExpand}
-                  onOpenFile={handleOpenFile}
-                />
-              ))}
-  				</div>
-					)}
+					<div className="flex flex-col gap-1 px-1 pt-2">
+						{filteredTags.map((entry) => (
+							<TagRow
+								key={entry.tag}
+								tag={entry.tag}
+								color={entry.color}
+								filePaths={entry.filePaths}
+								vaultPath={vault.path}
+								isExpanded={expandedTags.has(entry.tag)}
+								onToggle={handleToggleExpand}
+								onOpenFile={handleOpenFile}
+							/>
+						))}
+					</div>
+				)}
 			</div>
 		</div>
 	)

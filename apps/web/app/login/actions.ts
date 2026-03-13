@@ -1,9 +1,9 @@
 "use server"
 
-import { apiFetch } from "@/lib/api"
-import { createSession, getDeviceId } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { z } from "zod"
+import { apiFetch } from "@/lib/api"
+import { createSession, getDeviceId } from "@/lib/session"
 
 const loginSchema = z.object({
 	email: z.string().email("Invalid email address"),

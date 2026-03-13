@@ -1,0 +1,175 @@
+import { useMembersStore } from "@cortex/core"
+import { Badge, Button, Input, NativeSelect, NativeSelectOption } from "@cortex/ui"
+import { Plus, Trash2, UserMinus } from "lucide-react"
+import { useEffect, useState } from "react"
+
+interface MembersPanelProps {
+	vaultId: string
+}
+
+export function MembersPanel({ vaultId }: MembersPanelProps) {
+	const {
+		members,
+		invites,
+		loading,
+		error,
+		fetchMembers,
+		updateMemberRole,
+		removeMember,
+		fetchInvites,
+		createInvite,
+		deleteInvite,
+	} = useMembersStore()
+
+	const [inviteEmail, setInviteEmail] = useState("")
+	const [inviteRole, setInviteRole] = useState("member")
+	const [inviting, setInviting] = useState(false)
+
+	useEffect(() => {
+		fetchMembers(vaultId)
+		fetchInvites(vaultId)
+	}, [vaultId, fetchMembers, fetchInvites])
+
+	const handleInvite = async () => {
+		if (!inviteEmail.trim()) return
+		setInviting(true)
+		try {
+			await createInvite(vaultId, inviteEmail.trim(), inviteRole, "placeholder-key")
+			setInviteEmail("")
+		} catch {}
+		setInviting(false)
+	}
+
+	const handleRemoveMember = async (userId: string) => {
+		try {
+			await removeMember(vaultId, userId)
+		} catch {}
+	}
+
+	const handleChangeRole = async (userId: string, newRole: string) => {
+		try {
+			await updateMemberRole(vaultId, userId, newRole)
+		} catch {}
+	}
+
+	const handleDeleteInvite = async (inviteId: string) => {
+		try {
+			await deleteInvite(vaultId, inviteId)
+		} catch {}
+	}
+
+	return (
+		<div className="flex flex-col gap-4">
+			<div>
+				<h4 className="text-[10px] font-bold m-0 mb-2 text-text-muted uppercase tracking-wide">
+					Members
+				</h4>
+				{loading && members.length === 0 ? (
+					<p className="text-xs text-text-muted py-2">Loading members...</p>
+				) : members.length === 0 ? (
+					<p className="text-xs text-text-muted py-2">No members</p>
+				) : (
+					<div className="flex flex-col gap-1">
+						{members.map((member) => (
+							<div key={member.userId} className="flex items-center gap-3 py-1.5 group">
+								<div className="flex flex-col min-w-0 flex-1">
+									<span className="text-xs font-medium truncate">{member.displayName}</span>
+									<span className="text-[10px] text-text-muted truncate">{member.email}</span>
+								</div>
+								<select
+									className="text-[10px] bg-transparent border border-border rounded px-1 py-0.5 outline-none"
+									value={member.role}
+									onChange={(e) => handleChangeRole(member.userId, e.target.value)}
+								>
+									<option value="owner">Owner</option>
+									<option value="admin">Admin</option>
+									<option value="member">Member</option>
+									<option value="viewer">Viewer</option>
+								</select>
+								{member.role !== "owner" && (
+									<Button
+										variant="ghost"
+										size="icon"
+										onClick={() => handleRemoveMember(member.userId)}
+										className="h-6 w-6 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500"
+									>
+										<UserMinus size={12} />
+									</Button>
+								)}
+							</div>
+						))}
+					</div>
+				)}
+			</div>
+
+			<div>
+				<h4 className="text-[10px] font-bold m-0 mb-2 text-text-muted uppercase tracking-wide">
+					Invite
+				</h4>
+				<div className="flex items-center gap-2">
+					<Input
+						className="h-7 text-xs flex-1"
+						placeholder="email@example.com"
+						value={inviteEmail}
+						onChange={(e) => setInviteEmail(e.target.value)}
+						onKeyDown={(e) => {
+							if (e.key === "Enter") handleInvite()
+						}}
+					/>
+					<NativeSelect
+						className="text-[10px] bg-transparent border border-border rounded px-1 py-1 outline-none h-7"
+						value={inviteRole}
+						onChange={(e) => setInviteRole(e.target.value)}
+					>
+						<NativeSelectOption value="admin">Admin</NativeSelectOption>
+						<NativeSelectOption value="member">Member</NativeSelectOption>
+						<NativeSelectOption value="viewer">Viewer</NativeSelectOption>
+					</NativeSelect>
+					<Button
+						variant="secondary"
+						size="sm"
+						onClick={handleInvite}
+						disabled={inviting || !inviteEmail.trim()}
+						className="h-7 text-xs"
+					>
+						<Plus size={12} />
+						Invite
+					</Button>
+				</div>
+			</div>
+
+			{invites.length > 0 && (
+				<div>
+					<h4 className="text-[10px] font-bold m-0 mb-2 text-text-muted uppercase tracking-wide">
+						Pending Invites
+					</h4>
+					<div className="flex flex-col gap-1">
+						{invites
+							.filter((i) => !i.accepted)
+							.map((invite) => (
+								<div key={invite.id} className="flex items-center gap-3 py-1.5 group">
+									<div className="flex flex-col min-w-0 flex-1">
+										<span className="text-xs truncate">{invite.inviteeEmail}</span>
+										<span className="text-[10px] text-text-muted">{invite.role}</span>
+									</div>
+									<Badge variant="outline" className="text-[10px] py-0">
+										Pending
+									</Badge>
+									<Button
+										variant="ghost"
+										size="icon"
+										onClick={() => handleDeleteInvite(invite.id)}
+										className="h-6 w-6 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500"
+									>
+										<Trash2 size={12} />
+									</Button>
+								</div>
+							))}
+					</div>
+				</div>
+			)}
+
+			{error && <p className="text-xs text-red-500">{error}</p>}
+		</div>
+	)
+}

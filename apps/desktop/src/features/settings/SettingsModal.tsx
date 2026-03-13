@@ -18,18 +18,20 @@ import {
 	SidebarMenuItem,
 	SidebarProvider,
 } from "@cortex/ui"
-import { Keyboard, Palette, Settings, Type } from "lucide-react"
+import { Keyboard, Palette, RefreshCw, Settings, Type } from "lucide-react"
 import { useState } from "react"
 import { AppearanceSection } from "./AppearanceSettings"
 import { EditorSection } from "./EditorSettings"
 import { GeneralSection } from "./GeneralSettings"
 import { HotkeysSection } from "./HotkeysSettings"
+import { SyncSection } from "./SyncSettings"
 
 const sections = [
 	{ name: "General", id: "general", icon: Settings, component: GeneralSection },
 	{ name: "Appearance", id: "appearance", icon: Palette, component: AppearanceSection },
 	{ name: "Editor", id: "editor", icon: Type, component: EditorSection },
 	{ name: "Hotkeys", id: "hotkeys", icon: Keyboard, component: HotkeysSection },
+	{ name: "Sync", id: "sync", icon: RefreshCw, component: SyncSection },
 ] as const
 
 interface SettingsModalProps {
@@ -49,7 +51,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 				<DialogTitle className="sr-only">Settings</DialogTitle>
 				<DialogDescription className="sr-only">Customize your settings here.</DialogDescription>
 				<SidebarProvider className="items-start">
-					<Sidebar collapsible="none" className="hidden md:flex">
+					<Sidebar collapsible="none" className="hidden md:flex min-h-full">
 						<SidebarContent>
 							<SidebarGroup>
 								<SidebarGroupContent>
@@ -95,6 +97,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 								<EditorSection settings={settings.editor} onUpdate={updateSetting} />
 							)}
 							{activeSectionId === "hotkeys" && <HotkeysSection />}
+							{activeSectionId === "sync" && <SyncSection />}
 						</div>
 					</main>
 				</SidebarProvider>

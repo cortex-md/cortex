@@ -38,4 +38,12 @@ export class Vault implements IVault {
 			color: color ?? null,
 		})
 	}
+
+	async removeFromVaultRegistry(uuid: string): Promise<void> {
+		await invoke<void>("remove_from_vault_registry", { uuid })
+	}
+
+	async refreshMenuRecents(): Promise<void> {
+		await invoke<void>("refresh_menu_recents")
+	}
 }

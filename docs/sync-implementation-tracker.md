@@ -4,24 +4,24 @@ Tracks progress across all sync implementation phases. See `docs/cortex_desktop_
 
 ---
 
-## Phase 0: Rust Foundation — Keychain + Device Identity + SQLite
+## Phase 0: Rust Foundation — Keychain + Device Identity + SQLite ✅ COMPLETE
 
 ### Rust
-- [ ] `src-tauri/src/keychain/mod.rs` — Cross-platform keychain via `keyring` crate
-- [ ] `src-tauri/src/device/mod.rs` — Device identity (UUID generation + persistence)
-- [ ] `src-tauri/src/sync/db.rs` — SQLite sync.db (rusqlite, sync_state table)
-- [ ] `src-tauri/src/commands/keychain.rs` — `keychain_set`, `keychain_get`, `keychain_delete`
-- [ ] `src-tauri/src/commands/device.rs` — `get_device_id`, `get_device_info`
-- [ ] Update `Cargo.toml` — add rusqlite, keyring, gethostname, aes-gcm, rand
-- [ ] Update `lib.rs` — register commands, add mod declarations
+- [x] `src-tauri/src/keychain/mod.rs` — Cross-platform keychain via `keyring` crate (`set`, `get`, `delete`)
+- [x] `src-tauri/src/device/mod.rs` — Device identity (UUID generation + persistence)
+- [x] `src-tauri/src/sync/db.rs` — SQLite sync.db (rusqlite, `sync_state` table, full CRUD)
+- [x] `src-tauri/src/commands/keychain.rs` — `keychain_set`, `keychain_get`, `keychain_delete`
+- [x] `src-tauri/src/commands/device.rs` — `get_device_id`, `get_device_info`
+- [x] Update `Cargo.toml` — rusqlite, keyring, gethostname, aes-gcm, rand, reqwest, jsonwebtoken all present
+- [x] Update `lib.rs` — all commands registered, mod declarations in place
 
 ### TypeScript
-- [ ] `packages/platform/src/interfaces/Keychain.ts` — Keychain interface
-- [ ] `packages/platform/src/interfaces/Device.ts` — Device interface
-- [ ] `packages/ipc/src/Keychain.ts` — IPC wrapper
-- [ ] `packages/ipc/src/Device.ts` — IPC wrapper
-- [ ] Update `packages/platform/src/index.ts` — add to Platform interface
-- [ ] Update `packages/ipc/src/tauriPlatform.ts` — wire adapters
+- [x] `packages/platform/src/interfaces/Keychain.ts` — Keychain interface
+- [x] `packages/platform/src/interfaces/Device.ts` — Device interface + `DeviceInfo` type
+- [x] `packages/ipc/src/Keychain.ts` — IPC wrapper (invoke for set/get/delete)
+- [x] `packages/ipc/src/Device.ts` — IPC wrapper (invoke for both methods)
+- [x] Update `packages/platform/src/index.ts` — exports Keychain, Device, Auth, Sync; Platform interface includes all adapters
+- [x] Update `packages/ipc/src/tauriPlatform.ts` — wires all adapters including keychain, device, auth, sync
 
 ### Verification
 - [ ] `get_device_id` returns same UUID across calls
@@ -29,23 +29,23 @@ Tracks progress across all sync implementation phases. See `docs/cortex_desktop_
 
 ---
 
-## Phase 1: Auth — HTTP Client + Token Management
+## Phase 1: Auth — HTTP Client + Token Management ✅ COMPLETE
 
 ### Rust
-- [ ] `src-tauri/src/sync/http.rs` — Authenticated HTTP client (reqwest + auto-refresh)
-- [ ] `src-tauri/src/sync/auth.rs` — login, register, logout, get_status, refresh
-- [ ] `src-tauri/src/commands/auth.rs` — auth_login, auth_register, auth_logout, auth_get_status, auth_get_current_user
-- [ ] Update `Cargo.toml` — add reqwest, jsonwebtoken
-- [ ] Register auth commands in lib.rs
+- [x] `src-tauri/src/sync/http.rs` — `SyncHttpClient` (reqwest, auto 401 token refresh, JWT expiry pre-check, server URL from keychain)
+- [x] `src-tauri/src/sync/auth.rs` — login (stores tokens + user_id/email in keychain), register, logout, get_auth_status, get_current_user
+- [x] `src-tauri/src/commands/auth.rs` — `auth_login`, `auth_register`, `auth_logout`, `auth_get_status`, `auth_get_current_user`
+- [x] Update `Cargo.toml` — reqwest + jsonwebtoken present
+- [x] Register auth commands in lib.rs
 
 ### TypeScript
-- [ ] `packages/platform/src/interfaces/Auth.ts` — Auth interface
-- [ ] `packages/ipc/src/Auth.ts` — IPC wrapper
-- [ ] `packages/core/src/stores/authStore.ts` — Zustand auth store
-- [ ] `apps/desktop/src/features/auth/LoginPage.tsx`
-- [ ] `apps/desktop/src/features/auth/RegisterPage.tsx`
-- [ ] `apps/desktop/src/features/auth/AuthGuard.tsx`
-- [ ] Update Platform interface + tauriPlatform
+- [x] `packages/platform/src/interfaces/Auth.ts` — `LoginResult`, `RegisterResult`, `AuthStatus`, `CurrentUser`, `Auth` interface
+- [x] `packages/ipc/src/Auth.ts` — IPC wrapper for all 5 methods
+- [x] `packages/core/src/stores/authStore.ts` — Zustand+Immer store (`checkAuth`, `login`, `register`, `logout`, `clearError`)
+- [x] `apps/desktop/src/features/auth/LoginPage.tsx` — full form with server URL, email, password
+- [x] `apps/desktop/src/features/auth/RegisterPage.tsx` — full form with validation (password match, min 8 chars)
+- [x] `apps/desktop/src/features/auth/AuthGuard.tsx` — `checkAuth()` on mount, routes to Login/Register if unauthenticated
+- [x] Update Platform interface + tauriPlatform — auth wired in both
 
 ### Verification
 - [ ] Register + login flow works
@@ -54,24 +54,24 @@ Tracks progress across all sync implementation phases. See `docs/cortex_desktop_
 
 ---
 
-## Phase 2: Sync Engine Core — State Machine + Queue + Watcher Bridge
+## Phase 2: Sync Engine Core — State Machine + Queue + Watcher Bridge ✅ COMPLETE
 
 ### Rust
-- [ ] `src-tauri/src/sync/mod.rs` — Module root
-- [ ] `src-tauri/src/sync/state.rs` — SyncEngineState enum + SyncCommand enum
-- [ ] `src-tauri/src/sync/queue.rs` — Priority queue (BinaryHeap, max 3 concurrent)
-- [ ] `src-tauri/src/sync/engine.rs` — Main loop, state machine, mpsc consumer
-- [ ] `src-tauri/src/commands/sync.rs` — sync_start, sync_stop, sync_get_status, sync_force_sync_file
-- [ ] Update `lib.rs` — spawn engine in setup(), store mpsc::Sender
-- [ ] Update `watcher.rs` — send LocalFileChanged to engine channel
+- [x] `src-tauri/src/sync/mod.rs` — Declares all 11 submodules (auth, crypto, db, downloader, engine, http, ignore, queue, sse, state, uploader)
+- [x] `src-tauri/src/sync/state.rs` — `SyncEngineState` enum (Idle/Authenticating/Connecting/Syncing/Live/Offline/Recovering) + `SyncCommand` enum
+- [x] `src-tauri/src/sync/queue.rs` — `BinaryHeap` priority queue; `SyncOp` variants (Upload/Download/Delete/Rename/ResolveConflict/InitialSync) with factory methods
+- [x] `src-tauri/src/sync/engine.rs` — Full async event loop consuming `SyncCommand` via `mpsc::Receiver`; handles Start (opens DB, derives VEK, starts SSE), Stop, LocalFileChanged (5s debounce), ForceSyncFile, Remote events; emits `sync-file-event` + `sync-state-changed` Tauri events
+- [x] `src-tauri/src/commands/sync.rs` — `sync_start`, `sync_stop`, `sync_force_sync_file`
+- [x] Update `lib.rs` — engine spawned in setup(), mpsc Sender stored via `app.manage()`
+- [x] Update `watcher.rs` — sends `SyncCommand::LocalFileChanged` to engine channel for every non-`.cortex` file event
 
 ### TypeScript
-- [ ] `packages/platform/src/interfaces/Sync.ts` — Sync interface
-- [ ] `packages/ipc/src/Sync.ts` — IPC wrapper + event listeners
-- [ ] `packages/core/src/stores/syncStore.ts` — Zustand sync store
-- [ ] `packages/sync-client/package.json` — new package
-- [ ] `packages/sync-client/src/index.ts` — barrel export
-- [ ] `packages/sync-client/src/eventBridge.ts` — Tauri events → syncStore
+- [x] `packages/platform/src/interfaces/Sync.ts` — `SyncEngineState`, `SyncStateEvent`, `SyncFileEvent`, `Sync` interface (start/stop/forceSyncFile/onStateChanged/onFileEvent)
+- [x] `packages/ipc/src/Sync.ts` — IPC wrapper (invoke for commands, `listen()` for events)
+- [x] `packages/core/src/stores/syncStore.ts` — Zustand+Immer store (`startSync`, `stopSync`, `forceSyncFile`, `subscribeEvents`, `unsubscribeEvents`; tracks `engineState`, `syncingFiles`, `lastSyncedAt`)
+- [ ] `packages/sync-client/package.json` — **NOT CREATED** — sync store lives in `@cortex/core` instead
+- [ ] `packages/sync-client/src/index.ts` — **NOT CREATED**
+- [ ] `packages/sync-client/src/eventBridge.ts` — **NOT CREATED** — event subscription is part of syncStore directly
 
 ### Verification
 - [ ] Engine starts → state transitions visible in syncStore
@@ -79,22 +79,22 @@ Tracks progress across all sync implementation phases. See `docs/cortex_desktop_
 
 ---
 
-## Phase 3: SSE + File Upload/Download + E2EE
+## Phase 3: SSE + File Upload/Download + E2EE ✅ COMPLETE
 
 ### Rust
-- [ ] `src-tauri/src/sync/crypto.rs` — AES-256-GCM encrypt/decrypt, VEK generation
-- [ ] `src-tauri/src/sync/sse.rs` — SSE client (reqwest streaming, backoff, polling fallback)
-- [ ] `src-tauri/src/sync/uploader.rs` — Hash check → encrypt → POST /files, delta-first strategy
-- [ ] `src-tauri/src/sync/downloader.rs` — GET /files → decrypt → pre-write ack → write
-- [ ] `src-tauri/src/sync/ignore.rs` — should_ignore() for excluded paths
-- [ ] Wire SSE + uploader + downloader into engine.rs
-- [ ] Update `Cargo.toml` — add dmp crate
+- [x] `src-tauri/src/sync/crypto.rs` — AES-256-GCM: `generate_vek`, `store_vek`/`load_vek` (base64 in keychain), `get_or_create_vek`, `encrypt` (12-byte nonce prefix), `decrypt`
+- [x] `src-tauri/src/sync/sse.rs` — SSE client: exponential backoff (1s→60s, max 5 failures), parses wire format, handles file_created/updated/deleted/renamed/ping, filters own-device events, tracks `Last-Event-ID`
+- [x] `src-tauri/src/sync/uploader.rs` — Hash check → AES-GCM encrypt → POST `/sync/v1/vaults/{id}/files` with `X-File-Path` + `X-Local-Hash` headers → updates sync_state DB
+- [x] `src-tauri/src/sync/downloader.rs` — GET + decrypt → write to disk (creates dirs) → DB update; also `delete_local_file`, `rename_local_file`
+- [x] `src-tauri/src/sync/ignore.rs` — `should_ignore()` skips `.cortex/`, `.DS_Store`, `Thumbs.db`, `desktop.ini`
+- [x] Wire SSE + uploader + downloader into engine.rs
+- [x] Update `Cargo.toml` — add `dmp` crate (added in Phase 4)
 
 ### TypeScript
-- [ ] `apps/desktop/src/features/statusbar/SyncIndicator.tsx` — status bar sync icon
-- [ ] Update syncStore — per-file status tracking
-- [ ] Update eventBridge — file sync event listeners
-- [ ] Update noteCache.ts — handle sync-pre-write → snapshot → ack
+- [x] `apps/desktop/src/features/sync/SyncIndicator.tsx` — reads `engineState`+`syncingFiles` from `useSyncStore`; shows icon+label per state; returns null when idle
+- [x] Update syncStore — per-file status tracking via `syncingFiles` record
+- [ ] Update eventBridge — **N/A** (event subscription is in syncStore, not a separate bridge)
+- [ ] Update noteCache.ts — handle sync-pre-write → snapshot → ack — **NOT DONE**
 
 ### Verification
 - [ ] Local file change → encrypted upload to server
@@ -104,19 +104,28 @@ Tracks progress across all sync implementation phases. See `docs/cortex_desktop_
 
 ---
 
-## Phase 4: Initial Sync + Conflict Resolution
+## Phase 4: Initial Sync + Conflict Resolution ✅ COMPLETE
 
 ### Rust
-- [ ] `src-tauri/src/sync/initial.rs` — GET /files/list → compare → enqueue ops (concurrency 3)
-- [ ] `src-tauri/src/sync/merge.rs` — Three-way merge (markdown: dmp, binary: last-modified, JSON: key merge)
-- [ ] `src-tauri/src/sync/conflict.rs` — Detection (triple-hash) + resolution dispatch
-- [ ] Extend commands/sync.rs — sync_resolve_conflict, sync_get_conflicts, sync_get_version_history, sync_restore_version
+- [x] `src-tauri/src/sync/initial.rs` — GET /files/list → compare → enqueue ops (concurrency 3), emits progress + complete events
+- [x] `src-tauri/src/sync/merge.rs` — Three-way merge (markdown: dmp patch_apply, binary: last-modified-wins, JSON: key-by-key merge)
+- [x] `src-tauri/src/sync/conflict.rs` — Detection (triple-hash) + `ConflictResolver` (attempt_auto_merge + apply_resolution)
+- [x] Extend commands/sync.rs — sync_resolve_conflict, sync_get_conflicts, sync_get_version_history, sync_restore_version
+- [x] Add `dmp = "0.2"` to Cargo.toml
+- [x] Wire InitialSync into engine.rs (runs on Start before SSE)
+- [x] Wire ResolveConflict handler in engine.rs
+- [x] Downloader rewritten with conflict detection, auto-merge, version history
+- [x] Uploader fixed for ancestor_hash + server_version_id tracking
 
 ### TypeScript
-- [ ] `apps/desktop/src/features/sync/ConflictBanner.tsx` — editor conflict banner
-- [ ] `apps/desktop/src/features/sync/ConflictDiffView.tsx` — side-by-side diff viewer
-- [ ] `apps/desktop/src/features/sync/InitialSyncProgress.tsx` — progress overlay
-- [ ] Update syncStore — conflicts map, initialSyncProgress, resolveConflict(), getVersionHistory()
+- [x] `apps/desktop/src/features/sync/ConflictBanner.tsx` — editor conflict banner (Keep Local / Keep Remote / View Diff)
+- [x] `apps/desktop/src/features/sync/ConflictDiffView.tsx` — side-by-side diff viewer (Radix Dialog)
+- [x] `apps/desktop/src/features/sync/InitialSyncProgress.tsx` — progress overlay with Progress bar
+- [x] Update syncStore — conflicts map, initialSyncProgress, initialSyncComplete, resolveConflict(), loadConflicts(), getVersionHistory(), restoreVersion(), event subscriptions for progress/conflict/complete
+- [x] Update platform/index.ts — exports ConflictInfo, ConflictResolution, InitialSyncProgressEvent, SyncConflictEvent, VersionInfo
+- [x] Update ipc/Sync.ts — IPC wrappers for all new methods + event listeners
+- [x] Wire ConflictBanner into PaneView.tsx (renders above editor when conflict exists)
+- [x] Wire InitialSyncProgress into App.tsx (full-screen overlay during initial sync)
 
 ### Verification
 - [ ] New device: full initial sync downloads all files
@@ -127,28 +136,34 @@ Tracks progress across all sync implementation phases. See `docs/cortex_desktop_
 
 ---
 
-## Phase 5: Vault + Device + Member Management (CRUD)
-
-_Can parallelize with Phases 2-4 (depends only on Phase 1)_
+## Phase 5: Vault + Device + Member Management (CRUD) ✅ COMPLETE
 
 ### Rust
-- [ ] `src-tauri/src/commands/remote_vault.rs` — remote_vault_create, remote_vault_list, remote_vault_link, remote_vault_unlink
-- [ ] `src-tauri/src/commands/members.rs` — vault_members_list, vault_invite_create, vault_invites_list, vault_invite_delete, vault_my_invites, vault_invite_accept, vault_member_update_role, vault_member_remove
-- [ ] `src-tauri/src/commands/devices.rs` — devices_list, device_rename, device_revoke
+- [x] `src-tauri/src/commands/remote_vault.rs` — remote_vault_create, remote_vault_list, remote_vault_get, remote_vault_update, remote_vault_delete, remote_vault_link, remote_vault_unlink, remote_vault_get_link
+- [x] `src-tauri/src/commands/members.rs` — vault_members_list, vault_invite_create, vault_invites_list, vault_invite_delete, vault_my_invites, vault_invite_accept, vault_member_update_role, vault_member_remove
+- [x] `src-tauri/src/commands/devices.rs` — devices_list, device_get, device_rename, device_revoke, device_update_sync_cursor
+- [x] Register all new commands in `commands/mod.rs` and `lib.rs`
 
 ### TypeScript
-- [ ] `packages/platform/src/interfaces/RemoteVault.ts` — RemoteVault interface
-- [ ] `packages/platform/src/interfaces/Members.ts` — Members interface
-- [ ] `packages/ipc/src/RemoteVault.ts` — IPC wrapper
-- [ ] `packages/ipc/src/Members.ts` — IPC wrapper
-- [ ] `packages/ipc/src/Devices.ts` — IPC wrapper
-- [ ] `packages/core/src/stores/deviceStore.ts` — device list + actions
-- [ ] `packages/core/src/stores/membersStore.ts` — members + invites per vault
-- [ ] `apps/desktop/src/features/sync/SyncSettings.tsx` — sync settings panel
-- [ ] `apps/desktop/src/features/sync/VaultLinkModal.tsx` — create/link remote vault
-- [ ] `apps/desktop/src/features/sync/DeviceManager.tsx` — device list + actions
-- [ ] `apps/desktop/src/features/sync/MembersPanel.tsx` — members + invite
-- [ ] `apps/desktop/src/features/sync/InvitesPanel.tsx` — pending invites accept/decline
+- [x] `packages/platform/src/interfaces/RemoteVault.ts` — RemoteVault + RemoteVaultInfo interfaces
+- [x] `packages/platform/src/interfaces/Members.ts` — Members + VaultMember + VaultInvite + AcceptInviteResult interfaces
+- [x] `packages/platform/src/interfaces/Devices.ts` — Devices + DeviceEntry interfaces
+- [x] `packages/ipc/src/RemoteVault.ts` — IPC wrapper (8 methods)
+- [x] `packages/ipc/src/Members.ts` — IPC wrapper (8 methods)
+- [x] `packages/ipc/src/Devices.ts` — IPC wrapper (5 methods)
+- [x] Update `packages/platform/src/index.ts` — exports all new types; Platform includes remoteVault, members, devices
+- [x] Update `packages/ipc/src/tauriPlatform.ts` — wires RemoteVault, Members, Devices adapters
+- [x] Update `packages/ipc/src/index.ts` — exports new classes
+- [x] `packages/core/src/stores/remoteVaultStore.ts` — Zustand+Immer store (CRUD + link/unlink)
+- [x] `packages/core/src/stores/membersStore.ts` — Zustand+Immer store (members + invites)
+- [x] `packages/core/src/stores/devicesStore.ts` — Zustand+Immer store (device list + rename/revoke)
+- [x] Update `packages/core/src/index.ts` — exports new stores
+- [x] `apps/desktop/src/features/sync/SyncSettings.tsx` — sync settings section (vault link, devices, invites, members)
+- [x] `apps/desktop/src/features/sync/VaultLinkModal.tsx` — create/link/unlink remote vault
+- [x] `apps/desktop/src/features/sync/DeviceManager.tsx` — device list with rename/revoke
+- [x] `apps/desktop/src/features/sync/MembersPanel.tsx` — member list + role change + invite creation
+- [x] `apps/desktop/src/features/sync/InvitesPanel.tsx` — pending invites accept
+- [x] Wire SyncSection into SettingsModal as "Sync" tab
 
 ### Verification
 - [ ] Create remote vault + link to local
@@ -158,23 +173,27 @@ _Can parallelize with Phases 2-4 (depends only on Phase 1)_
 
 ---
 
-## Phase 6: Reconnection + Long Offline + Retry Hardening
+## Phase 6: Reconnection + Long Offline + Retry Hardening ✅ COMPLETE
 
 ### Rust
-- [ ] `src-tauri/src/sync/reconcile.rs` — Full vault reconciliation for long offline (>30 day gap)
-- [ ] Update engine.rs — retry backoff (30s→6h cap), 10 failures → failed_permanent
-- [ ] Update sse.rs — consecutive failure tracking, polling mode switch
-- [ ] Update queue.rs — persist to SQLite sync_queue table for crash recovery
+- [x] `src-tauri/src/sync/state.rs` — Added `SyncError` + `SyncErrorKind` (Transient/Permanent/Auth), `ConnectionMode` enum (Sse/Polling/Disconnected), new `SyncCommand` variants (SseConnected, SseDisconnected, Reconcile, PollTick)
+- [x] `src-tauri/src/sync/db.rs` — Added `QueueRow` struct, `sync_queue` table (SQLite persistence for queue), `sync_metadata` table (key/value), queue CRUD methods + metadata CRUD
+- [x] `src-tauri/src/sync/queue.rs` — Full rewrite with SQLite persistence (`set_db`, `load_from_db`, `reload_ready`), retry backoff (30s→6h schedule), deduplication, `mark_completed`/`mark_failed` with dead-letter support
+- [x] `src-tauri/src/sync/sse.rs` — Removed 5-failure hard cap; infinite retry with exponential backoff (1s→5min) + 25% jitter; `CancellationToken` for clean shutdown; sends `SseConnected`/`SseDisconnected` to engine; accepts initial `last_event_id` for resumption
+- [x] `src-tauri/src/sync/reconcile.rs` — **NEW** — Incremental reconciliation via `GET /changes?since=<id>` for short gaps; full `GET /files/list` reconciliation for long offline (>30 days); deduplicates events; saves last_event_id + reconcile timestamp to sync_metadata
+- [x] `src-tauri/src/sync/engine.rs` — **REWRITE** — SSE lifecycle via `CancellationToken`; tracks `ConnectionMode` + `last_event_id`; handles SseConnected (→ Live, reconcile on reconnect), SseDisconnected (→ Offline, save event id), Reconcile, PollTick; polling fallback (30s interval when SSE disconnected); retry reload (60s interval loads retry-ready items from SQLite); queue persistence wired via `set_db`; `load_from_db` on startup to resume crashed ops; `process_queue` uses `mark_completed`/`mark_failed` with retriability check
+- [x] `src-tauri/src/sync/mod.rs` — Added `pub mod reconcile`
+- [x] `Cargo.toml` — Added `tokio-util = "0.7"` for `CancellationToken`
 
 ### Verification
 - [ ] Kill network mid-sync → restore → reconciles correctly
 - [ ] 30+ day offline → full reconciliation works
 - [ ] App crash mid-sync → restart → queue resumes
-- [ ] SSE fails 5 times → switches to polling → recovers to SSE
+- [ ] SSE disconnect → switches to polling → SSE reconnects → reconciles gap
 
 ---
 
-## Phase 7 (Layer 2): Real-time Collaboration — Yjs + WebSocket
+## Phase 7 (Layer 2): Real-time Collaboration — Yjs + WebSocket ⬜ NOT STARTED
 
 ### Rust
 - [ ] `src-tauri/src/sync/collab.rs` — WebSocket client (tokio-tungstenite), Yjs protocol
@@ -203,46 +222,47 @@ _Can parallelize with Phases 2-4 (depends only on Phase 1)_
 
 ### Phase Dependency Graph
 ```
-Phase 0 (Foundation)
+Phase 0 (Foundation) ✅
   │
   v
-Phase 1 (Auth)
+Phase 1 (Auth) ✅
   │
   ├───────────────────┐
   v                   v
-Phase 2 (Engine)      Phase 5 (CRUD)  ← parallelizable
+Phase 2 (Engine) ✅   Phase 5 (CRUD) ✅  ← parallelizable
   │                   │
   v                   │
-Phase 3 (SSE+Sync)    │
+Phase 3 (SSE+Sync) ✅ │
   │                   │
   v                   │
-Phase 4 (Conflicts)   │
+Phase 4 (Conflicts) ✅ │
   │                   │
   ├───────────────────┘
   v
-Phase 6 (Hardening)
+Phase 6 (Hardening) ✅
   │
   v
-Phase 7 (Collab)
+Phase 7 (Collab) ⬜
 ```
 
 ### Rust Cargo Dependencies
-| Crate | Phase | Purpose |
-|-------|-------|---------|
-| rusqlite (bundled) | 0 | sync.db SQLite |
-| keyring | 0 | Cross-platform keychain |
-| gethostname | 0 | Device name |
-| aes-gcm | 0 | AES-256-GCM encryption |
-| rand | 0 | IV generation |
-| reqwest (rustls-tls, stream, json) | 1 | HTTP client |
-| jsonwebtoken | 1 | JWT decode (exp check) |
-| dmp | 3 | diff-match-patch merge |
-| tokio-tungstenite | 7 | WebSocket for collab |
+| Crate | Phase | Purpose | Status |
+|-------|-------|---------|--------|
+| rusqlite (bundled) | 0 | sync.db SQLite | ✅ |
+| keyring | 0 | Cross-platform keychain | ✅ |
+| gethostname | 0 | Device name | ✅ |
+| aes-gcm | 0 | AES-256-GCM encryption | ✅ |
+| rand | 0 | IV generation | ✅ |
+| reqwest (rustls-tls, json, blocking) | 1 | HTTP client | ✅ |
+| jsonwebtoken | 1 | JWT decode (exp check) | ✅ |
+| dmp | 4 | diff-match-patch merge | ✅ |
+| tokio-util | 6 | CancellationToken for SSE | ✅ |
+| tokio-tungstenite | 7 | WebSocket for collab | ❌ not added yet |
 
 ### Key Design Decisions
 - Sync engine as tokio task (not separate OS thread)
 - 5s upload debounce lives in Rust
 - NoteCache pre-sync snapshots via Tauri event round-trip
 - VEK stored in keychain as `(cortex, vek_{vault_id})`
-- `packages/sync-client/` is thin event bridge only
+- `packages/sync-client/` was planned as thin event bridge — **not created**, sync store lives in `@cortex/core` directly
 - All interfaces in `packages/platform/` for future mobile reuse

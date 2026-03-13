@@ -1,7 +1,7 @@
 import type {
-	Auth as IAuth,
 	AuthStatus,
 	CurrentUser,
+	Auth as IAuth,
 	LoginResult,
 	RegisterResult,
 } from "@cortex/platform"

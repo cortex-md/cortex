@@ -8,19 +8,22 @@ export {
 export { type AppState, useAppStore } from "./stores/appStore"
 export { type AuthState, useAuthStore } from "./stores/authStore"
 export { type BookmarksState, useBookmarksStore } from "./stores/bookmarksStore"
+export { type DevicesState, useDevicesStore } from "./stores/devicesStore"
 export {
 	type CursorPosition,
 	type EditorMode,
 	type EditorState,
 	useEditorStore,
 } from "./stores/editorStore"
+export { type MembersState, useMembersStore } from "./stores/membersStore"
+export { type RemoteVaultState, useRemoteVaultStore } from "./stores/remoteVaultStore"
+export { type SyncState, useSyncStore } from "./stores/syncStore"
 export {
 	type TagColor,
 	type TagEntry,
 	type TagsState,
 	useTagsStore,
 } from "./stores/tagsStore"
-export { type SyncState, useSyncStore } from "./stores/syncStore"
 export { type LeftSidebarView, type UIState, useUIStore } from "./stores/uiStore"
 export {
 	useVaultStore,

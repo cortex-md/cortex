@@ -2,11 +2,14 @@ import type { Platform, Storage } from "@cortex/platform"
 import { App } from "./App"
 import { Auth } from "./Auth"
 import { Device } from "./Device"
+import { Devices } from "./Devices"
 import { Dialog } from "./Dialog"
 import { FileSystem } from "./FileSystem"
 import { Font } from "./Font"
 import { Http } from "./Http"
 import { Keychain } from "./Keychain"
+import { Members } from "./Members"
+import { RemoteVault } from "./RemoteVault"
 import { Sync } from "./Sync"
 import { Vault } from "./Vault"
 
@@ -30,5 +33,8 @@ export const tauriPlatform: Platform = {
 	keychain: new Keychain(),
 	device: new Device(),
 	sync: new Sync(),
+	remoteVault: new RemoteVault(),
+	members: new Members(),
+	devices: new Devices(),
 	capabilities: ["menu", "hotkeys"],
 }

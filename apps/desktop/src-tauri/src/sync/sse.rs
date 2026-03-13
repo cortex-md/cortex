@@ -2,14 +2,17 @@ use std::time::Duration;
 
 use serde::Deserialize;
 use tokio::sync::mpsc;
+use tokio_util::sync::CancellationToken;
 
 use crate::sync::state::SyncCommand;
 
 #[derive(Debug, Deserialize)]
 pub struct SseFileEvent {
+    #[allow(dead_code)]
     pub vault_uuid: String,
     pub file_path: String,
     pub version: u64,
+    #[allow(dead_code)]
     pub actor_id: String,
     pub device_id: String,
     #[serde(default)]
@@ -23,11 +26,15 @@ pub struct SseClient {
 }
 
 impl SseClient {
-    pub fn new(command_tx: mpsc::Sender<SyncCommand>, own_device_id: String) -> Self {
+    pub fn new(
+        command_tx: mpsc::Sender<SyncCommand>,
+        own_device_id: String,
+        last_event_id: Option<String>,
+    ) -> Self {
         Self {
             command_tx,
             own_device_id,
-            last_event_id: None,
+            last_event_id,
         }
     }
 
@@ -36,24 +43,50 @@ impl SseClient {
         url: &str,
         access_token: &str,
         device_id: &str,
+        cancel: CancellationToken,
     ) -> Result<(), String> {
-        let mut backoff = Duration::from_secs(1);
-        let max_backoff = Duration::from_secs(60);
-        let mut consecutive_failures = 0u32;
+        let mut backoff_ms: u64 = 1000;
+        let max_backoff_ms: u64 = 300_000;
 
         loop {
-            match self.stream_events(url, access_token, device_id).await {
+            if cancel.is_cancelled() {
+                return Ok(());
+            }
+
+            match self.stream_events(url, access_token, device_id, &cancel).await {
                 Ok(()) => {
-                    backoff = Duration::from_secs(1);
-                    consecutive_failures = 0;
+                    if cancel.is_cancelled() {
+                        return Ok(());
+                    }
+                    let _ = self
+                        .command_tx
+                        .send(SyncCommand::SseDisconnected {
+                            last_event_id: self.last_event_id.clone(),
+                        })
+                        .await;
+                    backoff_ms = 1000;
                 }
                 Err(e) => {
-                    consecutive_failures += 1;
-                    if consecutive_failures >= 5 {
-                        return Err(format!("SSE failed after {} attempts: {}", consecutive_failures, e));
+                    if cancel.is_cancelled() {
+                        return Ok(());
                     }
-                    tokio::time::sleep(backoff).await;
-                    backoff = (backoff * 2).min(max_backoff);
+                    let _ = self
+                        .command_tx
+                        .send(SyncCommand::SseDisconnected {
+                            last_event_id: self.last_event_id.clone(),
+                        })
+                        .await;
+
+                    let jitter = (rand::random::<u64>() % (backoff_ms / 4 + 1)) as u64;
+                    let sleep_ms = backoff_ms + jitter;
+
+                    tokio::select! {
+                        _ = tokio::time::sleep(Duration::from_millis(sleep_ms)) => {}
+                        _ = cancel.cancelled() => return Ok(()),
+                    }
+
+                    backoff_ms = (backoff_ms * 2).min(max_backoff_ms);
+                    let _ = e;
                 }
             }
         }
@@ -64,6 +97,7 @@ impl SseClient {
         url: &str,
         access_token: &str,
         device_id: &str,
+        cancel: &CancellationToken,
     ) -> Result<(), String> {
         let client = reqwest::Client::new();
         let mut builder = client
@@ -79,8 +113,12 @@ impl SseClient {
         let response = builder.send().await.map_err(|e| e.to_string())?;
 
         if !response.status().is_success() {
-            return Err(format!("SSE connection failed: {}", response.status()));
+            let status = response.status().as_u16();
+            let body = response.text().await.unwrap_or_default();
+            return Err(format!("SSE connection failed: HTTP {}: {}", status, body));
         }
+
+        let _ = self.command_tx.send(SyncCommand::SseConnected).await;
 
         let mut buffer = String::new();
         let mut current_event_type = String::new();
@@ -88,10 +126,20 @@ impl SseClient {
         let mut current_id = String::new();
 
         let mut stream = response;
-        while let Ok(chunk) = stream.chunk().await {
-            let chunk = match chunk {
-                Some(c) => c,
-                None => break,
+        loop {
+            if cancel.is_cancelled() {
+                return Ok(());
+            }
+
+            let chunk = tokio::select! {
+                result = stream.chunk() => {
+                    match result {
+                        Ok(Some(c)) => c,
+                        Ok(None) => break,
+                        Err(e) => return Err(e.to_string()),
+                    }
+                }
+                _ = cancel.cancelled() => return Ok(()),
             };
 
             buffer.push_str(&String::from_utf8_lossy(&chunk));

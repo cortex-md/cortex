@@ -172,23 +172,32 @@ refreshFiles: async () => {
 ## Existing Stores
 
 ### vaultStore
-Manages the current vault (folder) and its file tree:
+Manages the current vault (folder), its file tree, and the vault registry (recent vaults):
 
 ```typescript
 export interface VaultState {
   vault: VaultMetadata | null        // Current vault metadata
   files: FileEntry[]                 // Files in vault
+  recentVaults: VaultRegistryEntry[] // Recent vaults from registry
   loading: boolean
   error: string | null
   stopWatcher: (() => void) | null   // Function to stop file watcher
 
-  openVault: (path: string) => Promise<void>
+  openVault: (path: string, options?: { icon?: string; color?: string; name: string }) => Promise<void>
   closeVault: () => Promise<void>
   refreshFiles: () => Promise<void>
+  loadRecentVaults: () => Promise<void>  // Also refreshes macOS menu recents
+  removeRecentVault: (uuid: string) => Promise<void>
+  createFile: (parentPath: string, name: string) => Promise<string>
+  createFolder: (parentPath: string, name: string) => Promise<string>
+  deleteFile: (filePath: string) => Promise<void>
+  renameFile: (oldPath: string, newName: string) => Promise<string>
+  duplicateFile: (filePath: string) => Promise<string>
+  openDailyNote: () => Promise<string | null>
 }
 ```
 
-**Usage**: `const { vault, files, openVault } = useVaultStore()`
+**Usage**: `const { vault, files, recentVaults, openVault, closeVault } = useVaultStore()`
 
 ### editorStore
 Tracks the currently active file and editor state:

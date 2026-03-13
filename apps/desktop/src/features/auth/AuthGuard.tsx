@@ -11,22 +11,33 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-	const { authenticated, checkAuth } = useAuthStore()
+	const { authenticated, offline, checkAuth, loadServerUrl, setOffline } = useAuthStore()
 	const [authView, setAuthView] = useState<AuthView>("login")
 	const [checked, setChecked] = useState(false)
 
 	useEffect(() => {
-		checkAuth().finally(() => setChecked(true))
-	}, [checkAuth])
+		loadServerUrl()
+			.then(() => checkAuth())
+			.finally(() => setChecked(true))
+	}, [checkAuth, loadServerUrl])
 
 	if (!checked) return null
 
-	if (!authenticated) {
-		if (authView === "register") {
-			return <RegisterPage onSwitchToLogin={() => setAuthView("login")} />
-		}
-		return <LoginPage onSwitchToRegister={() => setAuthView("register")} />
+	if (authenticated || offline) return <>{children}</>
+
+	if (authView === "register") {
+		return (
+			<RegisterPage
+				onStayOffline={() => setOffline(true)}
+				onSwitchToLogin={() => setAuthView("login")}
+			/>
+		)
 	}
 
-	return <>{children}</>
+	return (
+		<LoginPage
+			onStayOffline={() => setOffline(true)}
+			onSwitchToRegister={() => setAuthView("register")}
+		/>
+	)
 }

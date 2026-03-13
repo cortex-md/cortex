@@ -9,9 +9,11 @@ import {
 	useWorkspaceStore,
 } from "@cortex/core"
 import { useHotkey, useHotkeyListener, useHotkeysStore } from "@cortex/hotkeys"
+import { getPlatform } from "@cortex/platform"
 import { useSearchStore } from "@cortex/search"
 import { useSettingsStore } from "@cortex/settings"
 import { getThemeManager } from "@cortex/theme"
+import { listen } from "@tauri-apps/api/event"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import {
 	BookmarkIcon,
@@ -39,8 +41,10 @@ import { applyAppearanceSettings } from "./features/settings/applyAppearance"
 import { SettingsModal } from "./features/settings/SettingsModal"
 import { PaneView } from "./features/split-view/PaneView"
 import { StatusBar } from "./features/statusbar/StatusBar"
+import { InitialSyncProgress } from "./features/sync/InitialSyncProgress"
 import { TagPicker } from "./features/tags/TagPicker"
 import { TagsSidebar } from "./features/tags/TagsSidebar"
+import { VaultSwitcher } from "./features/vault/VaultSwitcher"
 
 const NAV_ITEMS: NavItem[] = [
 	{ id: "files", icon: FolderClosed, label: "Files" },
@@ -53,11 +57,18 @@ const NAV_BOTTOM_ITEMS: NavItem[] = [{ id: "settings", icon: SettingsIcon, label
 
 export default function App() {
 	const [settingsOpen, setSettingsOpen] = useState(false)
-	const { vault, files, recentVaults, openVault, loadRecentVaults, createFile, openDailyNote } =
-		useVaultStore()
+	const {
+		vault,
+		files,
+		recentVaults,
+		openVault,
+		closeVault,
+		loadRecentVaults,
+		createFile,
+		openDailyNote,
+	} = useVaultStore()
 	const { loadAppInfo } = useAppStore()
-	const { cursor, mode, setMode, flushActive } = useEditorStore()
-	const { activeFilePath } = useEditorStore()
+	const { flushActive } = useEditorStore()
 	const {
 		splitTree,
 		resizeSplit,
@@ -394,6 +405,42 @@ export default function App() {
 		return () => clearInterval(suspensionInterval)
 	}, [suspendInactiveTabs])
 
+	useEffect(() => {
+		const unlisteners = [
+			listen("menu-new-note", () => {
+				if (vault) createFile(vault.path, "Untitled").then((filePath) => openTab(filePath))
+			}),
+			listen("menu-open-vault", async () => {
+				const folderPath = await getPlatform().dialog.pickFolder()
+				if (folderPath) {
+					const existing = recentVaults.find((v) => v.path === folderPath)
+					if (existing) {
+						await closeVault()
+						await openVault(folderPath)
+					} else {
+						await closeVault()
+						await openVault(folderPath, { name: folderPath.split("/").pop() ?? folderPath })
+					}
+				}
+			}),
+			listen("menu-close-vault", () => {
+				closeVault()
+			}),
+			listen<string>("menu-recent-vault", (event) => {
+				const path = event.payload
+				if (path && path !== vault?.path) {
+					closeVault().then(() => openVault(path))
+				}
+			}),
+		]
+
+		return () => {
+			for (const unlistener of unlisteners) {
+				unlistener.then((fn) => fn())
+			}
+		}
+	}, [vault, recentVaults, createFile, openTab, closeVault, openVault])
+
 	const handleSidebarNavSelect = (id: string) => {
 		if (id === "settings") {
 			setSettingsOpen(true)
@@ -447,6 +494,7 @@ export default function App() {
 							style={{ width: leftSidebarWidth }}
 							aria-label="Sidebar panel"
 						>
+							<VaultSwitcher />
 							<SidebarNav
 								items={NAV_ITEMS}
 								bottomItems={NAV_BOTTOM_ITEMS}
@@ -477,12 +525,13 @@ export default function App() {
 				)}
 			</div>
 
-			<StatusBar filePath={activeFilePath} cursor={cursor} mode={mode} onModeChange={setMode} />
+			<StatusBar />
 
 			<SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
 			<QuickFinder />
 			<CommandPalette />
 			<TagPicker />
+			<InitialSyncProgress />
 		</div>
 	)
 }

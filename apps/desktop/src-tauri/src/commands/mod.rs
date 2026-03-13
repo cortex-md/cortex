@@ -1,10 +1,14 @@
 pub mod auth;
 pub mod device;
+pub mod devices;
 pub mod dialog;
 pub mod font;
 pub mod fs;
 pub mod keychain;
+pub mod members;
+pub mod menu;
 pub mod registry;
+pub mod remote_vault;
 pub mod sync;
 pub mod vault;
 pub mod watcher;

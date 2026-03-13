@@ -1,26 +1,163 @@
-use keyring::Entry;
+use aes_gcm::aead::{Aead, KeyInit, OsRng};
+use aes_gcm::{Aes256Gcm, Nonce};
+use rand::RngCore;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::fs;
+use std::path::PathBuf;
+use std::sync::Mutex;
 
-const SERVICE: &str = "cortex";
+static STORE: Mutex<Option<CredentialStore>> = Mutex::new(None);
+
+#[derive(Serialize, Deserialize)]
+struct EncryptedPayload {
+    nonce: String,
+    data: String,
+}
+
+struct CredentialStore {
+    path: PathBuf,
+    key: [u8; 32],
+    entries: HashMap<String, String>,
+}
+
+impl CredentialStore {
+    fn load(path: PathBuf, key: [u8; 32]) -> Self {
+        let entries = Self::decrypt_file(&path, &key).unwrap_or_default();
+        Self { path, key, entries }
+    }
+
+    fn decrypt_file(path: &PathBuf, key: &[u8; 32]) -> Result<HashMap<String, String>, String> {
+        let raw = fs::read_to_string(path).map_err(|e| e.to_string())?;
+        let payload: EncryptedPayload = serde_json::from_str(&raw).map_err(|e| e.to_string())?;
+        let nonce_bytes = encoding::decode(&payload.nonce)?;
+        let ciphertext = encoding::decode(&payload.data)?;
+        let cipher = Aes256Gcm::new_from_slice(key).map_err(|e| e.to_string())?;
+        let nonce = Nonce::from_slice(&nonce_bytes);
+        let plaintext = cipher
+            .decrypt(nonce, ciphertext.as_ref())
+            .map_err(|_| "failed to decrypt credential store".to_string())?;
+        let json = String::from_utf8(plaintext).map_err(|e| e.to_string())?;
+        serde_json::from_str(&json).map_err(|e| e.to_string())
+    }
+
+    fn flush(&self) -> Result<(), String> {
+        let json = serde_json::to_string(&self.entries).map_err(|e| e.to_string())?;
+        let cipher = Aes256Gcm::new_from_slice(&self.key).map_err(|e| e.to_string())?;
+        let mut nonce_bytes = [0u8; 12];
+        OsRng.fill_bytes(&mut nonce_bytes);
+        let nonce = Nonce::from_slice(&nonce_bytes);
+        let ciphertext = cipher
+            .encrypt(nonce, json.as_bytes())
+            .map_err(|e| e.to_string())?;
+        let payload = EncryptedPayload {
+            nonce: encoding::encode(&nonce_bytes),
+            data: encoding::encode(&ciphertext),
+        };
+        let raw = serde_json::to_string(&payload).map_err(|e| e.to_string())?;
+        if let Some(parent) = self.path.parent() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        fs::write(&self.path, raw).map_err(|e| e.to_string())
+    }
+}
+
+mod encoding {
+    use base64::{engine::general_purpose::STANDARD, Engine};
+
+    pub fn encode(bytes: &[u8]) -> String {
+        STANDARD.encode(bytes)
+    }
+
+    pub fn decode(s: &str) -> Result<Vec<u8>, String> {
+        STANDARD.decode(s).map_err(|e| e.to_string())
+    }
+}
+
+fn store_path() -> Result<PathBuf, String> {
+    let home = dirs::home_dir().ok_or("could not determine home directory")?;
+    Ok(home.join(".cortex").join("credentials.enc"))
+}
+
+fn derive_key() -> Result<[u8; 32], String> {
+    let machine_id = machine_identity()?;
+    let hash = blake3::derive_key("cortex credential store v1", machine_id.as_bytes());
+    Ok(hash)
+}
+
+fn with_store<F, R>(f: F) -> Result<R, String>
+where
+    F: FnOnce(&mut CredentialStore) -> Result<R, String>,
+{
+    let mut guard = STORE.lock().map_err(|e| e.to_string())?;
+    if guard.is_none() {
+        let path = store_path()?;
+        let key = derive_key()?;
+        *guard = Some(CredentialStore::load(path, key));
+    }
+    f(guard.as_mut().unwrap())
+}
 
 pub fn set(account: &str, value: &str) -> Result<(), String> {
-    let entry = Entry::new(SERVICE, account).map_err(|e| e.to_string())?;
-    entry.set_password(value).map_err(|e| e.to_string())
+    with_store(|store| {
+        store.entries.insert(account.to_string(), value.to_string());
+        store.flush()
+    })
 }
 
 pub fn get(account: &str) -> Result<Option<String>, String> {
-    let entry = Entry::new(SERVICE, account).map_err(|e| e.to_string())?;
-    match entry.get_password() {
-        Ok(value) => Ok(Some(value)),
-        Err(keyring::Error::NoEntry) => Ok(None),
-        Err(e) => Err(e.to_string()),
-    }
+    with_store(|store| Ok(store.entries.get(account).cloned()))
 }
 
 pub fn delete(account: &str) -> Result<(), String> {
-    let entry = Entry::new(SERVICE, account).map_err(|e| e.to_string())?;
-    match entry.delete_credential() {
-        Ok(()) => Ok(()),
-        Err(keyring::Error::NoEntry) => Ok(()),
-        Err(e) => Err(e.to_string()),
+    with_store(|store| {
+        store.entries.remove(account);
+        store.flush()
+    })
+}
+
+#[cfg(target_os = "macos")]
+fn machine_identity() -> Result<String, String> {
+    let output = std::process::Command::new("ioreg")
+        .args(["-rd1", "-c", "IOPlatformExpertDevice"])
+        .output()
+        .map_err(|e| e.to_string())?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines() {
+        if line.contains("IOPlatformUUID") {
+            if let Some(uuid) = line.split('"').nth(3) {
+                return Ok(uuid.to_string());
+            }
+        }
     }
+    Err("could not read IOPlatformUUID".to_string())
+}
+
+#[cfg(target_os = "windows")]
+fn machine_identity() -> Result<String, String> {
+    let output = std::process::Command::new("reg")
+        .args([
+            "query",
+            r"HKLM\SOFTWARE\Microsoft\Cryptography",
+            "/v",
+            "MachineGuid",
+        ])
+        .output()
+        .map_err(|e| e.to_string())?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines() {
+        if line.contains("MachineGuid") {
+            if let Some(guid) = line.split_whitespace().last() {
+                return Ok(guid.to_string());
+            }
+        }
+    }
+    Err("could not read MachineGuid from registry".to_string())
+}
+
+#[cfg(target_os = "linux")]
+fn machine_identity() -> Result<String, String> {
+    fs::read_to_string("/etc/machine-id")
+        .map(|s| s.trim().to_string())
+        .map_err(|e| format!("could not read /etc/machine-id: {}", e))
 }

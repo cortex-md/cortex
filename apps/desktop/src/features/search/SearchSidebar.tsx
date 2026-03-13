@@ -168,10 +168,8 @@ export function SearchSidebar() {
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="start" className="w-60">
-              <DropdownMenuLabel>
-                Filter options
-  						</DropdownMenuLabel>
-						<DropdownMenuItem className="text-sm" onSelect={() => handleInsertFilter("tag:")}>
+							<DropdownMenuLabel>Filter options</DropdownMenuLabel>
+							<DropdownMenuItem className="text-sm" onSelect={() => handleInsertFilter("tag:")}>
 								<span>tag</span>
 								<span className="ml-auto text-muted-foreground">tag:name</span>
 							</DropdownMenuItem>
@@ -189,7 +187,7 @@ export function SearchSidebar() {
 
 				<div className="mt-1.5 flex items-center justify-between">
 					<span className="text-[10px] text-muted-foreground">
-							{results.length !== 0 && `${results.length} result${results.length !== 1 ? "s" : ""}`}
+						{results.length !== 0 && `${results.length} result${results.length !== 1 ? "s" : ""}`}
 					</span>
 					{hasFilters && (
 						<span className="text-[10px] text-brand">
@@ -211,35 +209,35 @@ export function SearchSidebar() {
 						No results found
 					</div>
 				)}
-        <div className="px-1 pt-2 flex flex-col gap-1">
-          {results.map((result) => {
-					const folder = folderFromPath(result.id)
-					return (
-						<Button
-  						size={"sm"}
-  						variant={"ghost"}
-							key={result.id}
-							className="w-full text-left px-3 py-2 hover:bg-accent transition-colors"
-							onClick={() => handleResultClick(result.id)}
-						>
-							<div className="flex items-center gap-1.5">
-								<FileIcon className="size-3.5 text-muted-foreground flex-shrink-0" />
-								<span className="text-sm font-medium truncate">{result.title}</span>
-							</div>
-							{folder && (
-								<div className="flex items-center gap-1 mt-0.5 ml-5">
-									<FolderIcon className="size-3 text-muted-foreground" />
-									<span className="text-[10px] text-muted-foreground truncate">{folder}</span>
+				<div className="px-1 pt-2 flex flex-col gap-1">
+					{results.map((result) => {
+						const folder = folderFromPath(result.id)
+						return (
+							<Button
+								size={"sm"}
+								variant={"ghost"}
+								key={result.id}
+								className="w-full text-left px-3 py-2 hover:bg-accent transition-colors"
+								onClick={() => handleResultClick(result.id)}
+							>
+								<div className="flex items-center gap-1.5">
+									<FileIcon className="size-3.5 text-muted-foreground flex-shrink-0" />
+									<span className="text-sm font-medium truncate">{result.title}</span>
 								</div>
-							)}
-							{result.snippet && (
-								<p className="mt-1 ml-5 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-									{highlightSnippet(result.snippet, parsed.text)}
-								</p>
-							)}
-						</Button>
-					)
-				})}
+								{folder && (
+									<div className="flex items-center gap-1 mt-0.5 ml-5">
+										<FolderIcon className="size-3 text-muted-foreground" />
+										<span className="text-[10px] text-muted-foreground truncate">{folder}</span>
+									</div>
+								)}
+								{result.snippet && (
+									<p className="mt-1 ml-5 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+										{highlightSnippet(result.snippet, parsed.text)}
+									</p>
+								)}
+							</Button>
+						)
+					})}
 				</div>
 			</div>
 		</div>

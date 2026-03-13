@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { MenuItem } from "@/utils/context-menu"
 import { NativeMenuActions } from "@/utils/context-menu"
 
+import { ConflictBanner } from "../sync/ConflictBanner"
 import { TabBar } from "../tabs/TabBar"
 
 const hasNativeMenu = () => getPlatform().capabilities.includes("menu")
@@ -332,6 +333,12 @@ export function PaneView({ paneId }: Props) {
 				(() => {
 					const activeTab = pane.tabs.find((t) => t.id === pane.activeTabId)
 					return activeTab ? <FileTagsStrip filePath={activeTab.filePath} /> : null
+				})()}
+
+			{pane.activeTabId &&
+				(() => {
+					const activeTab = pane.tabs.find((t) => t.id === pane.activeTabId)
+					return activeTab ? <ConflictBanner filePath={activeTab.filePath} /> : null
 				})()}
 
 			{!hasNativeMenu() && fallbackTab && fallbackMenu && (

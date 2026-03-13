@@ -1,10 +1,26 @@
 import type {
+	ConflictInfo,
+	ConflictResolution,
+	InitialSyncProgressEvent,
 	Sync as ISync,
+	SyncConflictEvent,
 	SyncFileEvent,
 	SyncStateEvent,
+	VersionInfo,
 } from "@cortex/platform"
 import { invoke } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
+
+function toRustResolution(resolution: ConflictResolution): unknown {
+	switch (resolution.type) {
+		case "keep_local":
+			return "keep_local"
+		case "keep_remote":
+			return "keep_remote"
+		case "merged":
+			return { merged: { content: resolution.content } }
+	}
+}
 
 export class Sync implements ISync {
 	async start(vaultId: string, vaultPath: string, serverUrl: string): Promise<void> {
@@ -19,6 +35,46 @@ export class Sync implements ISync {
 		await invoke<void>("sync_force_sync_file", { path })
 	}
 
+	async resolveConflict(path: string, resolution: ConflictResolution): Promise<void> {
+		await invoke<void>("sync_resolve_conflict", {
+			path,
+			resolution: toRustResolution(resolution),
+		})
+	}
+
+	async getConflicts(vaultId: string, vaultPath: string): Promise<ConflictInfo[]> {
+		return await invoke<ConflictInfo[]>("sync_get_conflicts", {
+			vaultId,
+			vaultPath,
+		})
+	}
+
+	async getVersionHistory(
+		vaultId: string,
+		vaultPath: string,
+		filePath: string,
+	): Promise<VersionInfo[]> {
+		return await invoke<VersionInfo[]>("sync_get_version_history", {
+			vaultId,
+			vaultPath,
+			filePath,
+		})
+	}
+
+	async restoreVersion(
+		vaultId: string,
+		vaultPath: string,
+		filePath: string,
+		version: string,
+	): Promise<void> {
+		await invoke<void>("sync_restore_version", {
+			vaultId,
+			vaultPath,
+			filePath,
+			version,
+		})
+	}
+
 	async onStateChanged(callback: (event: SyncStateEvent) => void): Promise<() => void> {
 		const unlisten = await listen<SyncStateEvent>("sync-state-changed", (e) => {
 			callback(e.payload)
@@ -29,6 +85,29 @@ export class Sync implements ISync {
 	async onFileEvent(callback: (event: SyncFileEvent) => void): Promise<() => void> {
 		const unlisten = await listen<SyncFileEvent>("sync-file-event", (e) => {
 			callback(e.payload)
+		})
+		return unlisten
+	}
+
+	async onInitialSyncProgress(
+		callback: (event: InitialSyncProgressEvent) => void,
+	): Promise<() => void> {
+		const unlisten = await listen<InitialSyncProgressEvent>("sync-initial-progress", (e) => {
+			callback(e.payload)
+		})
+		return unlisten
+	}
+
+	async onConflict(callback: (event: SyncConflictEvent) => void): Promise<() => void> {
+		const unlisten = await listen<SyncConflictEvent>("sync-conflict", (e) => {
+			callback(e.payload)
+		})
+		return unlisten
+	}
+
+	async onInitialSyncComplete(callback: () => void): Promise<() => void> {
+		const unlisten = await listen("sync-initial-complete", () => {
+			callback()
 		})
 		return unlisten
 	}
