@@ -65,19 +65,19 @@ export function MembersPanel({ vaultId }: MembersPanelProps) {
 					Members
 				</h4>
 				{loading && members.length === 0 ? (
-					<p className="text-xs text-text-muted py-2">Loading members...</p>
+					<p className="text-text-muted py-2">Loading members...</p>
 				) : members.length === 0 ? (
-					<p className="text-xs text-text-muted py-2">No members</p>
+					<p className="text-text-muted py-2">No members</p>
 				) : (
 					<div className="flex flex-col gap-1">
 						{members.map((member) => (
 							<div key={member.userId} className="flex items-center gap-3 py-1.5 group">
 								<div className="flex flex-col min-w-0 flex-1">
-									<span className="text-xs font-medium truncate">{member.displayName}</span>
-									<span className="text-[10px] text-text-muted truncate">{member.email}</span>
+									<span className="font-medium truncate">{member.displayName}</span>
+									<span className="text-text-muted truncate">{member.email}</span>
 								</div>
-								<select
-									className="text-[10px] bg-transparent border border-border rounded px-1 py-0.5 outline-none"
+								<NativeSelect
+									className="bg-transparent border border-border rounded px-1 py-0.5 outline-none"
 									value={member.role}
 									onChange={(e) => handleChangeRole(member.userId, e.target.value)}
 								>
@@ -85,7 +85,7 @@ export function MembersPanel({ vaultId }: MembersPanelProps) {
 									<option value="admin">Admin</option>
 									<option value="member">Member</option>
 									<option value="viewer">Viewer</option>
-								</select>
+								</NativeSelect>
 								{member.role !== "owner" && (
 									<Button
 										variant="ghost"
@@ -108,7 +108,7 @@ export function MembersPanel({ vaultId }: MembersPanelProps) {
 				</h4>
 				<div className="flex items-center gap-2">
 					<Input
-						className="h-7 text-xs flex-1"
+						className="h-7 flex-1"
 						placeholder="email@example.com"
 						value={inviteEmail}
 						onChange={(e) => setInviteEmail(e.target.value)}
@@ -117,7 +117,7 @@ export function MembersPanel({ vaultId }: MembersPanelProps) {
 						}}
 					/>
 					<NativeSelect
-						className="text-[10px] bg-transparent border border-border rounded px-1 py-1 outline-none h-7"
+						className="bg-transparent border border-border rounded px-1 py-1 outline-none h-7"
 						value={inviteRole}
 						onChange={(e) => setInviteRole(e.target.value)}
 					>
@@ -130,7 +130,7 @@ export function MembersPanel({ vaultId }: MembersPanelProps) {
 						size="sm"
 						onClick={handleInvite}
 						disabled={inviting || !inviteEmail.trim()}
-						className="h-7 text-xs"
+						className="h-7"
 					>
 						<Plus size={12} />
 						Invite
@@ -149,10 +149,10 @@ export function MembersPanel({ vaultId }: MembersPanelProps) {
 							.map((invite) => (
 								<div key={invite.id} className="flex items-center gap-3 py-1.5 group">
 									<div className="flex flex-col min-w-0 flex-1">
-										<span className="text-xs truncate">{invite.inviteeEmail}</span>
-										<span className="text-[10px] text-text-muted">{invite.role}</span>
+										<span className="truncate">{invite.inviteeEmail}</span>
+										<span className="text-text-muted">{invite.role}</span>
 									</div>
-									<Badge variant="outline" className="text-[10px] py-0">
+									<Badge variant="outline" className="py-0">
 										Pending
 									</Badge>
 									<Button

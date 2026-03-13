@@ -14,6 +14,7 @@
 		"@cortex/editor": "workspace:*",
 		"@cortex/hotkeys": "workspace:*",
 		"@cortex/ipc": "workspace:*",
+		"@cortex/plugin-runtime": "workspace:*",
 		"@cortex/platform": "workspace:*",
 		"@cortex/search": "workspace:*",
 		"@cortex/settings": "workspace:*",

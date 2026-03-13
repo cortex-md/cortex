@@ -22,6 +22,8 @@
 		{ "path": "packages/settings" },
 		{ "path": "packages/hotkeys" },
 		{ "path": "packages/search" },
+		{ "path": "packages/plugin-api" },
+		{ "path": "packages/plugin-runtime" },
 		{ "path": "packages/renderer" },
 		{ "path": "apps/desktop" },
 		{ "path": "apps/web" },

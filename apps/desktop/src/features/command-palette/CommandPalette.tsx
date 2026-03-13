@@ -10,7 +10,7 @@ import {
 	CommandShortcut,
 } from "@cortex/ui"
 import { useCallback, useMemo } from "react"
-import { type CommandEntry, getCommands } from "./commandRegistry"
+import { type CommandEntry, getCommands } from "@cortex/plugin-runtime"
 
 interface GroupedCommands {
 	category: string
@@ -72,7 +72,7 @@ export function CommandPalette() {
 				{grouped.map((group) => (
 					<CommandGroup key={group.category} heading={group.category}>
 						{group.commands.map((cmd) => {
-							const Icon = cmd.icon
+							const Icon = typeof cmd.icon === "function" ? cmd.icon : null
 							const shortcut = cmd.shortcut ?? shortcutMap.get(cmd.id)
 							return (
 								<CommandItem

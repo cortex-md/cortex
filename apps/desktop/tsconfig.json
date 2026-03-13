@@ -28,6 +28,8 @@
 		{ "path": "../../packages/core" },
 		{ "path": "../../packages/editor" },
 		{ "path": "../../packages/ipc" },
+		{ "path": "../../packages/plugin-api" },
+		{ "path": "../../packages/plugin-runtime" },
 		{ "path": "../../packages/platform" },
 		{ "path": "../../packages/ui" },
 		{ "path": "../../packages/hotkeys" },

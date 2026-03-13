@@ -71,7 +71,7 @@ export function SyncSection() {
 				<Separator className="my-4" />
 				<div className="flex flex-col items-center gap-3 py-8">
 					<CloudOff size={32} className="text-text-muted" />
-					<p className="text-xs text-text-muted text-center">Sign in to enable sync features</p>
+					<p className="text-text-muted text-center">Sign in to enable sync features</p>
 				</div>
 			</section>
 		)
@@ -92,24 +92,24 @@ export function SyncSection() {
 						<>
 							<Cloud size={16} className="text-accent" />
 							<div className="flex flex-col min-w-0 flex-1">
-								<span className="text-xs font-medium">Linked to remote vault</span>
-								<span className="text-[10px] text-text-muted truncate">{linkedVaultId}</span>
+								<span className="font-medium">Linked to remote vault</span>
+								<span className="text-text-muted truncate">{linkedVaultId}</span>
 							</div>
-							<Badge variant="outline" className="text-[10px] py-0">
+							<Badge variant="outline" className="py-1">
 								{engineState === "live" ? "Syncing" : engineState}
 							</Badge>
 						</>
 					) : (
 						<>
 							<CloudOff size={16} className="text-text-muted" />
-							<span className="text-xs text-text-muted flex-1">Not linked to any remote vault</span>
+							<span className="text-text-muted flex-1">Not linked to any remote vault</span>
 						</>
 					)}
 					<Button
 						variant="ghost"
 						size="sm"
 						onClick={() => setLinkModalOpen(true)}
-						className="text-xs h-7 px-2"
+						className="h-7 px-2"
 					>
 						<Link size={12} />
 						{linkedVaultId ? "Change" : "Link"}

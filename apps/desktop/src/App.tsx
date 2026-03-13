@@ -30,7 +30,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react"
 import { BookmarksSidebar } from "./features/bookmarks/BookmarksSidebar"
 import { CommandPalette } from "./features/command-palette/CommandPalette"
-import { registerCommand } from "./features/command-palette/commandRegistry"
+import { registerCommand } from "@cortex/plugin-runtime"
 import { FileSidebar } from "./features/file-explorer/FileSidebar"
 import { type NavItem, SidebarNav } from "./features/file-explorer/SidebarNav"
 import { EmptyVaultLayout } from "./features/layout/empty-vault-layout"

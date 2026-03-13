@@ -39,7 +39,7 @@ impl SyncHttpClient {
         }
     }
 
-    fn inject_auth_headers(&self, builder: RequestBuilder) -> Result<RequestBuilder, String> {
+    async fn inject_auth_headers(&self, builder: RequestBuilder) -> Result<RequestBuilder, String> {
         let access_token = keychain::get(ACCESS_TOKEN_KEY)?;
         let device_id = device::get_device_id()?;
 
@@ -47,8 +47,7 @@ impl SyncHttpClient {
 
         if let Some(token) = access_token {
             if should_refresh(&token) {
-                if let Err(_) = self.refresh_tokens_internal() {
-                    // proceed with possibly stale token
+                if let Err(_) = self.refresh_tokens_internal().await {
                 }
                 if let Ok(Some(new_token)) = keychain::get(ACCESS_TOKEN_KEY) {
                     return Ok(builder.header("Authorization", format!("Bearer {}", new_token)));
@@ -63,13 +62,13 @@ impl SyncHttpClient {
     pub async fn get(&self, path: &str) -> Result<Response, String> {
         let url = format!("{}{}", self.get_server_url(), path);
         let builder = self.client.get(&url);
-        let builder = self.inject_auth_headers(builder)?;
+        let builder = self.inject_auth_headers(builder).await?;
         let response = builder.send().await.map_err(|e| e.to_string())?;
 
         if response.status().as_u16() == 401 {
-            if self.refresh_tokens_internal().is_ok() {
+            if self.refresh_tokens_internal().await.is_ok() {
                 let builder = self.client.get(&url);
-                let builder = self.inject_auth_headers(builder)?;
+                let builder = self.inject_auth_headers(builder).await?;
                 return builder.send().await.map_err(|e| e.to_string());
             }
         }
@@ -84,13 +83,13 @@ impl SyncHttpClient {
     ) -> Result<Response, String> {
         let url = format!("{}{}", self.get_server_url(), path);
         let builder = self.client.post(&url).json(body);
-        let builder = self.inject_auth_headers(builder)?;
+        let builder = self.inject_auth_headers(builder).await?;
         let response = builder.send().await.map_err(|e| e.to_string())?;
 
         if response.status().as_u16() == 401 {
-            if self.refresh_tokens_internal().is_ok() {
+            if self.refresh_tokens_internal().await.is_ok() {
                 let builder = self.client.post(&url).json(body);
-                let builder = self.inject_auth_headers(builder)?;
+                let builder = self.inject_auth_headers(builder).await?;
                 return builder.send().await.map_err(|e| e.to_string());
             }
         }
@@ -109,16 +108,16 @@ impl SyncHttpClient {
         for (key, value) in &headers {
             builder = builder.header(key.as_str(), value.as_str());
         }
-        let builder = self.inject_auth_headers(builder)?;
+        let builder = self.inject_auth_headers(builder).await?;
         let response = builder.send().await.map_err(|e| e.to_string())?;
 
         if response.status().as_u16() == 401 {
-            if self.refresh_tokens_internal().is_ok() {
+            if self.refresh_tokens_internal().await.is_ok() {
                 let mut builder = self.client.post(&url).body(body);
                 for (key, value) in &headers {
                     builder = builder.header(key.as_str(), value.as_str());
                 }
-                let builder = self.inject_auth_headers(builder)?;
+                let builder = self.inject_auth_headers(builder).await?;
                 return builder.send().await.map_err(|e| e.to_string());
             }
         }
@@ -129,13 +128,13 @@ impl SyncHttpClient {
     pub async fn delete(&self, path: &str) -> Result<Response, String> {
         let url = format!("{}{}", self.get_server_url(), path);
         let builder = self.client.delete(&url);
-        let builder = self.inject_auth_headers(builder)?;
+        let builder = self.inject_auth_headers(builder).await?;
         let response = builder.send().await.map_err(|e| e.to_string())?;
 
         if response.status().as_u16() == 401 {
-            if self.refresh_tokens_internal().is_ok() {
+            if self.refresh_tokens_internal().await.is_ok() {
                 let builder = self.client.delete(&url);
-                let builder = self.inject_auth_headers(builder)?;
+                let builder = self.inject_auth_headers(builder).await?;
                 return builder.send().await.map_err(|e| e.to_string());
             }
         }
@@ -150,13 +149,13 @@ impl SyncHttpClient {
     ) -> Result<Response, String> {
         let url = format!("{}{}", self.get_server_url(), path);
         let builder = self.client.patch(&url).json(body);
-        let builder = self.inject_auth_headers(builder)?;
+        let builder = self.inject_auth_headers(builder).await?;
         let response = builder.send().await.map_err(|e| e.to_string())?;
 
         if response.status().as_u16() == 401 {
-            if self.refresh_tokens_internal().is_ok() {
+            if self.refresh_tokens_internal().await.is_ok() {
                 let builder = self.client.patch(&url).json(body);
-                let builder = self.inject_auth_headers(builder)?;
+                let builder = self.inject_auth_headers(builder).await?;
                 return builder.send().await.map_err(|e| e.to_string());
             }
         }
@@ -171,13 +170,13 @@ impl SyncHttpClient {
     ) -> Result<Response, String> {
         let url = format!("{}{}", self.get_server_url(), path);
         let builder = self.client.put(&url).json(body);
-        let builder = self.inject_auth_headers(builder)?;
+        let builder = self.inject_auth_headers(builder).await?;
         let response = builder.send().await.map_err(|e| e.to_string())?;
 
         if response.status().as_u16() == 401 {
-            if self.refresh_tokens_internal().is_ok() {
+            if self.refresh_tokens_internal().await.is_ok() {
                 let builder = self.client.put(&url).json(body);
-                let builder = self.inject_auth_headers(builder)?;
+                let builder = self.inject_auth_headers(builder).await?;
                 return builder.send().await.map_err(|e| e.to_string());
             }
         }
@@ -185,16 +184,18 @@ impl SyncHttpClient {
         Ok(response)
     }
 
-    fn refresh_tokens_internal(&self) -> Result<(), String> {
+    async fn refresh_tokens_internal(&self) -> Result<(), String> {
         let refresh_token = keychain::get(REFRESH_TOKEN_KEY)?
             .ok_or_else(|| "No refresh token".to_string())?;
 
         let url = format!("{}/auth/v1/token/refresh", self.get_server_url());
 
-        let response = reqwest::blocking::Client::new()
+        let response = self
+            .client
             .post(&url)
             .json(&serde_json::json!({ "refresh_token": refresh_token }))
             .send()
+            .await
             .map_err(|e| e.to_string())?;
 
         if !response.status().is_success() {
@@ -203,7 +204,7 @@ impl SyncHttpClient {
             return Err("Token refresh failed".to_string());
         }
 
-        let body: serde_json::Value = response.json().map_err(|e| e.to_string())?;
+        let body: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
 
         if let Some(access) = body["access_token"].as_str() {
             keychain::set(ACCESS_TOKEN_KEY, access)?;

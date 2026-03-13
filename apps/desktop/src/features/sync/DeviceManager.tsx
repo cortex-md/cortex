@@ -1,5 +1,5 @@
 import { useDevicesStore } from "@cortex/core"
-import { Badge, Button } from "@cortex/ui"
+import { Badge, Button, Input } from "@cortex/ui"
 import { Laptop, Monitor, Pencil, Smartphone, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 
@@ -69,8 +69,8 @@ export function DeviceManager() {
 					<div className="flex flex-col min-w-0 flex-1">
 						{editingId === device.id ? (
 							<div className="flex items-center gap-1">
-								<input
-									className="text-xs bg-transparent border border-border rounded px-1 py-0.5 outline-none focus:border-accent w-full"
+								<Input
+  								className="bg-transparent border border-border rounded px-1 py-0.5 outline-none focus:border-accent w-full"
 									value={editName}
 									onChange={(e) => setEditName(e.target.value)}
 									onKeyDown={(e) => {
@@ -83,22 +83,22 @@ export function DeviceManager() {
 									variant="ghost"
 									size="sm"
 									onClick={() => handleConfirmRename(device.id)}
-									className="text-xs h-6 px-2"
+									className="h-6 px-2"
 								>
 									Save
 								</Button>
 							</div>
 						) : (
 							<>
-								<span className="text-xs font-medium truncate">
+								<span className="font-medium truncate">
 									{device.deviceName}
 									{device.isCurrent && (
-										<Badge variant="outline" className="ml-2 text-[10px] py-0">
+										<Badge variant="outline" className="ml-2 py-0">
 											This device
 										</Badge>
 									)}
 								</span>
-								<span className="text-[10px] text-text-muted">
+								<span className="text-text-muted">
 									{device.lastSeenAt
 										? `Last seen ${new Date(device.lastSeenAt).toLocaleDateString()}`
 										: `Added ${new Date(device.createdAt).toLocaleDateString()}`}

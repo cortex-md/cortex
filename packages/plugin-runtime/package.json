@@ -1,0 +1,22 @@
+{
+	"name": "@cortex/plugin-runtime",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"dependencies": {
+		"@cortex/plugin-api": "workspace:*",
+		"@cortex/platform": "workspace:*",
+		"zustand": "^5.0.0",
+		"immer": "^10.1.1"
+	},
+	"devDependencies": {
+		"@types/react": "^19.1.8",
+		"typescript": "~5.8.3"
+	},
+	"peerDependencies": {
+		"react": ">=19"
+	}
+}
