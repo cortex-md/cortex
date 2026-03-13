@@ -7,6 +7,7 @@ import {
 	ViewPlugin,
 	type ViewUpdate,
 } from "@codemirror/view"
+import { findFrontmatter } from "./frontmatter"
 import { isCursorOnLine } from "./utils"
 
 interface DecorationEntry {
@@ -18,6 +19,7 @@ interface DecorationEntry {
 function buildDecorations(view: EditorView): DecorationSet {
 	const decorations: DecorationEntry[] = []
 	const tree = syntaxTree(view.state)
+	const fm = findFrontmatter(view.state.doc)
 
 	for (const { from, to } of view.visibleRanges) {
 		tree.iterate({
@@ -28,6 +30,8 @@ function buildDecorations(view: EditorView): DecorationSet {
 
 				const nodeFrom = node.from
 				const nodeTo = node.to
+
+				if (fm && nodeFrom < fm.to) return
 
 				if (isCursorOnLine(view.state, nodeFrom, nodeTo)) return
 

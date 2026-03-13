@@ -29,6 +29,7 @@ export interface ExternalChangeEvent {
 }
 
 type ExternalChangeListener = (event: ExternalChangeEvent) => void
+type ContentChangeListener = (filePath: string, content: string) => void
 
 const EVICTION_IDLE_MS = 15 * 60 * 1000
 const EVICTION_INTERVAL_MS = 5 * 60 * 1000
@@ -42,6 +43,7 @@ class NoteCache {
 	private saveTimers = new Map<string, ReturnType<typeof setTimeout>>()
 	private snapshotTimers = new Map<string, ReturnType<typeof setInterval>>()
 	private externalChangeListeners: ExternalChangeListener[] = []
+	private contentChangeListeners = new Map<string, Set<ContentChangeListener>>()
 	private evictionTimer: ReturnType<typeof setInterval> | null = null
 
 	start() {
@@ -103,6 +105,42 @@ class NoteCache {
 
 		if (entry.dirty) {
 			this.scheduleSave(filePath)
+		}
+	}
+
+	writeExternal(filePath: string, content: string) {
+		const entry = this.entries.get(filePath)
+		if (!entry) return
+
+		entry.content = content
+		entry.dirty = content !== entry.diskContent
+		entry.lastAccessed = Date.now()
+
+		if (entry.dirty) {
+			this.scheduleSave(filePath)
+		}
+
+		this.notifyContentChange(filePath, content)
+	}
+
+	onContentChange(filePath: string, listener: ContentChangeListener): () => void {
+		if (!this.contentChangeListeners.has(filePath)) {
+			this.contentChangeListeners.set(filePath, new Set())
+		}
+		this.contentChangeListeners.get(filePath)!.add(listener)
+		return () => {
+			const listeners = this.contentChangeListeners.get(filePath)
+			if (listeners) {
+				listeners.delete(listener)
+				if (listeners.size === 0) this.contentChangeListeners.delete(filePath)
+			}
+		}
+	}
+
+	private notifyContentChange(filePath: string, content: string) {
+		const listeners = this.contentChangeListeners.get(filePath)
+		if (listeners) {
+			for (const listener of listeners) listener(filePath, content)
 		}
 	}
 

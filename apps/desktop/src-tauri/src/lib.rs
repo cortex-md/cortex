@@ -1,4 +1,7 @@
 mod commands;
+mod device;
+mod keychain;
+mod sync;
 
 use tauri::Manager;
 
@@ -24,9 +27,32 @@ pub fn run() {
             commands::registry::update_vault_registry,
             commands::dialog::pick_folder,
             commands::font::list_system_fonts,
+            commands::keychain::keychain_set,
+            commands::keychain::keychain_get,
+            commands::keychain::keychain_delete,
+            commands::device::get_device_id,
+            commands::device::get_device_info,
+            commands::auth::auth_login,
+            commands::auth::auth_register,
+            commands::auth::auth_logout,
+            commands::auth::auth_get_status,
+            commands::auth::auth_get_current_user,
+            commands::sync::sync_start,
+            commands::sync::sync_stop,
+            commands::sync::sync_force_sync_file,
         ])
         .setup(|app| {
             commands::watcher::init(app);
+
+            let http_client = sync::http::SyncHttpClient::new();
+            http_client.load_server_url();
+            app.manage(http_client);
+
+            let (tx, rx) = tokio::sync::mpsc::channel(256);
+            app.manage(tx);
+
+            let engine = sync::engine::SyncEngine::new(app.handle().clone());
+            tauri::async_runtime::spawn(engine.run(rx));
 
             let window = app.get_webview_window("main").unwrap();
 

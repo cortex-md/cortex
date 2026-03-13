@@ -29,5 +29,6 @@ Document IDs are relative paths from vault root (e.g. `notes/my-note.md`).
 
 ## Dependencies
 - `@cortex/platform` — for file I/O
+- `@cortex/core` — for centralized `parseFrontmatter()` utility (frontmatter extraction in preprocessor)
 - `minisearch` — full-text search engine
 - `zustand` — store

@@ -566,6 +566,67 @@ body {
 	color: var(--text-primary);
 }
 
+/* Reading View: Frontmatter Properties Card */
+
+.reading-view .frontmatter-card {
+	background: var(--bg-secondary);
+	border: 1px solid var(--border-subtle);
+	border-radius: 8px;
+	margin-bottom: 16px;
+	overflow: hidden;
+}
+
+.reading-view .frontmatter-header {
+	font-family: var(--font-ui);
+	font-size: 0.7em;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--text-muted);
+	padding: 8px 14px 4px;
+}
+
+.reading-view .frontmatter-fields {
+	padding: 2px 14px 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.reading-view .frontmatter-row {
+	display: flex;
+	align-items: baseline;
+	gap: 12px;
+	font-family: var(--font-ui);
+	font-size: 0.82em;
+	line-height: 1.6;
+}
+
+.reading-view .frontmatter-key {
+	color: var(--text-secondary);
+	min-width: 80px;
+	flex-shrink: 0;
+}
+
+.reading-view .frontmatter-value {
+	color: var(--text-primary);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	align-items: center;
+}
+
+.reading-view .frontmatter-tag {
+	display: inline-flex;
+	align-items: center;
+	padding: 1px 8px;
+	border-radius: 10px;
+	font-size: 0.9em;
+	background: color-mix(in srgb, var(--accent) 12%, transparent);
+	color: var(--accent-text);
+	border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
 .reading-view h1,
 .reading-view h2,
 .reading-view h3,

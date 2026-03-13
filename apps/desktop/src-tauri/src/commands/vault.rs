@@ -10,6 +10,7 @@ pub struct VaultIdentity {
 }
 
 #[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct VaultMetadata {
     pub uuid: String,
     pub path: String,

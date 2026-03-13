@@ -14,7 +14,7 @@ import {
 	Kbd,
 } from "@cortex/ui"
 import { ClipboardCopyIcon, FolderIcon, PinIcon, PinOffIcon, TagIcon, XIcon } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { MenuItem } from "@/utils/context-menu"
 import { NativeMenuActions } from "@/utils/context-menu"
 
@@ -53,22 +53,47 @@ interface TabEditorProps {
 	onCursorChange: (cursor: CursorInfo) => void
 }
 
+interface CMView {
+	state: { doc: { toString(): string; length: number } }
+	dispatch(spec: { changes: { from: number; to: number; insert: string } }): void
+}
+
 function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabEditorProps) {
 	const [content, setContent] = useState<string | null>(null)
 	const { markTabDirty } = useWorkspaceStore()
 	const mode = useEditorStore((s) => s.mode)
+	const viewRef = useRef<CMView | null>(null)
 
 	useEffect(() => {
 		noteCache.read(tab.filePath).then(setContent)
 	}, [tab.filePath])
 
+	useEffect(() => {
+		const unsubscribe = noteCache.onContentChange(tab.filePath, (_filePath, newContent) => {
+			setContent(newContent)
+			const view = viewRef.current
+			if (!view) return
+			const currentContent = view.state.doc.toString()
+			if (currentContent === newContent) return
+			view.dispatch({
+				changes: { from: 0, to: view.state.doc.length, insert: newContent },
+			})
+		})
+		return unsubscribe
+	}, [tab.filePath])
+
 	const handleChange = useCallback(
 		(newContent: string) => {
+			setContent(newContent)
 			noteCache.write(tab.filePath, newContent)
 			markTabDirty(tab.id, true)
 		},
 		[tab.filePath, tab.id, markTabDirty],
 	)
+
+	const handleViewReady = useCallback((view: CMView) => {
+		viewRef.current = view
+	}, [])
 
 	return (
 		<div
@@ -105,6 +130,7 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 					livePreview={mode === "live-preview"}
 					onChange={handleChange}
 					onCursorChange={isActive ? onCursorChange : undefined}
+					onViewReady={handleViewReady}
 				/>
 			)}
 		</div>

@@ -3,6 +3,7 @@ use std::fs;
 use std::path::Path;
 
 #[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct FileEntry {
     pub path: String,
     pub name: String,
@@ -80,7 +81,9 @@ pub fn list_dir(path: String) -> Result<Vec<FileEntry>, String> {
         });
     }
     entries.sort_by(|a, b| {
-        b.is_dir.cmp(&a.is_dir).then(a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+        b.is_dir
+            .cmp(&a.is_dir)
+            .then(a.name.to_lowercase().cmp(&b.name.to_lowercase()))
     });
     Ok(entries)
 }

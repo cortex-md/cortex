@@ -22,19 +22,21 @@ const html = await renderer.render(markdownString)
 ## Pipeline Order
 
 1. `remark-parse` — Markdown → mdast
-2. `remarkFrontmatter` — strips YAML `---` front matter before rendering
+2. `remarkFrontmatter` — strips YAML `---` front matter nodes, saves parsed fields to `file.data`
 3. `remark-gfm` — GFM tables, strikethrough, task lists syntax
 4. `remark-rehype` — mdast → hast
-5. `rehypeWikiLinks` — `[[note]]` / `[[note|label]]` → `<a data-wiki-link="note">`
-6. `rehypeTaskList` — adds `data-task-item` and checkbox `<input>` to list items
-7. `rehype-highlight` — syntax highlighting via highlight.js (adds `hljs-*` classes)
-8. `rehype-stringify` — hast → HTML string
+5. `rehypeFrontmatter` — injects a Properties card (hast div) from parsed frontmatter data
+6. `rehypeWikiLinks` — `[[note]]` / `[[note|label]]` → `<a data-wiki-link="note">`
+7. `rehypeTaskList` — adds `data-task-item` and checkbox `<input>` to list items
+8. `rehype-highlight` — syntax highlighting via highlight.js (adds `hljs-*` classes)
+9. `rehype-stringify` — hast → HTML string
 
 ## Plugins
 
 | File | Stage | Purpose |
 |------|-------|---------|
-| `src/plugins/frontmatter.ts` | remark | Strips YAML front matter node before render |
+| `src/plugins/frontmatter.ts` (remarkFrontmatter) | remark | Strips YAML front matter nodes, parses fields into `file.data.frontmatterFields` |
+| `src/plugins/frontmatter.ts` (rehypeFrontmatter) | rehype | Injects a styled Properties card (div.frontmatter-card) from parsed frontmatter data |
 | `src/plugins/wikiLinks.ts` | rehype | Transforms `[[link]]` text into `<a data-wiki-link>` elements |
 | `src/plugins/taskList.ts` | rehype | Enhances GFM task list items with `data-task-item` and checkbox inputs |
 
@@ -64,6 +66,15 @@ CSS variables in the consuming app's stylesheet (see `apps/desktop/src/styles.cs
 
 Wiki links use `data-wiki-link` attribute — style with `.reading-view a[data-wiki-link]`.
 Task list items use `data-task-item="checked|unchecked"`.
+
+Frontmatter Properties card uses these classes (style under `.reading-view`):
+- `.frontmatter-card` — outer container (border, background, border-radius)
+- `.frontmatter-header` — "Properties" label (uppercase, muted)
+- `.frontmatter-fields` — field rows container (flex column)
+- `.frontmatter-row` — single key-value row (flex row)
+- `.frontmatter-key` — field name (muted text, fixed width)
+- `.frontmatter-value` — field value
+- `.frontmatter-tag` — tag chip (accent-colored pill)
 
 ## Key Constraints
 

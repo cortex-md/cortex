@@ -23,5 +23,13 @@ notify = "7"
 blake3 = "1"
 uuid = { version = "1", features = ["v4"] }
 dirs = "6"
-tokio = { version = "1", features = ["sync"] }
+tokio = { version = "1", features = ["sync", "macros", "rt-multi-thread", "time"] }
 font-kit = "0.14"
+rusqlite = { version = "0.31", features = ["bundled"] }
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
+gethostname = "0.5"
+aes-gcm = "0.10"
+rand = "0.8"
+reqwest = { version = "0.12", features = ["rustls-tls", "json", "blocking"] }
+jsonwebtoken = "9"
+base64 = "0.22"

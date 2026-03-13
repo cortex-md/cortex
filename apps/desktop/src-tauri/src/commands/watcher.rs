@@ -4,6 +4,8 @@ use std::path::Path;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager};
 
+use crate::sync::state::SyncCommand;
+
 #[derive(Serialize, Clone)]
 pub struct VaultFileChanged {
     pub path: String,
@@ -33,6 +35,8 @@ pub fn start_watching(app: AppHandle, path: String) -> Result<(), String> {
     let mut state = state.lock().map_err(|e| e.to_string())?;
 
     let app_handle = app.clone();
+    let sync_tx = app.try_state::<tokio::sync::mpsc::Sender<SyncCommand>>();
+    let sync_sender = sync_tx.map(|s| (*s).clone());
     let vault_path = path.clone();
 
     let mut watcher = RecommendedWatcher::new(
@@ -47,10 +51,15 @@ pub fn start_watching(app: AppHandle, path: String) -> Result<(), String> {
                         let _ = app_handle.emit(
                             "vault-file-changed",
                             VaultFileChanged {
-                                path: path_str,
+                                path: path_str.clone(),
                                 kind: kind_str.to_string(),
                             },
                         );
+                        if let Some(ref sender) = sync_sender {
+                            let _ = sender.try_send(SyncCommand::LocalFileChanged {
+                                path: path_str,
+                            });
+                        }
                     }
                 }
             }

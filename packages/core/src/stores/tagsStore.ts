@@ -1,6 +1,8 @@
 import { getPlatform } from "@cortex/platform"
 import { create } from "zustand"
 import { devtools } from "zustand/middleware"
+import { noteCache } from "../noteCache"
+import { addTagToFrontmatter, extractAllTags, removeTagFromFrontmatter } from "../utils/frontmatter"
 
 export interface TagColor {
 	tag: string
@@ -30,145 +32,6 @@ export interface TagsState {
 	loadTagColors: (vaultPath: string) => Promise<void>
 	addTagToFile: (filePath: string, tag: string) => Promise<void>
 	removeTagFromFile: (filePath: string, tag: string) => Promise<void>
-}
-
-function extractTagsFromContent(rawContent: string): string[] {
-	const frontmatterMatch = rawContent.match(/^---\n([\s\S]*?)\n---\n?/)
-	if (!frontmatterMatch) return extractInlineTags(rawContent)
-
-	const yaml = frontmatterMatch[1]
-	const bodyContent = rawContent.slice(frontmatterMatch[0].length)
-
-	const yamlTags = extractYamlTagList(yaml)
-	const inlineTags = extractInlineTags(bodyContent)
-
-	return [...new Set([...yamlTags, ...inlineTags])]
-}
-
-function extractYamlTagList(yaml: string): string[] {
-	const inlineMatch = yaml.match(/^tags:\s*\[([^\]]+)\]/m)
-	if (inlineMatch) {
-		return inlineMatch[1].split(",").map((s) =>
-			s
-				.trim()
-				.replace(/^["']|["']$/g, "")
-				.toLowerCase(),
-		)
-	}
-
-	const blockMatch = yaml.match(/^tags:\s*\n((?:\s+-\s+.+\n?)*)/m)
-	if (blockMatch) {
-		return blockMatch[1]
-			.split("\n")
-			.map((line) =>
-				line
-					.replace(/^\s*-\s*/, "")
-					.trim()
-					.replace(/^["']|["']$/g, "")
-					.toLowerCase(),
-			)
-			.filter(Boolean)
-	}
-
-	return []
-}
-
-function extractInlineTags(content: string): string[] {
-	const matches = content.match(/#([a-zA-Z][a-zA-Z0-9_/-]*)/g)
-	if (!matches) return []
-	return [...new Set(matches.map((m) => m.slice(1).toLowerCase()))]
-}
-
-function addTagToFrontmatter(content: string, tag: string): string {
-	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n?/)
-
-	if (!frontmatterMatch) {
-		return `---\ntags:\n  - ${tag}\n---\n${content}`
-	}
-
-	const yaml = frontmatterMatch[1]
-	const rest = content.slice(frontmatterMatch[0].length)
-
-	const inlineMatch = yaml.match(/^(tags:\s*)\[([^\]]*)\]/m)
-	if (inlineMatch) {
-		const existingTags = inlineMatch[2]
-			.split(",")
-			.map((s) => s.trim().replace(/^["']|["']$/g, ""))
-			.filter(Boolean)
-		if (existingTags.some((t) => t.toLowerCase() === tag.toLowerCase())) return content
-		existingTags.push(tag)
-		const updatedYaml = yaml.replace(
-			inlineMatch[0],
-			`${inlineMatch[1]}[${existingTags.join(", ")}]`,
-		)
-		return `---\n${updatedYaml}\n---\n${rest}`
-	}
-
-	const blockMatch = yaml.match(/^(tags:\s*\n)((?:\s+-\s+.+\n?)*)/m)
-	if (blockMatch) {
-		const existingLines = blockMatch[2]
-			.split("\n")
-			.map((l) =>
-				l
-					.replace(/^\s*-\s*/, "")
-					.trim()
-					.replace(/^["']|["']$/g, ""),
-			)
-			.filter(Boolean)
-		if (existingLines.some((t) => t.toLowerCase() === tag.toLowerCase())) return content
-		const updatedBlock = `${blockMatch[1]}${blockMatch[2]}  - ${tag}\n`
-		const updatedYaml = yaml.replace(blockMatch[0], updatedBlock)
-		return `---\n${updatedYaml}\n---\n${rest}`
-	}
-
-	const updatedYaml = `${yaml}\ntags:\n  - ${tag}`
-	return `---\n${updatedYaml}\n---\n${rest}`
-}
-
-function removeTagFromFrontmatter(content: string, tag: string): string {
-	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n?/)
-	if (!frontmatterMatch) return content
-
-	const yaml = frontmatterMatch[1]
-	const rest = content.slice(frontmatterMatch[0].length)
-
-	const inlineMatch = yaml.match(/^(tags:\s*)\[([^\]]*)\]/m)
-	if (inlineMatch) {
-		const existingTags = inlineMatch[2]
-			.split(",")
-			.map((s) => s.trim().replace(/^["']|["']$/g, ""))
-			.filter((t) => t.toLowerCase() !== tag.toLowerCase())
-		if (existingTags.length === 0) {
-			const updatedYaml = yaml.replace(/^tags:\s*\[[^\]]*\]\n?/m, "")
-			return `---\n${updatedYaml}\n---\n${rest}`
-		}
-		const updatedYaml = yaml.replace(
-			inlineMatch[0],
-			`${inlineMatch[1]}[${existingTags.join(", ")}]`,
-		)
-		return `---\n${updatedYaml}\n---\n${rest}`
-	}
-
-	const blockMatch = yaml.match(/^(tags:\s*\n)((?:\s+-\s+.+\n?)*)/m)
-	if (blockMatch) {
-		const lines = blockMatch[2].split("\n").filter(Boolean)
-		const filtered = lines.filter((line) => {
-			const value = line
-				.replace(/^\s*-\s*/, "")
-				.trim()
-				.replace(/^["']|["']$/g, "")
-			return value.toLowerCase() !== tag.toLowerCase()
-		})
-		if (filtered.length === 0) {
-			const updatedYaml = yaml.replace(blockMatch[0], "")
-			return `---\n${updatedYaml}\n---\n${rest}`
-		}
-		const updatedBlock = `${blockMatch[1]}${filtered.join("\n")}\n`
-		const updatedYaml = yaml.replace(blockMatch[0], updatedBlock)
-		return `---\n${updatedYaml}\n---\n${rest}`
-	}
-
-	return content
 }
 
 const TAG_COLORS_FILE = ".cortex/tags.json"
@@ -216,7 +79,7 @@ export const useTagsStore = create<TagsState>()(
 				for (const filePath of mdFilePaths) {
 					try {
 						const content = await platform.fs.readFile(filePath)
-						const tags = extractTagsFromContent(content)
+						const tags = extractAllTags(content)
 						fileTagsCache.set(filePath, tags)
 
 						for (const tag of tags) {
@@ -233,7 +96,7 @@ export const useTagsStore = create<TagsState>()(
 
 			updateFileInIndex: (filePath, rawContent) => {
 				const previousTags = fileTagsCache.get(filePath) ?? []
-				const updatedTags = extractTagsFromContent(rawContent)
+				const updatedTags = extractAllTags(rawContent)
 
 				fileTagsCache.set(filePath, updatedTags)
 
@@ -320,20 +183,32 @@ export const useTagsStore = create<TagsState>()(
 			},
 
 			addTagToFile: async (filePath, tag) => {
+				const entry = noteCache.getEntry(filePath)
 				const platform = getPlatform()
-				const content = await platform.fs.readFile(filePath)
+				const content = entry ? entry.content : await platform.fs.readFile(filePath)
 				const updated = addTagToFrontmatter(content, tag)
 				if (updated === content) return
-				await platform.fs.writeFile(filePath, updated)
+
+				if (entry) {
+					noteCache.writeExternal(filePath, updated)
+				} else {
+					await platform.fs.writeFile(filePath, updated)
+				}
 				get().updateFileInIndex(filePath, updated)
 			},
 
 			removeTagFromFile: async (filePath, tag) => {
+				const entry = noteCache.getEntry(filePath)
 				const platform = getPlatform()
-				const content = await platform.fs.readFile(filePath)
+				const content = entry ? entry.content : await platform.fs.readFile(filePath)
 				const updated = removeTagFromFrontmatter(content, tag)
 				if (updated === content) return
-				await platform.fs.writeFile(filePath, updated)
+
+				if (entry) {
+					noteCache.writeExternal(filePath, updated)
+				} else {
+					await platform.fs.writeFile(filePath, updated)
+				}
 				get().updateFileInIndex(filePath, updated)
 			},
 		}),

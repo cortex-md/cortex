@@ -260,6 +260,14 @@ await noteCache.openTab(path)  // Load file into cache
 await noteCache.closeTab(path) // Unload from cache
 await noteCache.write(path, content, metadata)  // Write to cache
 await noteCache.flush(path)    // Flush to disk
+
+// External content updates (e.g. tag additions from tagsStore)
+noteCache.writeExternal(path, content)  // Update cache + notify listeners
+
+// Subscribe to external content changes (for CM6 editor sync)
+const unsub = noteCache.onContentChange(path, (newContent) => {
+  // Dispatch CM6 transaction to update editor view
+})
 ```
 
 **Key features**:
@@ -267,6 +275,8 @@ await noteCache.flush(path)    // Flush to disk
 - Auto-saves every 2 seconds while file is open
 - Tracks diffs for undo/redo snapshots
 - Flushes on app close or explicit call
+- `writeExternal()` updates cache and notifies listeners without triggering auto-save
+- `onContentChange()` allows components to react to programmatic content changes (e.g. tag edits syncing to the editor)
 
 ## Adding a New Store
 
@@ -321,6 +331,7 @@ Stores **should not directly depend on each other**, but may read state via `get
 ```
 vaultStore (file operations)
   ├─ uses getPlatform() → platform abstraction
+  └─ createFile() auto-generates default frontmatter (created + tags)
 
 editorStore (editor state)
   └─ no dependencies
@@ -331,6 +342,11 @@ workspaceStore (layout)
 
 uiStore (UI chrome)
   └─ no dependencies
+
+tagsStore (tag management)
+  ├─ uses getPlatform() → file I/O
+  ├─ uses noteCache.writeExternal() when file is open (syncs to editor)
+  └─ falls back to platform.fs.writeFile() when file is not cached
 
 noteCache (file cache)
   ├─ uses getPlatform() → file I/O
@@ -404,3 +420,32 @@ import { useVaultStore, useEditorStore } from "@cortex/core"
 ```
 
 Stores are tree-shaken at build time, so importing only what you need is efficient.
+
+## Frontmatter Utilities
+
+`@cortex/core` exports centralized frontmatter utilities from `src/utils/frontmatter.ts`:
+
+```typescript
+import {
+  parseFrontmatter,
+  createDefaultFrontmatter,
+  hasFrontmatter,
+  updateFrontmatterField,
+  addTagToFrontmatter,
+  removeTagFromFrontmatter,
+  extractAllTags,
+  extractInlineTags,
+  extractYamlArray,
+} from "@cortex/core"
+```
+
+- `parseFrontmatter(content)` — Extracts typed `{ data, body }` from markdown string
+- `createDefaultFrontmatter(options?)` — Generates default YAML block with `created` timestamp and `tags: []`
+- `hasFrontmatter(content)` — Quick regex check
+- `updateFrontmatterField(content, key, value)` — Safely updates a single YAML field
+- `addTagToFrontmatter(content, tag)` / `removeTagFromFrontmatter(content, tag)` — Tag manipulation
+- `extractAllTags(content)` — Returns both YAML frontmatter tags and inline `#hashtags`
+- `extractInlineTags(content)` — Extracts only inline `#hashtags` from body
+- `extractYamlArray(raw)` — Parses YAML-style arrays (inline `[a, b]` or block `- item`)
+
+All other packages (`@cortex/search`, `tagsStore`, etc.) should import from here instead of writing inline frontmatter parsers.

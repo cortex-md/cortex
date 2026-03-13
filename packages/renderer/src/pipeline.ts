@@ -4,7 +4,7 @@ import remarkGfm from "remark-gfm"
 import remarkParse from "remark-parse"
 import remarkRehype from "remark-rehype"
 import { unified } from "unified"
-import { remarkFrontmatter } from "./plugins/frontmatter"
+import { rehypeFrontmatter, remarkFrontmatter } from "./plugins/frontmatter"
 import { rehypeTaskList } from "./plugins/taskList"
 import { rehypeWikiLinks } from "./plugins/wikiLinks"
 import type { Renderer, RendererOptions } from "./types"
@@ -15,6 +15,7 @@ export function createRenderer(options: RendererOptions = {}): Renderer {
 		.use(remarkFrontmatter)
 		.use(remarkGfm)
 		.use(remarkRehype, { allowDangerousHtml: false })
+		.use(rehypeFrontmatter)
 		.use(rehypeWikiLinks)
 		.use(rehypeTaskList)
 		.use(rehypeHighlight, { detect: true })

@@ -7,6 +7,7 @@
 		".": "./src/index.ts"
 	},
 	"dependencies": {
+		"@cortex/core": "workspace:*",
 		"@cortex/platform": "workspace:*",
 		"minisearch": "^7.1.1",
 		"zustand": "^5.0.11"

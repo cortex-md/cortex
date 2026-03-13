@@ -6,6 +6,7 @@ export {
 	type SnapshotTrigger,
 } from "./noteCache"
 export { type AppState, useAppStore } from "./stores/appStore"
+export { type AuthState, useAuthStore } from "./stores/authStore"
 export { type BookmarksState, useBookmarksStore } from "./stores/bookmarksStore"
 export {
 	type CursorPosition,
@@ -19,6 +20,7 @@ export {
 	type TagsState,
 	useTagsStore,
 } from "./stores/tagsStore"
+export { type SyncState, useSyncStore } from "./stores/syncStore"
 export { type LeftSidebarView, type UIState, useUIStore } from "./stores/uiStore"
 export {
 	useVaultStore,
@@ -36,3 +38,16 @@ export {
 	useWorkspaceStore,
 	type WorkspaceState,
 } from "./stores/workspaceStore"
+export {
+	addTagToFrontmatter,
+	createDefaultFrontmatter,
+	extractAllTags,
+	extractInlineTags,
+	extractYamlArray,
+	type Frontmatter,
+	hasFrontmatter,
+	type ParsedNote,
+	parseFrontmatter,
+	removeTagFromFrontmatter,
+	updateFrontmatterField,
+} from "./utils/frontmatter"

@@ -3,6 +3,7 @@ import { getPlatform } from "@cortex/platform"
 import { getSettingsManager, initSettingsManager } from "@cortex/settings"
 import { create } from "zustand"
 import { noteCache } from "../noteCache"
+import { createDefaultFrontmatter } from "../utils/frontmatter"
 
 export type { VaultMetadata, VaultRegistryEntry }
 
@@ -104,7 +105,8 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 		const platform = getPlatform()
 		const fileName = name.endsWith(".md") ? name : `${name}.md`
 		const filePath = `${parentPath}/${fileName}`
-		await platform.fs.writeFile(filePath, "")
+		const content = createDefaultFrontmatter()
+		await platform.fs.writeFile(filePath, content)
 		await get().refreshFiles()
 		return filePath
 	},
@@ -162,8 +164,11 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 			await platform.fs.createDir(dailyDir)
 		}
 
-		const frontmatter = `---\ndate: ${dateStr}\ntags:\n  - daily\n---\n\n# ${dateStr}\n\n`
-		await platform.fs.writeFile(filePath, frontmatter)
+		const content = createDefaultFrontmatter({
+			tags: ["daily"],
+			extraFields: { date: dateStr },
+		})
+		await platform.fs.writeFile(filePath, `${content}\n# ${dateStr}\n\n`)
 		await get().refreshFiles()
 		return filePath
 	},

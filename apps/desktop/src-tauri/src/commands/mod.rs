@@ -1,6 +1,10 @@
+pub mod auth;
+pub mod device;
 pub mod dialog;
 pub mod font;
 pub mod fs;
+pub mod keychain;
 pub mod registry;
+pub mod sync;
 pub mod vault;
 pub mod watcher;
