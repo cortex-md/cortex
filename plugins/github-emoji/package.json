@@ -1,0 +1,17 @@
+{
+	"name": "@cortex/plugin-github-emoji",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"dependencies": {
+		"@cortex/plugin-api": "workspace:*",
+		"@codemirror/view": "^6.36.8",
+		"@codemirror/state": "^6.5.2"
+	},
+	"devDependencies": {
+		"typescript": "~5.8.3"
+	}
+}

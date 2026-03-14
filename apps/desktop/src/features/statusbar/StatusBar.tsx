@@ -1,4 +1,6 @@
 import { type EditorMode, useEditorStore } from "@cortex/core"
+import { usePluginStore } from "@cortex/plugin-runtime"
+import { LucideIcon } from "@cortex/ui"
 
 const MODE_LABELS: Record<EditorMode, string> = {
 	source: "Source",
@@ -16,18 +18,45 @@ const NEXT_MODE: Record<EditorMode, EditorMode> = {
 
 export function StatusBar() {
 	const { activeFilePath, cursor, mode, setMode } = useEditorStore()
+	const statusBarItems = usePluginStore((s) => s.statusBarItems)
 
 	const fileName = activeFilePath ? (activeFilePath.split("/").pop() ?? activeFilePath) : null
+	const leftPluginItems = statusBarItems.filter((item) => item.position === "left")
+	const rightPluginItems = statusBarItems.filter((item) => item.position === "right")
 
 	return (
 		<div className="app-statusbar">
 			<div className="statusbar-left">
 				{fileName && <span className="statusbar-item statusbar-filename">{fileName}</span>}
+				{leftPluginItems.map((item) => (
+					<button
+						key={item.id}
+						type="button"
+						className="statusbar-item statusbar-btn"
+						onClick={item.onClick}
+						title={item.tooltip}
+					>
+						{item.icon && <LucideIcon name={item.icon} size={12} />}
+						{item.text && <span>{item.text}</span>}
+					</button>
+				))}
 			</div>
 
 			<div className="statusbar-sep" />
 
 			<div className="statusbar-right">
+				{rightPluginItems.map((item) => (
+					<button
+						key={item.id}
+						type="button"
+						className="statusbar-item statusbar-btn"
+						onClick={item.onClick}
+						title={item.tooltip}
+					>
+						{item.icon && <LucideIcon name={item.icon} size={12} />}
+						{item.text && <span>{item.text}</span>}
+					</button>
+				))}
 				{cursor && (
 					<span className="statusbar-item statusbar-cursor">
 						Ln {cursor.line + 1}, Col {cursor.col + 1}

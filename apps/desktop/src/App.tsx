@@ -10,10 +10,24 @@ import {
 } from "@cortex/core"
 import { useHotkey, useHotkeyListener, useHotkeysStore } from "@cortex/hotkeys"
 import { getPlatform } from "@cortex/platform"
+import GitHubEmojiPlugin from "@cortex/plugin-github-emoji"
+import {
+	disableAllPlugins,
+	discoverCommunityPlugins,
+	enablePlugin,
+	getCommunityPluginsDir,
+	PluginViewRenderer,
+	registerBundledPlugin,
+	registerCommand,
+	setCommunityPluginExternal,
+	setCommunityPluginsDir,
+	usePluginStore,
+} from "@cortex/plugin-runtime"
 import { useSearchStore } from "@cortex/search"
 import { useSettingsStore } from "@cortex/settings"
 import { getThemeManager } from "@cortex/theme"
 import { listen } from "@tauri-apps/api/event"
+import { homeDir } from "@tauri-apps/api/path"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import {
 	BookmarkIcon,
@@ -27,10 +41,9 @@ import {
 	TagIcon,
 	TerminalIcon,
 } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { BookmarksSidebar } from "./features/bookmarks/BookmarksSidebar"
 import { CommandPalette } from "./features/command-palette/CommandPalette"
-import { registerCommand } from "@cortex/plugin-runtime"
 import { FileSidebar } from "./features/file-explorer/FileSidebar"
 import { type NavItem, SidebarNav } from "./features/file-explorer/SidebarNav"
 import { EmptyVaultLayout } from "./features/layout/empty-vault-layout"
@@ -46,7 +59,7 @@ import { TagPicker } from "./features/tags/TagPicker"
 import { TagsSidebar } from "./features/tags/TagsSidebar"
 import { VaultSwitcher } from "./features/vault/VaultSwitcher"
 
-const NAV_ITEMS: NavItem[] = [
+const CORE_NAV_ITEMS: NavItem[] = [
 	{ id: "files", icon: FolderClosed, label: "Files" },
 	{ id: "search", icon: SearchIcon, label: "Search" },
 	{ id: "bookmarks", icon: BookmarkIcon, label: "Bookmarks" },
@@ -54,6 +67,28 @@ const NAV_ITEMS: NavItem[] = [
 ]
 
 const NAV_BOTTOM_ITEMS: NavItem[] = [{ id: "settings", icon: SettingsIcon, label: "Settings" }]
+
+registerBundledPlugin(
+	{
+		id: "github-emoji",
+		name: "GitHub Emoji",
+		version: "0.1.0",
+		minAppVersion: "0.1.0",
+		author: "Cortex",
+		description: "Convert :emoji_code: to emoji characters in the editor",
+		icon: "smile",
+		main: "index.ts",
+		capabilities: [
+			"editor:extensions",
+			"ui:views",
+			"ui:sidebar",
+			"ui:statusbar",
+			"settings",
+			"commands",
+		],
+	},
+	{ default: GitHubEmojiPlugin },
+)
 
 export default function App() {
 	const [settingsOpen, setSettingsOpen] = useState(false)
@@ -103,6 +138,17 @@ export default function App() {
 	const loadTagColors = useTagsStore((s) => s.loadTagColors)
 	const loadBookmarks = useBookmarksStore((s) => s.loadBookmarks)
 	const resetBookmarks = useBookmarksStore((s) => s.reset)
+	const pluginSidebarItems = usePluginStore((s) => s.sidebarItems)
+	const pluginViews = usePluginStore((s) => s.views)
+
+	const navItems = useMemo<NavItem[]>(() => {
+		const pluginNavItems: NavItem[] = pluginSidebarItems.map((item) => ({
+			id: item.id,
+			icon: item.icon,
+			label: item.label,
+		}))
+		return [...CORE_NAV_ITEMS, ...pluginNavItems]
+	}, [pluginSidebarItems])
 
 	const sidebarResizing = useRef(false)
 	const sidebarResizeStart = useRef({ x: 0, width: 0 })
@@ -315,6 +361,27 @@ export default function App() {
 	])
 
 	useEffect(() => {
+		if (!vault) {
+			disableAllPlugins()
+			return
+		}
+		const getVaultPath = () => vault?.path ?? null
+		const initPlugins = async () => {
+			const [cmState, cmView, home] = await Promise.all([
+				import("@codemirror/state"),
+				import("@codemirror/view"),
+				homeDir(),
+			])
+			setCommunityPluginExternal("@codemirror/state", cmState)
+			setCommunityPluginExternal("@codemirror/view", cmView)
+			setCommunityPluginsDir(`${home}.cortex/plugins`)
+			await discoverCommunityPlugins(getCommunityPluginsDir())
+			await enablePlugin("github-emoji", getVaultPath)
+		}
+		initPlugins()
+	}, [vault])
+
+	useEffect(() => {
 		loadAppInfo()
 		loadRecentVaults()
 	}, [loadAppInfo, loadRecentVaults])
@@ -496,7 +563,7 @@ export default function App() {
 						>
 							<VaultSwitcher />
 							<SidebarNav
-								items={NAV_ITEMS}
+								items={navItems}
 								bottomItems={NAV_BOTTOM_ITEMS}
 								activeId={leftSidebarView}
 								onSelect={handleSidebarNavSelect}
@@ -506,6 +573,14 @@ export default function App() {
 								{leftSidebarView === "search" && <SearchSidebar />}
 								{leftSidebarView === "bookmarks" && <BookmarksSidebar />}
 								{leftSidebarView === "tags" && <TagsSidebar />}
+								{pluginViews
+									.filter((v) => {
+										const sidebarItem = pluginSidebarItems.find((s) => s.viewId === v.id)
+										return sidebarItem && leftSidebarView === sidebarItem.id
+									})
+									.map((view) => (
+										<PluginViewRenderer key={view.id} registration={view} />
+									))}
 							</div>
 						</aside>
 						<div

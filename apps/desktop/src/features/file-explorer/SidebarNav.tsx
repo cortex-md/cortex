@@ -1,9 +1,9 @@
-import { Button } from "@cortex/ui"
-import type { LucideIcon } from "lucide-react"
+import { Button, LucideIcon } from "@cortex/ui"
+import type { LucideIcon as LucideIconType } from "lucide-react"
 
 export interface NavItem {
 	id: string
-	icon: LucideIcon
+	icon: LucideIconType | string
 	label: string
 }
 
@@ -16,7 +16,6 @@ interface Props {
 
 export function SidebarNav({ items, bottomItems, activeId, onSelect }: Props) {
 	const renderItem = (item: NavItem) => {
-		const Icon = item.icon
 		return (
 			<Button
 				key={item.id}
@@ -27,7 +26,11 @@ export function SidebarNav({ items, bottomItems, activeId, onSelect }: Props) {
 				aria-label={item.label}
 				aria-pressed={activeId === item.id}
 			>
-				<Icon size={14} strokeWidth={2} />
+				{typeof item.icon === "string" ? (
+					<LucideIcon name={item.icon} size={14} strokeWidth={2} />
+				) : (
+					<item.icon size={14} strokeWidth={2} />
+				)}
 				<span>{item.label}</span>
 			</Button>
 		)

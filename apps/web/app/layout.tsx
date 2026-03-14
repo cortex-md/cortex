@@ -43,7 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 			suppressHydrationWarning
 		>
 			<head />
-			<ThemeProvider defaultTheme="light">
+			<ThemeProvider defaultTheme="dark">
 				<body>{children}</body>
 			</ThemeProvider>
 		</html>

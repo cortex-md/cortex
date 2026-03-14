@@ -89,6 +89,7 @@ export const usePluginStore = create<PluginStoreState>()(
 
 			addSidebarItem: (item) =>
 				set((state) => {
+					state.sidebarItems = state.sidebarItems.filter((i) => i.id !== item.id)
 					state.sidebarItems.push(item)
 				}),
 			removeSidebarItem: (itemId) =>
@@ -98,6 +99,7 @@ export const usePluginStore = create<PluginStoreState>()(
 
 			addStatusBarItem: (item) =>
 				set((state) => {
+					state.statusBarItems = state.statusBarItems.filter((i) => i.id !== item.id)
 					state.statusBarItems.push(item)
 				}),
 			removeStatusBarItem: (itemId) =>
@@ -107,6 +109,7 @@ export const usePluginStore = create<PluginStoreState>()(
 
 			addSettingsTab: (tab) =>
 				set((state) => {
+					state.settingsTabs = state.settingsTabs.filter((t) => t.id !== tab.id)
 					state.settingsTabs.push(tab)
 				}),
 			removeSettingsTab: (tabId) =>
@@ -116,6 +119,7 @@ export const usePluginStore = create<PluginStoreState>()(
 
 			addView: (view) =>
 				set((state) => {
+					state.views = state.views.filter((v) => v.id !== view.id)
 					state.views.push(view)
 				}),
 			removeView: (viewId) =>
@@ -125,15 +129,21 @@ export const usePluginStore = create<PluginStoreState>()(
 
 			addContextMenuItem: (item) =>
 				set((state) => {
+					state.contextMenuItems = state.contextMenuItems.filter(
+						(i) => i.id !== item.id,
+					)
 					state.contextMenuItems.push(item)
 				}),
 			removeContextMenuItem: (itemId) =>
 				set((state) => {
-					state.contextMenuItems = state.contextMenuItems.filter((i) => i.id !== itemId)
+					state.contextMenuItems = state.contextMenuItems.filter(
+						(i) => i.id !== itemId,
+					)
 				}),
 
 			addRibbonAction: (action) =>
 				set((state) => {
+					state.ribbonActions = state.ribbonActions.filter((a) => a.id !== action.id)
 					state.ribbonActions.push(action)
 				}),
 			removeRibbonAction: (actionId) =>

@@ -76,7 +76,7 @@ export default function Cta() {
 					<Button
 						asChild
 						size="lg"
-						className="rounded-[10px] bg-accent px-[22px] text-[15px] font-semibold text-ink-900 hover:bg-accent-light"
+						className="rounded-[10px] bg-accent px-[22px] text-[15px] font-semibold text-primary-foreground hover:bg-accent/90"
 					>
 						<a href="/download">Baixar o Cortex</a>
 					</Button>
@@ -84,7 +84,7 @@ export default function Cta() {
 						asChild
 						variant="outline"
 						size="lg"
-						className="rounded-[10px] border-border bg-transparent px-[22px] text-[15px] font-semibold text-primary hover:border-accent hover:bg-transparent hover:text-accent"
+						className="rounded-[10px] border-border bg-transparent px-[22px] text-[15px] font-semibold text-primary hover:border-accent hover:bg-secondary hover:text-accent"
 					>
 						<a href="/docs">Ver a documentação</a>
 					</Button>

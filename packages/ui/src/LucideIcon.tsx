@@ -16,17 +16,29 @@ const iconMap: Record<
 	ForwardRefExoticComponent<LucideIcons.LucideProps & RefAttributes<SVGSVGElement>>
 > = { ...LucideIcons } as never
 
+const lowercaseIndex = new Map<string, string>()
+for (const key of Object.keys(iconMap)) {
+	lowercaseIndex.set(key.toLowerCase(), key)
+}
+
+function resolveIconName(name: string): string | undefined {
+	if (name in iconMap) return name
+	return lowercaseIndex.get(name.toLowerCase())
+}
+
 interface Props extends SVGAttributes<SVGSVGElement> {
-	name: LucideIconName
+	name: LucideIconName | string
 	size?: number | string
 }
 
 export function LucideIcon({ name, size = 16, ...rest }: Props) {
-	const IconComponent = iconMap[name]
+	const resolved = resolveIconName(name)
+	if (!resolved) return null
+	const IconComponent = iconMap[resolved]
 	if (!IconComponent) return null
 	return <IconComponent size={size} {...rest} />
 }
 
 export function isValidLucideIconName(value: string): value is LucideIconName {
-	return value in iconMap
+	return resolveIconName(value) !== undefined
 }

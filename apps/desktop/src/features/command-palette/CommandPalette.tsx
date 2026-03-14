@@ -1,5 +1,6 @@
 import { useUIStore } from "@cortex/core"
 import { formatHotkeyDisplay, useHotkeysStore } from "@cortex/hotkeys"
+import { type CommandEntry, getCommands } from "@cortex/plugin-runtime"
 import {
 	CommandDialog,
 	CommandEmpty,
@@ -10,7 +11,6 @@ import {
 	CommandShortcut,
 } from "@cortex/ui"
 import { useCallback, useMemo } from "react"
-import { type CommandEntry, getCommands } from "@cortex/plugin-runtime"
 
 interface GroupedCommands {
 	category: string

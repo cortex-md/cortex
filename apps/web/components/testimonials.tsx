@@ -30,7 +30,7 @@ export default function Testimonials() {
 			<div className="max-w-[1100px] mx-auto">
 				<ScrollReveal className="text-center max-w-[500px] mx-auto">
 					<div
-						className="text-[11.5px] font-semibold uppercase text-accent-light mb-3.5"
+						className="text-[11.5px] font-semibold uppercase text-accent mb-3.5"
 						style={{ letterSpacing: "0.08em" }}
 					>
 						06 — Depoimentos

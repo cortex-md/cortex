@@ -33,6 +33,7 @@
 		{ "path": "../../packages/platform" },
 		{ "path": "../../packages/ui" },
 		{ "path": "../../packages/hotkeys" },
-		{ "path": "../../packages/search" }
+		{ "path": "../../packages/search" },
+		{ "path": "../../plugins/github-emoji" }
 	]
 }

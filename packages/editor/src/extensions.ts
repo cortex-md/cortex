@@ -76,6 +76,7 @@ const typographyCompartment = new Compartment()
 const lineWrappingCompartment = new Compartment()
 const indentCompartment = new Compartment()
 const lineNumbersCompartment = new Compartment()
+const pluginExtensionsCompartment = new Compartment()
 
 function typographyExtension(fontSize: number, lineHeight: number) {
 	return EditorView.theme({
@@ -144,6 +145,7 @@ export function baseExtensions(
 		lineWrappingCompartment.of(config.wordWrap ? EditorView.lineWrapping : []),
 		indentCompartment.of(indentUnit.of(config.useSpaces ? " ".repeat(config.tabSize) : "\t")),
 		lineNumbersCompartment.of(config.showLineNumbers ? lineNumbers() : []),
+		pluginExtensionsCompartment.of([]),
 	]
 }
 
@@ -156,6 +158,16 @@ export function reconfigureEditor(view: EditorView, config: EditorConfig) {
 				indentUnit.of(config.useSpaces ? " ".repeat(config.tabSize) : "\t"),
 			),
 			lineNumbersCompartment.reconfigure(config.showLineNumbers ? lineNumbers() : []),
+		],
+	})
+}
+
+export function reconfigurePluginExtensions(view: EditorView, extensions: unknown[]) {
+	view.dispatch({
+		effects: [
+			pluginExtensionsCompartment.reconfigure(
+				extensions as import("@codemirror/state").Extension[],
+			),
 		],
 	})
 }

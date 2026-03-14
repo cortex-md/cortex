@@ -23,14 +23,13 @@ export default function Hero() {
 
 			<div className="relative z-10 mx-auto flex w-full max-w-[980px] flex-col items-center">
 				<Badge
-					className="hero-badge mb-8 border px-3 py-[5px] text-[12.5px] font-medium text-accent-light"
+					className="hero-badge mb-8 border border-accent/25 px-3 py-[5px] text-[12.5px] font-medium text-accent"
 					style={{
-						background: "rgba(232,168,60,0.10)",
-						borderColor: "rgba(232,168,60,0.25)",
+						background: "var(--color-accent-subtle)",
 					}}
 				>
 					<span
-						className="dot-pulse inline-block h-1.5 w-1.5 rounded-full bg-accent-light"
+						className="dot-pulse inline-block h-1.5 w-1.5 rounded-full bg-accent"
 						aria-hidden="true"
 					/>
 					Agora com sincronização cross-device
@@ -62,7 +61,7 @@ export default function Hero() {
 					<Button
 						asChild
 						size="lg"
-						className="bg-accent px-[22px] text-[15px] font-semibold text-ink-900 hover:bg-accent-light"
+						className="bg-accent px-[22px] text-[15px] font-semibold text-primary-foreground hover:bg-accent/90"
 					>
 						<a href="#">
 							<svg

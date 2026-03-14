@@ -70,7 +70,7 @@ export function DeviceManager() {
 						{editingId === device.id ? (
 							<div className="flex items-center gap-1">
 								<Input
-  								className="bg-transparent border border-border rounded px-1 py-0.5 outline-none focus:border-accent w-full"
+									className="bg-transparent border border-border rounded px-1 py-0.5 outline-none focus:border-accent w-full"
 									value={editName}
 									onChange={(e) => setEditName(e.target.value)}
 									onKeyDown={(e) => {

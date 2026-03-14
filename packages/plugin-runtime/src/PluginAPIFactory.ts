@@ -1,19 +1,30 @@
 import type { PluginAPI } from "@cortex/plugin-api"
 import { createCommandsAPI } from "./apis/CommandsAPI"
 import { createDataAPI } from "./apis/DataAPI"
+import { createEditorAPI } from "./apis/EditorAPI"
+import { createHotkeysAPI } from "./apis/HotkeysAPI"
+import { createMetadataAPI } from "./apis/MetadataAPI"
+import { createRendererAPI } from "./apis/RendererAPI"
 import { createSettingsAPI } from "./apis/SettingsAPI"
+import { createThemeAPI } from "./apis/ThemeAPI"
 import { createVaultAPI } from "./apis/VaultAPI"
+import { createWorkspaceAPI } from "./apis/WorkspaceAPI"
 import { usePluginStore } from "./pluginStore"
-
-function notImplemented(apiName: string): never {
-	throw new Error(`PluginAPI.${apiName} is not yet implemented`)
-}
 
 export function createPluginAPI(pluginId: string, getVaultPath: () => string | null): PluginAPI {
 	const commands = createCommandsAPI(pluginId)
 	const settings = createSettingsAPI(pluginId, getVaultPath)
 	const vault = createVaultAPI(getVaultPath)
 	const data = createDataAPI(pluginId, getVaultPath)
+	const editor = createEditorAPI(
+		() => null,
+		() => null,
+	)
+	const renderer = createRendererAPI()
+	const hotkeys = createHotkeysAPI(pluginId)
+	const metadata = createMetadataAPI()
+	const theme = createThemeAPI()
+	const workspace = createWorkspaceAPI()
 
 	const settingsWithSchema: PluginAPI["settings"] = {
 		...settings,
@@ -27,38 +38,16 @@ export function createPluginAPI(pluginId: string, getVaultPath: () => string | n
 		settings: settingsWithSchema,
 		vault,
 		data,
-
-		editor: {
-			registerExtension() {
-				notImplemented("editor.registerExtension")
-			},
-			getActiveFilePath() {
-				notImplemented("editor.getActiveFilePath")
-			},
-			getActiveFileContent() {
-				notImplemented("editor.getActiveFileContent")
-			},
-			insertAtCursor() {
-				notImplemented("editor.insertAtCursor")
-			},
-			replaceSelection() {
-				notImplemented("editor.replaceSelection")
-			},
-		},
-
-		renderer: {
-			registerPlugin() {
-				notImplemented("renderer.registerPlugin")
-			},
-			registerCodeBlockProcessor() {
-				notImplemented("renderer.registerCodeBlockProcessor")
-			},
-		},
+		editor,
+		renderer,
+		hotkeys,
+		metadata,
+		theme,
+		workspace,
 
 		ui: {
 			registerView(registration) {
-				const store = usePluginStore.getState()
-				store.addView(registration)
+				usePluginStore.getState().addView(registration)
 				return {
 					dispose() {
 						usePluginStore.getState().removeView(registration.id)
@@ -66,8 +55,7 @@ export function createPluginAPI(pluginId: string, getVaultPath: () => string | n
 				}
 			},
 			registerSidebarItem(item) {
-				const store = usePluginStore.getState()
-				store.addSidebarItem(item)
+				usePluginStore.getState().addSidebarItem(item)
 				return {
 					dispose() {
 						usePluginStore.getState().removeSidebarItem(item.id)
@@ -75,8 +63,7 @@ export function createPluginAPI(pluginId: string, getVaultPath: () => string | n
 				}
 			},
 			registerStatusBarItem(item) {
-				const store = usePluginStore.getState()
-				store.addStatusBarItem(item)
+				usePluginStore.getState().addStatusBarItem(item)
 				return {
 					dispose() {
 						usePluginStore.getState().removeStatusBarItem(item.id)
@@ -84,8 +71,7 @@ export function createPluginAPI(pluginId: string, getVaultPath: () => string | n
 				}
 			},
 			registerContextMenuItem(item) {
-				const store = usePluginStore.getState()
-				store.addContextMenuItem(item)
+				usePluginStore.getState().addContextMenuItem(item)
 				return {
 					dispose() {
 						usePluginStore.getState().removeContextMenuItem(item.id)
@@ -93,8 +79,7 @@ export function createPluginAPI(pluginId: string, getVaultPath: () => string | n
 				}
 			},
 			registerSettingsTab(tab) {
-				const store = usePluginStore.getState()
-				store.addSettingsTab(tab)
+				usePluginStore.getState().addSettingsTab(tab)
 				return {
 					dispose() {
 						usePluginStore.getState().removeSettingsTab(tab.id)
@@ -102,59 +87,14 @@ export function createPluginAPI(pluginId: string, getVaultPath: () => string | n
 				}
 			},
 			registerRibbonAction(action) {
-				const store = usePluginStore.getState()
-				store.addRibbonAction(action)
+				usePluginStore.getState().addRibbonAction(action)
 				return {
 					dispose() {
 						usePluginStore.getState().removeRibbonAction(action.id)
 					},
 				}
 			},
-			showNotice(_message, _duration) {
-				// Will be implemented with toast/notice system
-			},
-		},
-
-		hotkeys: {
-			register() {
-				notImplemented("hotkeys.register")
-			},
-		},
-
-		metadata: {
-			async getFrontmatter() {
-				notImplemented("metadata.getFrontmatter")
-			},
-			async getTags() {
-				notImplemented("metadata.getTags")
-			},
-			getAllTags() {
-				notImplemented("metadata.getAllTags")
-			},
-		},
-
-		theme: {
-			register() {
-				notImplemented("theme.register")
-			},
-			getActiveThemeName() {
-				notImplemented("theme.getActiveThemeName")
-			},
-			onThemeChange() {
-				notImplemented("theme.onThemeChange")
-			},
-		},
-
-		workspace: {
-			openFile() {
-				notImplemented("workspace.openFile")
-			},
-			getOpenFiles() {
-				notImplemented("workspace.getOpenFiles")
-			},
-			onActiveFileChange() {
-				notImplemented("workspace.onActiveFileChange")
-			},
+			showNotice(_message, _duration) {},
 		},
 	}
 }

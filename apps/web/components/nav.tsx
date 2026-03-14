@@ -81,7 +81,7 @@ export default function Nav() {
 				<Button
 					asChild
 					size="sm"
-					className="h-auto bg-accent px-3.5 py-[7px] text-[13.5px] font-semibold text-ink-900 hover:bg-accent-light"
+					className="h-auto bg-accent px-3.5 py-[7px] text-[13.5px] font-semibold text-primary-foreground hover:bg-accent/90"
 				>
 					<a href="/download">Baixar grátis</a>
 				</Button>

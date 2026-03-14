@@ -37,7 +37,7 @@ export default function DemoSection() {
 			<div className="max-w-[1100px] mx-auto">
 				<div className="reveal">
 					<div
-						className="text-[11.5px] font-semibold uppercase text-accent-light mb-3.5"
+						className="text-[11.5px] font-semibold uppercase text-accent mb-3.5"
 						style={{ letterSpacing: "0.08em" }}
 					>
 						02 — Como funciona
@@ -189,7 +189,7 @@ function StepFrameCapture() {
 								borderRadius: "var(--radius-md)",
 								background: item.active ? "rgba(232,168,60,0.08)" : "var(--color-bg-secondary)",
 								border: item.active ? "1px solid rgba(232,168,60,0.15)" : "1px solid transparent",
-								color: item.active ? "var(--color-accent-light)" : "var(--color-text-muted)",
+								color: item.active ? "var(--color-accent)" : "var(--color-text-muted)",
 							}}
 						>
 							{item.emoji} {item.label}
@@ -213,7 +213,7 @@ function StepFrameWikilinks() {
 					<span
 						className="px-1 py-px"
 						style={{
-							color: "var(--color-accent-light)",
+							color: "var(--color-accent)",
 							background: "rgba(232,168,60,0.1)",
 							borderRadius: "3px",
 						}}
@@ -224,7 +224,7 @@ function StepFrameWikilinks() {
 					<span
 						className="px-1 py-px"
 						style={{
-							color: "var(--color-accent-light)",
+							color: "var(--color-accent)",
 							background: "rgba(232,168,60,0.1)",
 							borderRadius: "3px",
 						}}
@@ -259,13 +259,13 @@ function StepFrameWikilinks() {
 								height="12"
 								viewBox="0 0 24 24"
 								fill="none"
-								stroke="var(--color-accent-light)"
+								stroke="var(--color-accent)"
 								strokeWidth="2"
 								strokeLinecap="round"
 							>
 								<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
 							</svg>
-							<span className="text-[12px] text-accent-light">Sprint 08</span>
+							<span className="text-[12px] text-accent">Sprint 08</span>
 							<span className="text-[11px] text-muted ml-auto">↩ Enter</span>
 						</div>
 						<div
@@ -434,10 +434,13 @@ function StepFrameSync() {
 		<MockWindow title="Cortex Sync — Status">
 			<div className="flex items-center justify-between mb-4">
 				<span className="text-[13px] font-semibold text-primary">Vault: Trabalho</span>
-				<span className="flex items-center gap-[5px] text-[12px]" style={{ color: "#4A9B6F" }}>
+				<span
+					className="flex items-center gap-[5px] text-[12px]"
+					style={{ color: "var(--color-status-success)" }}
+				>
 					<span
 						className="w-1.5 h-1.5 rounded-full inline-block"
-						style={{ background: "#4A9B6F" }}
+						style={{ background: "var(--color-status-success)" }}
 					/>
 					Sincronizado
 				</span>

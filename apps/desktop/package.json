@@ -11,6 +11,7 @@
 	},
 	"dependencies": {
 		"@cortex/core": "workspace:*",
+		"@cortex/plugin-github-emoji": "workspace:*",
 		"@cortex/editor": "workspace:*",
 		"@cortex/hotkeys": "workspace:*",
 		"@cortex/ipc": "workspace:*",
@@ -29,6 +30,8 @@
 		"tw-animate-css": "^1.2.5"
 	},
 	"devDependencies": {
+		"@codemirror/state": "^6.5.2",
+		"@codemirror/view": "^6.36.8",
 		"@tailwindcss/vite": "^4.2.1",
 		"@tauri-apps/cli": "^2",
 		"@types/node": "^25.3.5",

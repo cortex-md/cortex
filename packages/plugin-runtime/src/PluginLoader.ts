@@ -1,5 +1,6 @@
 import { getPlatform } from "@cortex/platform"
-import type { CortexPlugin, PluginManifest } from "@cortex/plugin-api"
+import { CortexPlugin } from "@cortex/plugin-api"
+import type { PluginManifest } from "@cortex/plugin-api"
 import { createPluginAPI } from "./PluginAPIFactory"
 import { usePluginStore } from "./pluginStore"
 
@@ -73,6 +74,78 @@ export async function disableAllPlugins(): Promise<void> {
 	}
 }
 
+const communityPluginExternals: Record<string, unknown> = {
+	"@cortex/plugin-api": { CortexPlugin },
+}
+
+export function setCommunityPluginExternal(moduleId: string, moduleExports: unknown): void {
+	communityPluginExternals[moduleId] = moduleExports
+}
+
+export async function discoverCommunityPlugins(pluginsDir: string): Promise<void> {
+	const fs = getPlatform().fs
+	let entries: Awaited<ReturnType<typeof fs.listDir>>
+	try {
+		entries = await fs.listDir(pluginsDir)
+	} catch {
+		return
+	}
+
+	const pluginDirs = entries.filter((e) => e.isDir)
+	for (const dir of pluginDirs) {
+		try {
+			const manifestPath = `${dir.path}/manifest.json`
+			const manifestContent = await fs.readFile(manifestPath)
+			const manifest = JSON.parse(manifestContent) as PluginManifest
+
+			if (!manifest.id || !manifest.main) continue
+
+			const mainPath = `${dir.path}/${manifest.main}`
+			const moduleCode = await fs.readFile(mainPath)
+
+			const loadedModule = loadCommunityModule(moduleCode, manifest.id)
+			if (loadedModule) {
+				bundledPlugins.set(manifest.id, loadedModule)
+				usePluginStore.getState().registerPlugin(manifest)
+			}
+		} catch {}
+	}
+}
+
+function loadCommunityModule(code: string, pluginId: string): PluginModule | null {
+	try {
+		const moduleExports: Record<string, unknown> = {}
+		const moduleObj = { exports: moduleExports as Record<string, unknown> & { default?: unknown } }
+
+		const requireStub = (id: string): unknown => {
+			const resolved = communityPluginExternals[id]
+			if (resolved) return resolved
+			throw new Error(`Cannot require "${id}" in plugin "${pluginId}"`)
+		}
+
+		// biome-ignore lint/security/noGlobalEval: required to load community plugin CJS bundles
+		const factory = (0, eval)(
+			`(function(module, exports, require) {\n${code}\n})`,
+		) as (
+			m: typeof moduleObj,
+			e: typeof moduleExports,
+			r: typeof requireStub,
+		) => void
+		factory(moduleObj, moduleExports, requireStub)
+
+		const defaultExport =
+			(moduleObj.exports.default as PluginConstructor) ??
+			(moduleObj.exports as unknown as PluginConstructor)
+
+		if (typeof defaultExport === "function") {
+			return { default: defaultExport }
+		}
+		return null
+	} catch {
+		return null
+	}
+}
+
 export async function loadEnabledPlugins(
 	vaultPath: string,
 	getVaultPath: () => string | null,
@@ -106,4 +179,14 @@ export async function saveEnabledPlugins(vaultPath: string): Promise<void> {
 
 export function getPluginInstance(pluginId: string): CortexPlugin | undefined {
 	return instances.get(pluginId)?.plugin
+}
+
+let communityPluginsDir = "~/.cortex/plugins"
+
+export function setCommunityPluginsDir(dir: string): void {
+	communityPluginsDir = dir
+}
+
+export function getCommunityPluginsDir(): string {
+	return communityPluginsDir
 }

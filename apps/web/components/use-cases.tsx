@@ -136,7 +136,7 @@ export default function UseCases() {
 			<div className="mx-auto max-w-[1100px]">
 				<div className="reveal">
 					<div
-						className="mb-3.5 text-[11.5px] font-semibold text-accent-light uppercase"
+						className="mb-3.5 text-[11.5px] font-semibold text-accent uppercase"
 						style={{ letterSpacing: "0.08em" }}
 					>
 						03 — Casos de uso
@@ -357,7 +357,7 @@ function ResearcherMock() {
 function DevlogTag({ children }: { children: React.ReactNode }) {
 	return (
 		<span
-			className="mt-1.5 mr-1 inline-block px-[7px] py-0.5 font-mono text-[11px] text-accent-light"
+			className="mt-1.5 mr-1 inline-block px-[7px] py-0.5 font-mono text-[11px] text-accent"
 			style={{
 				background: "rgba(232,168,60,0.10)",
 				borderRadius: "9999px",
@@ -370,7 +370,7 @@ function DevlogTag({ children }: { children: React.ReactNode }) {
 }
 
 function WikiLink({ children }: { children: React.ReactNode }) {
-	return <span className="cursor-pointer text-accent-light">[[{children}]]</span>
+	return <span className="cursor-pointer text-accent">[[{children}]]</span>
 }
 
 function DevlogMock() {
@@ -411,7 +411,7 @@ function StudentMock() {
 								<a
 									key={link}
 									href="#"
-									className="flex items-center gap-[5px] text-[12px] text-accent-light no-underline"
+									className="flex items-center gap-[5px] text-[12px] text-accent no-underline"
 								>
 									<span className="text-[11px]">→</span>
 									{link}

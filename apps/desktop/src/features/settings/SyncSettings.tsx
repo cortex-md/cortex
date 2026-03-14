@@ -1,5 +1,5 @@
 import { useAuthStore, useRemoteVaultStore, useSyncStore, useVaultStore } from "@cortex/core"
-import { Badge, Button, Field, FieldLabel, Input, Separator } from "@cortex/ui"
+import { Badge, Button, Field, FieldLabel, Input, Separator, Switch } from "@cortex/ui"
 import { Cloud, CloudOff, Link } from "lucide-react"
 import { useEffect, useState } from "react"
 import { DeviceManager } from "../sync/DeviceManager"
@@ -11,6 +11,7 @@ function ServerUrlSection() {
 	const { serverUrl, saveServerUrl } = useAuthStore()
 	const [inputValue, setInputValue] = useState(serverUrl)
 	const [saved, setSaved] = useState(false)
+	const [selfHosted, setSelfHosted] = useState(false) // TODO: Implement a way to see if the user has previously self-hosted the sync
 
 	useEffect(() => {
 		setInputValue(serverUrl)
@@ -31,9 +32,19 @@ function ServerUrlSection() {
 			<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
 				Server
 			</h3>
-			<Field>
+      <Field>
+        <FieldLabel>
+          Self host sync
+        </FieldLabel>
+        <Switch
+        checked={selfHosted}
+        onCheckedChange={() => setSelfHosted(!selfHosted)}
+        />
+			</Field>
+      {selfHosted && (
+        <Field>
 				<FieldLabel htmlFor="server-url">API URL</FieldLabel>
-				<div className="flex gap-2">
+				  <div className="flex gap-2">
 					<Input
 						id="server-url"
 						type="url"
@@ -47,6 +58,7 @@ function ServerUrlSection() {
 					</Button>
 				</div>
 			</Field>
+			)}
 		</div>
 	)
 }

@@ -6,6 +6,7 @@ export {
 	type EditorConfig,
 	readonlyExtension,
 	reconfigureEditor,
+	reconfigurePluginExtensions,
 } from "./extensions"
 export { buildHighlightStyle, resolveSyntaxTokens, type SyntaxTokens } from "./highlight"
 export { getLanguageSupport } from "./languages"

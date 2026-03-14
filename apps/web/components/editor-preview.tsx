@@ -119,7 +119,7 @@ export default function EditorPreview() {
 								<a
 									key={link}
 									href="/"
-									className="block rounded-md px-1.5 py-[5px] text-[12.5px] text-accent-light no-underline transition-colors duration-100 hover:bg-secondary"
+									className="block rounded-md px-1.5 py-[5px] text-[12.5px] text-accent no-underline transition-colors duration-100 hover:bg-secondary"
 								>
 									<span className="flex items-center gap-1.5">
 										<FileIconSm />
@@ -167,9 +167,7 @@ function SidebarItem({
 	return (
 		<div
 			className={`my-px flex items-center gap-2 rounded-md px-2.5 py-[5px] text-[13px] transition-all duration-100 ${
-				active
-					? "bg-[rgba(232,168,60,0.12)] text-accent-light"
-					: "text-muted hover:bg-secondary hover:text-primary"
+				active ? "bg-accent/10 text-accent" : "text-muted hover:bg-secondary hover:text-primary"
 			}`}
 		>
 			{children}
@@ -180,7 +178,7 @@ function SidebarItem({
 function WikiLink({ children }: { children: React.ReactNode }) {
 	return (
 		<span
-			className="cursor-pointer text-accent-light"
+			className="cursor-pointer text-accent"
 			style={{
 				textDecoration: "underline",
 				textDecorationColor: "rgba(232,168,60,0.3)",
@@ -200,7 +198,7 @@ function EditorTag({
 }) {
 	return (
 		<span
-			className={`inline-block px-2 py-0.5 font-mono text-[12px] text-accent-light ${className}`}
+			className={`inline-block px-2 py-0.5 font-mono text-[12px] text-accent ${className}`}
 			style={{
 				background: "rgba(232,168,60,0.12)",
 				borderRadius: "9999px",

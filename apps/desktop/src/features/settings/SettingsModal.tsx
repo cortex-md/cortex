@@ -1,3 +1,4 @@
+import { PluginSettingsRenderer, usePluginStore } from "@cortex/plugin-runtime"
 import { useSettingsStore } from "@cortex/settings"
 import {
 	Breadcrumb,
@@ -9,29 +10,33 @@ import {
 	DialogContent,
 	DialogDescription,
 	DialogTitle,
+	LucideIcon,
 	Sidebar,
 	SidebarContent,
 	SidebarGroup,
 	SidebarGroupContent,
+	SidebarGroupLabel,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
 	SidebarProvider,
 } from "@cortex/ui"
-import { Keyboard, Palette, RefreshCw, Settings, Type } from "lucide-react"
-import { useState } from "react"
+import { Blocks, Keyboard, Palette, RefreshCw, Settings, Type } from "lucide-react"
+import { useCallback, useState } from "react"
 import { AppearanceSection } from "./AppearanceSettings"
 import { EditorSection } from "./EditorSettings"
 import { GeneralSection } from "./GeneralSettings"
 import { HotkeysSection } from "./HotkeysSettings"
+import { PluginsSection } from "./PluginsSettings"
 import { SyncSection } from "./SyncSettings"
 
-const sections = [
+const coreSections = [
 	{ name: "General", id: "general", icon: Settings, component: GeneralSection },
 	{ name: "Appearance", id: "appearance", icon: Palette, component: AppearanceSection },
 	{ name: "Editor", id: "editor", icon: Type, component: EditorSection },
 	{ name: "Hotkeys", id: "hotkeys", icon: Keyboard, component: HotkeysSection },
 	{ name: "Sync", id: "sync", icon: RefreshCw, component: SyncSection },
+	{ name: "Plugins", id: "plugins", icon: Blocks, component: PluginsSection },
 ] as const
 
 interface SettingsModalProps {
@@ -42,21 +47,32 @@ interface SettingsModalProps {
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 	const [activeSectionId, setActiveSectionId] = useState<string>("general")
 	const { settings, updateSetting } = useSettingsStore()
+	const pluginSettingsTabs = usePluginStore((s) => s.settingsTabs)
+	const pluginSettingsSchemas = usePluginStore((s) => s.settingsSchemas)
 
-	const activeSection = sections.find((s) => s.id === activeSectionId) ?? sections[0]
+	const coreSection = coreSections.find((s) => s.id === activeSectionId)
+	const pluginTab = pluginSettingsTabs.find((t) => t.id === activeSectionId)
+	const activeName = coreSection?.name ?? pluginTab?.label ?? "Settings"
+
+	const handlePluginSettingUpdate = useCallback(
+		(_pluginId: string, _key: string, _value: unknown) => {},
+		[],
+	)
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="overflow-hidden p-0 md:max-h-[600px] md:max-w-[900px] lg:max-w-[1000px]">
 				<DialogTitle className="sr-only">Settings</DialogTitle>
-				<DialogDescription className="sr-only">Customize your settings here.</DialogDescription>
+				<DialogDescription className="sr-only">
+					Customize your settings here.
+				</DialogDescription>
 				<SidebarProvider className="items-start">
 					<Sidebar collapsible="none" className="hidden md:flex min-h-full">
 						<SidebarContent>
 							<SidebarGroup>
 								<SidebarGroupContent>
 									<SidebarMenu>
-										{sections.map((item) => (
+										{coreSections.map((item) => (
 											<SidebarMenuItem key={item.id}>
 												<SidebarMenuButton
 													onClick={() => setActiveSectionId(item.id)}
@@ -70,6 +86,31 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 									</SidebarMenu>
 								</SidebarGroupContent>
 							</SidebarGroup>
+							{pluginSettingsTabs.length > 0 && (
+								<SidebarGroup>
+									<SidebarGroupLabel>Plugin Settings</SidebarGroupLabel>
+									<SidebarGroupContent>
+										<SidebarMenu>
+											{pluginSettingsTabs.map((tab) => (
+												<SidebarMenuItem key={tab.id}>
+													<SidebarMenuButton
+														onClick={() =>
+															setActiveSectionId(tab.id)
+														}
+														isActive={activeSectionId === tab.id}
+													>
+														<LucideIcon
+															name={tab.icon}
+															size={16}
+														/>
+														<span>{tab.label}</span>
+													</SidebarMenuButton>
+												</SidebarMenuItem>
+											))}
+										</SidebarMenu>
+									</SidebarGroupContent>
+								</SidebarGroup>
+							)}
 						</SidebarContent>
 					</Sidebar>
 					<main className="flex h-[580px] flex-1 flex-col overflow-hidden">
@@ -77,10 +118,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 							<div className="flex items-center gap-2 px-4">
 								<Breadcrumb>
 									<BreadcrumbList>
-										<BreadcrumbItem className="hidden md:block">Settings</BreadcrumbItem>
+										<BreadcrumbItem className="hidden md:block">
+											Settings
+										</BreadcrumbItem>
 										<BreadcrumbSeparator className="hidden md:block" />
 										<BreadcrumbItem>
-											<BreadcrumbPage>{activeSection.name}</BreadcrumbPage>
+											<BreadcrumbPage>{activeName}</BreadcrumbPage>
 										</BreadcrumbItem>
 									</BreadcrumbList>
 								</Breadcrumb>
@@ -88,16 +131,38 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 						</header>
 						<div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
 							{activeSectionId === "general" && (
-								<GeneralSection settings={settings.general} onUpdate={updateSetting} />
+								<GeneralSection
+									settings={settings.general}
+									onUpdate={updateSetting}
+								/>
 							)}
 							{activeSectionId === "appearance" && (
-								<AppearanceSection settings={settings.appearance} onUpdate={updateSetting} />
+								<AppearanceSection
+									settings={settings.appearance}
+									onUpdate={updateSetting}
+								/>
 							)}
 							{activeSectionId === "editor" && (
-								<EditorSection settings={settings.editor} onUpdate={updateSetting} />
+								<EditorSection
+									settings={settings.editor}
+									onUpdate={updateSetting}
+								/>
 							)}
 							{activeSectionId === "hotkeys" && <HotkeysSection />}
 							{activeSectionId === "sync" && <SyncSection />}
+							{activeSectionId === "plugins" && <PluginsSection />}
+							{pluginTab && (
+								<PluginSettingsRenderer
+									pluginId={pluginTab.id}
+									settings={
+										pluginSettingsSchemas[pluginTab.id] ?? pluginTab.settings
+									}
+									values={{}}
+									onUpdate={(key, value) =>
+										handlePluginSettingUpdate(pluginTab.id, key, value)
+									}
+								/>
+							)}
 						</div>
 					</main>
 				</SidebarProvider>

@@ -89,16 +89,3 @@ export function createSettingsAPI(
 		},
 	}
 }
-
-export async function loadPluginSettings(
-	pluginId: string,
-	vaultPath: string,
-): Promise<Record<string, unknown>> {
-	const filePath = `${vaultPath}/.cortex/plugins/${pluginId}/settings.json`
-	try {
-		const content = await getPlatform().fs.readFile(filePath)
-		return JSON.parse(content) as Record<string, unknown>
-	} catch {
-		return {}
-	}
-}

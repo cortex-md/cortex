@@ -270,7 +270,7 @@ export default function GraphSection() {
 				<div className="grid gap-20 items-center" style={{ gridTemplateColumns: "1fr 1fr" }}>
 					<ScrollReveal>
 						<div
-							className="text-[11.5px] font-semibold uppercase text-accent-light mb-3.5"
+							className="text-[11.5px] font-semibold uppercase text-accent mb-3.5"
 							style={{ letterSpacing: "0.08em" }}
 						>
 							04 — Graph View

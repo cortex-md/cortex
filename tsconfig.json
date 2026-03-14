@@ -27,6 +27,7 @@
 		{ "path": "packages/renderer" },
 		{ "path": "apps/desktop" },
 		{ "path": "apps/web" },
+		{ "path": "plugins/github-emoji" },
 		{ "path": "apps/desktop/tsconfig.node.json" }
 	],
 	"files": []

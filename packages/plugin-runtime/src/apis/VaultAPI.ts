@@ -1,5 +1,5 @@
 import { getPlatform } from "@cortex/platform"
-import type { Disposable, FileEntry, PluginAPI, VaultFileEvent } from "@cortex/plugin-api"
+import type { Disposable, PluginAPI, VaultFileEvent } from "@cortex/plugin-api"
 
 function validateRelativePath(relativePath: string): void {
 	if (
@@ -36,17 +36,10 @@ export function createVaultAPI(getVaultPath: () => string | null): PluginAPI["va
 			await getPlatform().fs.deleteFile(resolvePath(relativePath))
 		},
 
-		async listFiles(dir?: string): Promise<FileEntry[]> {
+		async listFiles(dir?: string) {
 			const fullPath = dir ? resolvePath(dir) : getVaultPath()
 			if (!fullPath) throw new Error("No vault is open")
-			const entries = await getPlatform().fs.listDir(fullPath)
-			return entries.map((entry) => ({
-				path: entry.path,
-				name: entry.name,
-				isDir: entry.isDir,
-				size: entry.size,
-				mtime: entry.mtime,
-			}))
+			return getPlatform().fs.listDir(fullPath)
 		},
 
 		async exists(relativePath: string): Promise<boolean> {
