@@ -54,10 +54,10 @@ import { applyAppearanceSettings } from "./features/settings/applyAppearance"
 import { SettingsModal } from "./features/settings/SettingsModal"
 import { PaneView } from "./features/split-view/PaneView"
 import { StatusBar } from "./features/statusbar/StatusBar"
-import { InitialSyncProgress } from "./features/sync/InitialSyncProgress"
 import { TagPicker } from "./features/tags/TagPicker"
 import { TagsSidebar } from "./features/tags/TagsSidebar"
 import { VaultSwitcher } from "./features/vault/VaultSwitcher"
+import { useSyncLifecycle } from "./hooks/useSyncLifecycle"
 
 const CORE_NAV_ITEMS: NavItem[] = [
 	{ id: "files", icon: FolderClosed, label: "Files" },
@@ -155,6 +155,7 @@ export default function App() {
 	const autoOpenAttempted = useRef(false)
 
 	useHotkeyListener()
+	useSyncLifecycle()
 
 	useHotkey(
 		"file.new",
@@ -606,7 +607,6 @@ export default function App() {
 			<QuickFinder />
 			<CommandPalette />
 			<TagPicker />
-			<InitialSyncProgress />
 		</div>
 	)
 }

@@ -212,8 +212,13 @@ impl SyncEngine {
         self.server_url = Some(server_url);
 
         self.run_initial_sync().await;
-        self.start_sse_listener();
-        self.set_state(SyncEngineState::Live);
+        let sse_started = self.start_sse_listener();
+        if sse_started {
+            self.set_state(SyncEngineState::Live);
+        } else {
+            self.connection_mode = ConnectionMode::Polling;
+            self.set_state(SyncEngineState::Offline);
+        }
     }
 
     fn handle_stop(&mut self) {
@@ -416,29 +421,44 @@ impl SyncEngine {
         absolute_path.to_string()
     }
 
-    fn start_sse_listener(&mut self) {
+    fn start_sse_listener(&mut self) -> bool {
         let Some(ref vault_id) = self.vault_id else {
-            return;
+            eprintln!("start_sse_listener: no vault_id, SSE not started");
+            return false;
         };
         let Some(ref server_url) = self.server_url else {
-            return;
+            eprintln!("start_sse_listener: no server_url, SSE not started");
+            return false;
         };
 
         let device_id = match crate::device::get_device_id() {
             Ok(id) => id,
-            Err(_) => return,
+            Err(e) => {
+                eprintln!("start_sse_listener: failed to get device_id: {}, SSE not started", e);
+                return false;
+            }
         };
 
-        let access_token = match crate::keychain::get("access_token") {
-            Ok(Some(token)) => token,
-            _ => return,
-        };
+        match crate::keychain::get("access_token") {
+            Ok(Some(_)) => {}
+            Ok(None) => {
+                eprintln!("start_sse_listener: no access_token in keychain, SSE not started");
+                return false;
+            }
+            Err(e) => {
+                eprintln!("start_sse_listener: keychain error reading access_token: {}, SSE not started", e);
+                return false;
+            }
+        }
 
         let url = format!("{}/sync/v1/vaults/{}/events", server_url, vault_id);
 
         let tx = match self.app.try_state::<mpsc::Sender<SyncCommand>>() {
             Some(s) => (*s).clone(),
-            None => return,
+            None => {
+                eprintln!("start_sse_listener: SyncCommand sender not in Tauri state, SSE not started");
+                return false;
+            }
         };
 
         if let Some(cancel) = self.sse_cancel.take() {
@@ -450,14 +470,15 @@ impl SyncEngine {
 
         let saved_last_event_id = self.last_event_id.clone();
         let device_id_clone = device_id.clone();
-        let access_token_clone = access_token.clone();
 
         tokio::spawn(async move {
             let mut sse = SseClient::new(tx, device_id_clone.clone(), saved_last_event_id);
             let _ = sse
-                .connect(&url, &access_token_clone, &device_id_clone, cancel)
+                .connect(&url, "", &device_id_clone, cancel)
                 .await;
         });
+
+        true
     }
 
     async fn run_initial_sync(&self) {

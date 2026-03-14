@@ -63,9 +63,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="overflow-hidden p-0 md:max-h-[600px] md:max-w-[900px] lg:max-w-[1000px]">
 				<DialogTitle className="sr-only">Settings</DialogTitle>
-				<DialogDescription className="sr-only">
-					Customize your settings here.
-				</DialogDescription>
+				<DialogDescription className="sr-only">Customize your settings here.</DialogDescription>
 				<SidebarProvider className="items-start">
 					<Sidebar collapsible="none" className="hidden md:flex min-h-full">
 						<SidebarContent>
@@ -94,15 +92,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 											{pluginSettingsTabs.map((tab) => (
 												<SidebarMenuItem key={tab.id}>
 													<SidebarMenuButton
-														onClick={() =>
-															setActiveSectionId(tab.id)
-														}
+														onClick={() => setActiveSectionId(tab.id)}
 														isActive={activeSectionId === tab.id}
 													>
-														<LucideIcon
-															name={tab.icon}
-															size={16}
-														/>
+														<LucideIcon name={tab.icon} size={16} />
 														<span>{tab.label}</span>
 													</SidebarMenuButton>
 												</SidebarMenuItem>
@@ -118,9 +111,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 							<div className="flex items-center gap-2 px-4">
 								<Breadcrumb>
 									<BreadcrumbList>
-										<BreadcrumbItem className="hidden md:block">
-											Settings
-										</BreadcrumbItem>
+										<BreadcrumbItem className="hidden md:block">Settings</BreadcrumbItem>
 										<BreadcrumbSeparator className="hidden md:block" />
 										<BreadcrumbItem>
 											<BreadcrumbPage>{activeName}</BreadcrumbPage>
@@ -131,22 +122,13 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 						</header>
 						<div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
 							{activeSectionId === "general" && (
-								<GeneralSection
-									settings={settings.general}
-									onUpdate={updateSetting}
-								/>
+								<GeneralSection settings={settings.general} onUpdate={updateSetting} />
 							)}
 							{activeSectionId === "appearance" && (
-								<AppearanceSection
-									settings={settings.appearance}
-									onUpdate={updateSetting}
-								/>
+								<AppearanceSection settings={settings.appearance} onUpdate={updateSetting} />
 							)}
 							{activeSectionId === "editor" && (
-								<EditorSection
-									settings={settings.editor}
-									onUpdate={updateSetting}
-								/>
+								<EditorSection settings={settings.editor} onUpdate={updateSetting} />
 							)}
 							{activeSectionId === "hotkeys" && <HotkeysSection />}
 							{activeSectionId === "sync" && <SyncSection />}
@@ -154,13 +136,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 							{pluginTab && (
 								<PluginSettingsRenderer
 									pluginId={pluginTab.id}
-									settings={
-										pluginSettingsSchemas[pluginTab.id] ?? pluginTab.settings
-									}
+									settings={pluginSettingsSchemas[pluginTab.id] ?? pluginTab.settings}
 									values={{}}
-									onUpdate={(key, value) =>
-										handlePluginSettingUpdate(pluginTab.id, key, value)
-									}
+									onUpdate={(key, value) => handlePluginSettingUpdate(pluginTab.id, key, value)}
 								/>
 							)}
 						</div>

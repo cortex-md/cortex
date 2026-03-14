@@ -1,6 +1,6 @@
 import { getPlatform } from "@cortex/platform"
-import { CortexPlugin } from "@cortex/plugin-api"
 import type { PluginManifest } from "@cortex/plugin-api"
+import { CortexPlugin } from "@cortex/plugin-api"
 import { createPluginAPI } from "./PluginAPIFactory"
 import { usePluginStore } from "./pluginStore"
 
@@ -124,9 +124,8 @@ function loadCommunityModule(code: string, pluginId: string): PluginModule | nul
 		}
 
 		// biome-ignore lint/security/noGlobalEval: required to load community plugin CJS bundles
-		const factory = (0, eval)(
-			`(function(module, exports, require) {\n${code}\n})`,
-		) as (
+		const indirectEval = globalThis.eval
+		const factory = indirectEval(`(function(module, exports, require) {\n${code}\n})`) as (
 			m: typeof moduleObj,
 			e: typeof moduleExports,
 			r: typeof requireStub,

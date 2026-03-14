@@ -57,22 +57,34 @@ export const useMembersStore = create<MembersState>()(
 			},
 
 			updateMemberRole: async (vaultId, userId, role) => {
-				const platform = getPlatform()
-				await platform.members.updateMemberRole(vaultId, userId, role)
-				set((state) => {
-					const member = state.members.find((m) => m.userId === userId)
-					if (member) {
-						member.role = role
-					}
-				})
+				try {
+					const platform = getPlatform()
+					await platform.members.updateMemberRole(vaultId, userId, role)
+					set((state) => {
+						const member = state.members.find((m) => m.userId === userId)
+						if (member) {
+							member.role = role
+						}
+					})
+				} catch (e) {
+					set((state) => {
+						state.error = String(e)
+					})
+				}
 			},
 
 			removeMember: async (vaultId, userId) => {
-				const platform = getPlatform()
-				await platform.members.removeMember(vaultId, userId)
-				set((state) => {
-					state.members = state.members.filter((m) => m.userId !== userId)
-				})
+				try {
+					const platform = getPlatform()
+					await platform.members.removeMember(vaultId, userId)
+					set((state) => {
+						state.members = state.members.filter((m) => m.userId !== userId)
+					})
+				} catch (e) {
+					set((state) => {
+						state.error = String(e)
+					})
+				}
 			},
 
 			fetchInvites: async (vaultId) => {
@@ -90,24 +102,37 @@ export const useMembersStore = create<MembersState>()(
 			},
 
 			createInvite: async (vaultId, inviteeEmail, role, encryptedVaultKey) => {
-				const platform = getPlatform()
-				const invite = await platform.members.createInvite(
-					vaultId,
-					inviteeEmail,
-					role,
-					encryptedVaultKey,
-				)
-				set((state) => {
-					state.invites.push(invite)
-				})
+				try {
+					const platform = getPlatform()
+					const invite = await platform.members.createInvite(
+						vaultId,
+						inviteeEmail,
+						role,
+						encryptedVaultKey,
+					)
+					set((state) => {
+						state.invites.push(invite)
+					})
+				} catch (e) {
+					set((state) => {
+						state.error = String(e)
+					})
+					throw e
+				}
 			},
 
 			deleteInvite: async (vaultId, inviteId) => {
-				const platform = getPlatform()
-				await platform.members.deleteInvite(vaultId, inviteId)
-				set((state) => {
-					state.invites = state.invites.filter((i) => i.id !== inviteId)
-				})
+				try {
+					const platform = getPlatform()
+					await platform.members.deleteInvite(vaultId, inviteId)
+					set((state) => {
+						state.invites = state.invites.filter((i) => i.id !== inviteId)
+					})
+				} catch (e) {
+					set((state) => {
+						state.error = String(e)
+					})
+				}
 			},
 
 			fetchMyInvites: async () => {
@@ -125,12 +150,19 @@ export const useMembersStore = create<MembersState>()(
 			},
 
 			acceptInvite: async (inviteId) => {
-				const platform = getPlatform()
-				const result = await platform.members.acceptInvite(inviteId)
-				set((state) => {
-					state.myInvites = state.myInvites.filter((i) => i.id !== inviteId)
-				})
-				return result
+				try {
+					const platform = getPlatform()
+					const result = await platform.members.acceptInvite(inviteId)
+					set((state) => {
+						state.myInvites = state.myInvites.filter((i) => i.id !== inviteId)
+					})
+					return result
+				} catch (e) {
+					set((state) => {
+						state.error = String(e)
+					})
+					throw e
+				}
 			},
 
 			clearError: () =>

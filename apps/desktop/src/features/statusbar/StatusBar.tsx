@@ -1,6 +1,7 @@
 import { type EditorMode, useEditorStore } from "@cortex/core"
 import { usePluginStore } from "@cortex/plugin-runtime"
 import { LucideIcon } from "@cortex/ui"
+import { SyncIndicator } from "../sync/SyncIndicator"
 
 const MODE_LABELS: Record<EditorMode, string> = {
 	source: "Source",
@@ -45,6 +46,7 @@ export function StatusBar() {
 			<div className="statusbar-sep" />
 
 			<div className="statusbar-right">
+				<SyncIndicator />
 				{rightPluginItems.map((item) => (
 					<button
 						key={item.id}

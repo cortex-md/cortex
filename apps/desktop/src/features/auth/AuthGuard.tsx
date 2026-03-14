@@ -1,4 +1,5 @@
 import { useAuthStore } from "@cortex/core"
+import { listen } from "@tauri-apps/api/event"
 import type { ReactNode } from "react"
 import { useEffect, useState } from "react"
 import { LoginPage } from "./LoginPage"
@@ -11,7 +12,7 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-	const { authenticated, offline, checkAuth, loadServerUrl, setOffline } = useAuthStore()
+	const { authenticated, offline, checkAuth, loadServerUrl, setOffline, logout } = useAuthStore()
 	const [authView, setAuthView] = useState<AuthView>("login")
 	const [checked, setChecked] = useState(false)
 
@@ -20,6 +21,15 @@ export function AuthGuard({ children }: AuthGuardProps) {
 			.then(() => checkAuth())
 			.finally(() => setChecked(true))
 	}, [checkAuth, loadServerUrl])
+
+	useEffect(() => {
+		const unlisten = listen("auth-session-expired", () => {
+			logout()
+		})
+		return () => {
+			unlisten.then((fn) => fn())
+		}
+	}, [logout])
 
 	if (!checked) return null
 

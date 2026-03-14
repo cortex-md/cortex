@@ -1,6 +1,8 @@
 use reqwest::{Client, RequestBuilder, Response};
 use serde::de::DeserializeOwned;
 use std::sync::Mutex;
+use tauri::{AppHandle, Emitter};
+use tokio::sync::Mutex as AsyncMutex;
 
 use crate::device;
 use crate::keychain;
@@ -12,13 +14,17 @@ const SERVER_URL_KEY: &str = "server_url";
 pub struct SyncHttpClient {
     client: Client,
     server_url: Mutex<String>,
+    app: AppHandle,
+    refresh_lock: AsyncMutex<()>,
 }
 
 impl SyncHttpClient {
-    pub fn new() -> Self {
+    pub fn new(app: AppHandle) -> Self {
         Self {
             client: Client::new(),
             server_url: Mutex::new(String::new()),
+            app,
+            refresh_lock: AsyncMutex::new(()),
         }
     }
 
@@ -185,6 +191,8 @@ impl SyncHttpClient {
     }
 
     async fn refresh_tokens_internal(&self) -> Result<(), String> {
+        let _guard = self.refresh_lock.lock().await;
+
         let refresh_token = keychain::get(REFRESH_TOKEN_KEY)?
             .ok_or_else(|| "No refresh token".to_string())?;
 
@@ -198,10 +206,16 @@ impl SyncHttpClient {
             .await
             .map_err(|e| e.to_string())?;
 
-        if !response.status().is_success() {
-            keychain::delete(ACCESS_TOKEN_KEY)?;
-            keychain::delete(REFRESH_TOKEN_KEY)?;
-            return Err("Token refresh failed".to_string());
+        let status = response.status();
+
+        if status.as_u16() == 401 || status.as_u16() == 403 {
+            clear_tokens_and_user_info()?;
+            let _ = self.app.emit("auth-session-expired", ());
+            return Err("Session expired: refresh token revoked or invalid".to_string());
+        }
+
+        if !status.is_success() {
+            return Err(format!("Token refresh failed with HTTP {}", status.as_u16()));
         }
 
         let body: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
@@ -238,8 +252,18 @@ pub fn clear_tokens() -> Result<(), String> {
     Ok(())
 }
 
+fn clear_tokens_and_user_info() -> Result<(), String> {
+    keychain::delete(ACCESS_TOKEN_KEY)?;
+    keychain::delete(REFRESH_TOKEN_KEY)?;
+    let _ = keychain::delete("user_id");
+    let _ = keychain::delete("user_email");
+    Ok(())
+}
+
 pub fn has_tokens() -> Result<bool, String> {
-    Ok(keychain::get(ACCESS_TOKEN_KEY)?.is_some())
+    let has_access = keychain::get(ACCESS_TOKEN_KEY)?.is_some();
+    let has_refresh = keychain::get(REFRESH_TOKEN_KEY)?.is_some();
+    Ok(has_access && has_refresh)
 }
 
 fn should_refresh(token: &str) -> bool {

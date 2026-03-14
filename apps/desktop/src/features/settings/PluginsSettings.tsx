@@ -38,9 +38,7 @@ function PluginRow({ record }: { record: PluginRecord }) {
 					<span className="text-[10px] text-text-muted">v{record.manifest.version}</span>
 					<span className="text-[10px] text-text-muted">by {record.manifest.author}</span>
 				</div>
-				<span className="text-[10px] text-text-muted truncate">
-					{record.manifest.description}
-				</span>
+				<span className="text-[10px] text-text-muted truncate">{record.manifest.description}</span>
 				{hasError && record.error && (
 					<span className="text-[10px] text-red-500 truncate">{record.error}</span>
 				)}
@@ -103,8 +101,7 @@ export function PluginsSection() {
 				</div>
 				{communityPlugins.length === 0 ? (
 					<p className="text-xs text-text-muted py-2">
-						No community plugins installed. Place plugins in ~/.cortex/plugins/ to get
-						started.
+						No community plugins installed. Place plugins in ~/.cortex/plugins/ to get started.
 					</p>
 				) : (
 					<div className="flex flex-col divide-y divide-border">

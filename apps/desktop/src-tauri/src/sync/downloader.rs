@@ -285,14 +285,16 @@ pub enum DownloadResult {
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "snake_case"))]
 pub struct VersionInfo {
     pub snapshot_id: String,
     pub version: u64,
     pub size_bytes: Option<u64>,
     pub checksum: Option<String>,
-    pub created_by: Option<String>,
+    pub author_id: Option<String>,
+    pub author_name: Option<String>,
     pub device_id: Option<String>,
+    pub device_name: Option<String>,
     pub created_at: Option<String>,
 }
 

@@ -23,11 +23,13 @@ import {
 	FilePlusIcon,
 	FolderIcon,
 	FolderPlusIcon,
+	HistoryIcon,
 	PencilIcon,
 	TrashIcon,
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { NativeMenuActions } from "@/utils/context-menu"
+import { NoteHistoryPanel } from "../sync/NoteHistoryPanel"
 import { buildFileContextMenuItems, buildRootContextMenuItems } from "./NativeMenuActions"
 
 interface TreeNode {
@@ -119,6 +121,7 @@ interface FileActions {
 	onDuplicate: (path: string) => void
 	onReveal: (path: string) => void
 	onCopyPath: (path: string, kind: "relative" | "absolute") => void
+	onViewHistory: (path: string) => void
 }
 
 function showNativeFileContextMenu(
@@ -145,6 +148,7 @@ function showNativeFileContextMenu(
 			copyPath: (path) => actions.onCopyPath(path, "absolute"),
 			copyRelativePath: (path) => actions.onCopyPath(path, "relative"),
 			showInExplorer: (path) => actions.onReveal(path),
+			showVersionHistory: (path) => actions.onViewHistory(path),
 		},
 	)
 
@@ -261,6 +265,7 @@ interface TreeNodeProps {
 	creatingType: "file" | "folder" | null
 	onConfirmCreate: (parentPath: string, name: string) => void
 	onCancelCreate: () => void
+	onViewHistory: (path: string) => void
 }
 
 function TreeNodeView({
@@ -284,6 +289,7 @@ function TreeNodeView({
 	creatingType,
 	onConfirmCreate,
 	onCancelCreate,
+	onViewHistory,
 }: TreeNodeProps) {
 	const getTagsForFile = useTagsStore((s) => s.getTagsForFile)
 	const getTagColor = useTagsStore((s) => s.getTagColor)
@@ -317,6 +323,7 @@ function TreeNodeView({
 		onDuplicate,
 		onReveal,
 		onCopyPath,
+		onViewHistory,
 	}
 
 	return (
@@ -384,6 +391,15 @@ function TreeNodeView({
 							<FolderIcon />
 							Reveal in Finder
 						</ContextMenuItem>
+						{!node.isDir && (
+							<>
+								<ContextMenuSeparator />
+								<ContextMenuItem onSelect={() => onViewHistory(node.path)}>
+									<HistoryIcon />
+									View History
+								</ContextMenuItem>
+							</>
+						)}
 						<ContextMenuSeparator />
 						<ContextMenuItem onSelect={() => onStartRename(node.path)}>
 							<PencilIcon />
@@ -441,6 +457,7 @@ function TreeNodeView({
 							creatingType={creatingType}
 							onConfirmCreate={onConfirmCreate}
 							onCancelCreate={onCancelCreate}
+							onViewHistory={onViewHistory}
 						/>
 					))}
 				</>
@@ -457,6 +474,7 @@ export function FileSidebar() {
 	const [renamingPath, setRenamingPath] = useState<string | null>(null)
 	const [creatingIn, setCreatingIn] = useState<string | null>(null)
 	const [creatingType, setCreatingType] = useState<"file" | "folder" | null>(null)
+	const [historyFilePath, setHistoryFilePath] = useState<string | null>(null)
 
 	const activePane = panes[activePaneId]
 	const activeTab = activePane?.tabs.find((t) => t.id === activePane.activeTabId)
@@ -659,10 +677,18 @@ export function FileSidebar() {
 							creatingType={creatingType}
 							onConfirmCreate={handleConfirmCreate}
 							onCancelCreate={handleCancelCreate}
+							onViewHistory={setHistoryFilePath}
 						/>
 					))
 				)}
 			</div>
+			<NoteHistoryPanel
+				filePath={historyFilePath ?? ""}
+				open={historyFilePath !== null}
+				onOpenChange={(open) => {
+					if (!open) setHistoryFilePath(null)
+				}}
+			/>
 		</div>
 	)
 }

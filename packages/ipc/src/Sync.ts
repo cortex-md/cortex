@@ -61,6 +61,20 @@ export class Sync implements ISync {
 		})
 	}
 
+	async downloadVersion(
+		vaultId: string,
+		vaultPath: string,
+		filePath: string,
+		version: string,
+	): Promise<string> {
+		return await invoke<string>("sync_download_version", {
+			vaultId,
+			vaultPath,
+			filePath,
+			version,
+		})
+	}
+
 	async restoreVersion(
 		vaultId: string,
 		vaultPath: string,

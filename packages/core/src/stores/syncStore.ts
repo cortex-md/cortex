@@ -30,6 +30,12 @@ export interface SyncState {
 		vaultPath: string,
 		filePath: string,
 	) => Promise<VersionInfo[]>
+	downloadVersion: (
+		vaultId: string,
+		vaultPath: string,
+		filePath: string,
+		version: string,
+	) => Promise<string>
 	restoreVersion: (
 		vaultId: string,
 		vaultPath: string,
@@ -128,6 +134,11 @@ export const useSyncStore = create<SyncState>()(
 			getVersionHistory: async (vaultId, vaultPath, filePath) => {
 				const platform = getPlatform()
 				return platform.sync.getVersionHistory(vaultId, vaultPath, filePath)
+			},
+
+			downloadVersion: async (vaultId, vaultPath, filePath, version) => {
+				const platform = getPlatform()
+				return platform.sync.downloadVersion(vaultId, vaultPath, filePath, version)
 			},
 
 			restoreVersion: async (vaultId, vaultPath, filePath, version) => {

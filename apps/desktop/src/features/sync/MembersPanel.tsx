@@ -3,6 +3,8 @@ import { Badge, Button, Input, NativeSelect, NativeSelectOption } from "@cortex/
 import { Plus, Trash2, UserMinus } from "lucide-react"
 import { useEffect, useState } from "react"
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 interface MembersPanelProps {
 	vaultId: string
 }
@@ -19,11 +21,14 @@ export function MembersPanel({ vaultId }: MembersPanelProps) {
 		fetchInvites,
 		createInvite,
 		deleteInvite,
+		clearError,
 	} = useMembersStore()
 
 	const [inviteEmail, setInviteEmail] = useState("")
 	const [inviteRole, setInviteRole] = useState("member")
 	const [inviting, setInviting] = useState(false)
+
+	const isValidEmail = EMAIL_REGEX.test(inviteEmail.trim())
 
 	useEffect(() => {
 		fetchMembers(vaultId)
@@ -31,31 +36,29 @@ export function MembersPanel({ vaultId }: MembersPanelProps) {
 	}, [vaultId, fetchMembers, fetchInvites])
 
 	const handleInvite = async () => {
-		if (!inviteEmail.trim()) return
+		if (!isValidEmail) return
+		clearError()
 		setInviting(true)
 		try {
-			await createInvite(vaultId, inviteEmail.trim(), inviteRole, "placeholder-key")
+			await createInvite(vaultId, inviteEmail.trim(), inviteRole, "")
 			setInviteEmail("")
 		} catch {}
 		setInviting(false)
 	}
 
 	const handleRemoveMember = async (userId: string) => {
-		try {
-			await removeMember(vaultId, userId)
-		} catch {}
+		clearError()
+		await removeMember(vaultId, userId)
 	}
 
 	const handleChangeRole = async (userId: string, newRole: string) => {
-		try {
-			await updateMemberRole(vaultId, userId, newRole)
-		} catch {}
+		clearError()
+		await updateMemberRole(vaultId, userId, newRole)
 	}
 
 	const handleDeleteInvite = async (inviteId: string) => {
-		try {
-			await deleteInvite(vaultId, inviteId)
-		} catch {}
+		clearError()
+		await deleteInvite(vaultId, inviteId)
 	}
 
 	return (
@@ -122,14 +125,14 @@ export function MembersPanel({ vaultId }: MembersPanelProps) {
 						onChange={(e) => setInviteRole(e.target.value)}
 					>
 						<NativeSelectOption value="admin">Admin</NativeSelectOption>
-						<NativeSelectOption value="member">Member</NativeSelectOption>
+						<NativeSelectOption value="editor">Editor</NativeSelectOption>
 						<NativeSelectOption value="viewer">Viewer</NativeSelectOption>
 					</NativeSelect>
 					<Button
 						variant="secondary"
 						size="sm"
 						onClick={handleInvite}
-						disabled={inviting || !inviteEmail.trim()}
+						disabled={inviting || !isValidEmail}
 						className="h-7"
 					>
 						<Plus size={12} />

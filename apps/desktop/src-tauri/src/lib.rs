@@ -45,6 +45,7 @@ pub fn run() {
             commands::sync::sync_get_conflicts,
             commands::sync::sync_get_version_history,
             commands::sync::sync_restore_version,
+            commands::sync::sync_download_version,
             commands::menu::refresh_menu_recents,
             commands::remote_vault::remote_vault_create,
             commands::remote_vault::remote_vault_list,
@@ -71,7 +72,7 @@ pub fn run() {
         .setup(|app| {
             commands::watcher::init(app);
 
-            let http_client = sync::http::SyncHttpClient::new();
+            let http_client = sync::http::SyncHttpClient::new(app.handle().clone());
             http_client.load_server_url();
             app.manage(http_client);
 

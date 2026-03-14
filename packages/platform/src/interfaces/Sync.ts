@@ -45,8 +45,10 @@ export interface VersionInfo {
 	version: number
 	sizeBytes: number | null
 	checksum: string | null
-	createdBy: string | null
+	authorId: string | null
+	authorName: string | null
 	deviceId: string | null
+	deviceName: string | null
 	createdAt: string | null
 }
 
@@ -57,6 +59,12 @@ export interface Sync {
 	resolveConflict(path: string, resolution: ConflictResolution): Promise<void>
 	getConflicts(vaultId: string, vaultPath: string): Promise<ConflictInfo[]>
 	getVersionHistory(vaultId: string, vaultPath: string, filePath: string): Promise<VersionInfo[]>
+	downloadVersion(
+		vaultId: string,
+		vaultPath: string,
+		filePath: string,
+		version: string,
+	): Promise<string>
 	restoreVersion(
 		vaultId: string,
 		vaultPath: string,

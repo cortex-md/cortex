@@ -129,16 +129,12 @@ export const usePluginStore = create<PluginStoreState>()(
 
 			addContextMenuItem: (item) =>
 				set((state) => {
-					state.contextMenuItems = state.contextMenuItems.filter(
-						(i) => i.id !== item.id,
-					)
+					state.contextMenuItems = state.contextMenuItems.filter((i) => i.id !== item.id)
 					state.contextMenuItems.push(item)
 				}),
 			removeContextMenuItem: (itemId) =>
 				set((state) => {
-					state.contextMenuItems = state.contextMenuItems.filter(
-						(i) => i.id !== itemId,
-					)
+					state.contextMenuItems = state.contextMenuItems.filter((i) => i.id !== itemId)
 				}),
 
 			addRibbonAction: (action) =>

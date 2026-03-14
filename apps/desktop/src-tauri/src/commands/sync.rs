@@ -133,3 +133,22 @@ pub async fn sync_restore_version(
 
     Ok(())
 }
+
+#[tauri::command]
+pub async fn sync_download_version(
+    app: AppHandle,
+    vault_id: String,
+    vault_path: String,
+    file_path: String,
+    version: String,
+) -> Result<String, String> {
+    let client = app
+        .try_state::<SyncHttpClient>()
+        .ok_or("No HTTP client")?;
+    let db = SyncDb::open(&vault_path)?;
+    let vek = crate::sync::crypto::get_or_create_vek(&vault_id)?;
+
+    let downloader = Downloader::new(&client, &db, &vault_id, &vault_path, &vek);
+    let bytes = downloader.download_version(&file_path, &version).await?;
+    String::from_utf8(bytes).map_err(|e| e.to_string())
+}
