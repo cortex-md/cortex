@@ -1,21 +1,28 @@
+import type { RendererPlugin } from "@cortex/renderer"
 import { createRenderer } from "@cortex/renderer"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 interface Props {
 	content: string
+	plugins?: RendererPlugin[]
 	onWikiLinkClick?: (target: string) => void
 	onTaskCheckboxToggle?: (offset: number, checked: boolean) => void
 }
 
-const renderer = createRenderer()
-
-export function ReadingView({ content, onWikiLinkClick, onTaskCheckboxToggle }: Props) {
+export function ReadingView({
+	content,
+	plugins = [],
+	onWikiLinkClick,
+	onTaskCheckboxToggle,
+}: Props) {
 	const [html, setHtml] = useState("")
 	const containerRef = useRef<HTMLDivElement>(null)
 
+	const renderer = useMemo(() => createRenderer({ plugins }), [plugins])
+
 	useEffect(() => {
 		renderer.render(content).then(setHtml)
-	}, [content])
+	}, [content, renderer])
 
 	useEffect(() => {
 		const container = containerRef.current

@@ -10,6 +10,8 @@ export interface SyntaxTokens {
 	type: string
 	operator: string
 	property: string
+	heading: string
+	meta: string
 	link: string
 	textPrimary: string
 	textMuted: string
@@ -46,6 +48,8 @@ export function resolveSyntaxTokens(element?: Element): SyntaxTokens {
 		type: get("--syntax-type"),
 		operator: get("--syntax-operator"),
 		property: get("--syntax-property"),
+		heading: get("--syntax-heading"),
+		meta: get("--syntax-meta"),
 		link: get("--link"),
 		textPrimary: get("--text-primary"),
 		textMuted: get("--text-muted"),
@@ -59,12 +63,12 @@ export function resolveSyntaxTokens(element?: Element): SyntaxTokens {
 export function buildHighlightStyle(t: SyntaxTokens) {
 	return syntaxHighlighting(
 		HighlightStyle.define([
-			{ tag: tags.heading1, fontWeight: "700", fontSize: "1.6em", color: t.textPrimary },
-			{ tag: tags.heading2, fontWeight: "700", fontSize: "1.4em", color: t.textPrimary },
-			{ tag: tags.heading3, fontWeight: "700", fontSize: "1.2em", color: t.textPrimary },
-			{ tag: tags.heading4, fontWeight: "600", fontSize: "1.1em", color: t.textPrimary },
-			{ tag: tags.heading5, fontWeight: "600", color: t.textPrimary },
-			{ tag: tags.heading6, fontWeight: "600", color: t.textPrimary },
+			{ tag: tags.heading1, fontWeight: "700", fontSize: "1.6em", color: t.heading },
+			{ tag: tags.heading2, fontWeight: "700", fontSize: "1.4em", color: t.heading },
+			{ tag: tags.heading3, fontWeight: "700", fontSize: "1.2em", color: t.heading },
+			{ tag: tags.heading4, fontWeight: "600", fontSize: "1.1em", color: t.heading },
+			{ tag: tags.heading5, fontWeight: "600", color: t.heading },
+			{ tag: tags.heading6, fontWeight: "600", color: t.heading },
 			{ tag: tags.strong, fontWeight: "700" },
 			{ tag: tags.emphasis, fontStyle: "italic" },
 			{ tag: tags.strikethrough, textDecoration: "line-through" },
@@ -72,6 +76,9 @@ export function buildHighlightStyle(t: SyntaxTokens) {
 			{ tag: tags.url, color: t.textMuted },
 			{ tag: tags.quote, color: t.textMuted, fontStyle: "italic" },
 			{ tag: tags.monospace, fontFamily: t.fontMono, fontSize: "0.9em" },
+			{ tag: tags.meta, color: t.meta },
+			{ tag: tags.processingInstruction, color: t.meta },
+			{ tag: tags.contentSeparator, color: t.meta },
 			{ tag: tags.comment, color: t.comment, fontStyle: "italic" },
 			{ tag: tags.keyword, color: t.keyword, fontWeight: "600" },
 			{ tag: tags.string, color: t.string },

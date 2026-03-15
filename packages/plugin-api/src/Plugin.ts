@@ -1,10 +1,15 @@
 import type {
 	CodeBlockHandler,
+	ContextMenuItemRegistration,
 	Disposable,
 	PluginAPI,
 	PluginCommand,
 	PluginManifest,
 	RendererPlugin,
+	RibbonActionRegistration,
+	SettingsTabRegistration,
+	SidebarItemRegistration,
+	StatusBarItemRegistration,
 	ViewRegistration,
 } from "./types"
 
@@ -44,6 +49,36 @@ export abstract class CortexPlugin {
 
 	registerView(registration: ViewRegistration): Disposable {
 		const disposable = this.api.ui.registerView(registration)
+		this._disposables.add(disposable)
+		return disposable
+	}
+
+	registerSidebarItem(item: SidebarItemRegistration): Disposable {
+		const disposable = this.api.ui.registerSidebarItem(item)
+		this._disposables.add(disposable)
+		return disposable
+	}
+
+	registerStatusBarItem(item: StatusBarItemRegistration): Disposable {
+		const disposable = this.api.ui.registerStatusBarItem(item)
+		this._disposables.add(disposable)
+		return disposable
+	}
+
+	registerSettingsTab(tab: SettingsTabRegistration): Disposable {
+		const disposable = this.api.ui.registerSettingsTab(tab)
+		this._disposables.add(disposable)
+		return disposable
+	}
+
+	registerContextMenuItem(item: ContextMenuItemRegistration): Disposable {
+		const disposable = this.api.ui.registerContextMenuItem(item)
+		this._disposables.add(disposable)
+		return disposable
+	}
+
+	registerRibbonAction(action: RibbonActionRegistration): Disposable {
+		const disposable = this.api.ui.registerRibbonAction(action)
 		this._disposables.add(disposable)
 		return disposable
 	}

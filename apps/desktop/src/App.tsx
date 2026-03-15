@@ -8,26 +8,28 @@ import {
 	useVaultStore,
 	useWorkspaceStore,
 } from "@cortex/core"
+import { reconfigurePluginExtensions } from "@cortex/editor"
 import { useHotkey, useHotkeyListener, useHotkeysStore } from "@cortex/hotkeys"
 import { getPlatform } from "@cortex/platform"
 import GitHubEmojiPlugin from "@cortex/plugin-github-emoji"
 import {
 	disableAllPlugins,
 	discoverCommunityPlugins,
-	enablePlugin,
 	getCommunityPluginsDir,
+	loadEnabledPlugins,
 	PluginViewRenderer,
 	registerBundledPlugin,
 	registerCommand,
 	setCommunityPluginExternal,
 	setCommunityPluginsDir,
+	setReconfigurePluginExtensions,
+	setWorkspaceFunctions,
 	usePluginStore,
 } from "@cortex/plugin-runtime"
 import { useSearchStore } from "@cortex/search"
 import { useSettingsStore } from "@cortex/settings"
 import { getThemeManager } from "@cortex/theme"
 import { listen } from "@tauri-apps/api/event"
-import { homeDir } from "@tauri-apps/api/path"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import {
 	BookmarkIcon,
@@ -56,6 +58,7 @@ import { PaneView } from "./features/split-view/PaneView"
 import { StatusBar } from "./features/statusbar/StatusBar"
 import { TagPicker } from "./features/tags/TagPicker"
 import { TagsSidebar } from "./features/tags/TagsSidebar"
+import { loadCommunityThemes, unloadCommunityThemes } from "./features/themes/communityThemeLoader"
 import { VaultSwitcher } from "./features/vault/VaultSwitcher"
 import { useSyncLifecycle } from "./hooks/useSyncLifecycle"
 
@@ -67,6 +70,25 @@ const CORE_NAV_ITEMS: NavItem[] = [
 ]
 
 const NAV_BOTTOM_ITEMS: NavItem[] = [{ id: "settings", icon: SettingsIcon, label: "Settings" }]
+
+setReconfigurePluginExtensions(reconfigurePluginExtensions as never)
+
+setWorkspaceFunctions({
+	openFile: (path: string) => {
+		useWorkspaceStore.getState().openTab(path)
+	},
+	getOpenFiles: () => {
+		const { panes } = useWorkspaceStore.getState()
+		return Object.values(panes).flatMap((p) => p.tabs.map((t) => t.filePath))
+	},
+	subscribeActiveFile: (callback: (path: string | null) => void) => {
+		return useEditorStore.subscribe((state, prevState) => {
+			if (state.activeFilePath !== prevState.activeFilePath) {
+				callback(state.activeFilePath)
+			}
+		})
+	},
+})
 
 registerBundledPlugin(
 	{
@@ -304,12 +326,15 @@ export default function App() {
 			}),
 			registerCommand({
 				id: "view.toggle-theme",
-				label: "Toggle Theme",
+				label: "Toggle Colorscheme",
 				category: "View",
 				icon: SunMoonIcon,
 				execute: () => {
 					const tm = getThemeManager()
-					tm.setActiveTheme(tm.getActiveTheme().name === "ink" ? "paper" : "ink")
+					const currentIsDark = tm.getActiveTheme().isDark
+					const familyName = settings.appearance.theme
+					const resolved = tm.resolveTheme(familyName, currentIsDark ? "light" : "dark")
+					tm.setActiveTheme(resolved)
 				},
 			}),
 			registerCommand({
@@ -359,6 +384,7 @@ export default function App() {
 		toggleTagPicker,
 		leftSidebarCollapsed,
 		setLeftSidebarView,
+		settings.appearance.theme,
 	])
 
 	useEffect(() => {
@@ -368,16 +394,15 @@ export default function App() {
 		}
 		const getVaultPath = () => vault?.path ?? null
 		const initPlugins = async () => {
-			const [cmState, cmView, home] = await Promise.all([
+			const [cmState, cmView] = await Promise.all([
 				import("@codemirror/state"),
 				import("@codemirror/view"),
-				homeDir(),
 			])
 			setCommunityPluginExternal("@codemirror/state", cmState)
 			setCommunityPluginExternal("@codemirror/view", cmView)
-			setCommunityPluginsDir(`${home}.cortex/plugins`)
+			setCommunityPluginsDir(`${vault.path}/.cortex/plugins`)
 			await discoverCommunityPlugins(getCommunityPluginsDir())
-			await enablePlugin("github-emoji", getVaultPath)
+			await loadEnabledPlugins(vault.path, getVaultPath)
 		}
 		initPlugins()
 	}, [vault])
@@ -444,12 +469,18 @@ export default function App() {
 
 	useEffect(() => {
 		if (!vault) return
+		loadCommunityThemes(`${vault.path}/.cortex/themes`)
+		return () => unloadCommunityThemes()
+	}, [vault])
+
+	useEffect(() => {
+		if (!vault) return
 		applyAppearanceSettings(settings.appearance)
 
 		if (settings.appearance.colorscheme === "system") {
 			const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-			const handleSystemThemeChange = (e: MediaQueryListEvent) => {
-				getThemeManager().setActiveTheme(e.matches ? "ink" : "paper")
+			const handleSystemThemeChange = () => {
+				applyAppearanceSettings(settings.appearance)
 			}
 			mediaQuery.addEventListener("change", handleSystemThemeChange)
 			return () => mediaQuery.removeEventListener("change", handleSystemThemeChange)

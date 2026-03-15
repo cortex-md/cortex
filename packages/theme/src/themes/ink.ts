@@ -109,6 +109,8 @@ export const inkTheme: Theme = {
 				type: "#f5c265",
 				operator: "#d4d3d1",
 				property: "#c8a0e0",
+				heading: "#f5c265",
+				meta: "#6a6866",
 			},
 		},
 		fonts: {

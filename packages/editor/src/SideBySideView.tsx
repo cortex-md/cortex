@@ -1,4 +1,5 @@
 import type { EditorView as CMEditorView } from "@codemirror/view"
+import type { RendererPlugin } from "@cortex/renderer"
 import { useCallback, useRef } from "react"
 import { EditorView } from "./EditorView"
 import type { EditorConfig } from "./extensions"
@@ -8,6 +9,7 @@ interface Props {
 	content: string
 	filePath: string
 	editorConfig?: EditorConfig
+	rendererPlugins?: RendererPlugin[]
 	onChange: (content: string) => void
 	onWikiLinkClick?: (target: string) => void
 }
@@ -16,6 +18,7 @@ export function SideBySideView({
 	content,
 	filePath,
 	editorConfig,
+	rendererPlugins,
 	onChange,
 	onWikiLinkClick,
 }: Props) {
@@ -58,7 +61,11 @@ export function SideBySideView({
 				/>
 			</div>
 			<div className="side-by-side-preview" ref={readingPanelRef}>
-				<ReadingView content={content} onWikiLinkClick={onWikiLinkClick} />
+				<ReadingView
+					content={content}
+					plugins={rendererPlugins}
+					onWikiLinkClick={onWikiLinkClick}
+				/>
 			</div>
 		</div>
 	)

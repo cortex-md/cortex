@@ -2,6 +2,7 @@ import type { ViewDescriptor, ViewDispatch, ViewState } from "@cortex/plugin-api
 import { CortexPlugin } from "@cortex/plugin-api"
 import { emojiExtension } from "./emojiExtension"
 import { EMOJI_CATEGORIES, GITHUB_EMOJI_MAP } from "./emojiMap"
+import { remarkEmojiPlugin } from "./emojiRemarkPlugin"
 
 const EMOJI_COUNT = Object.keys(GITHUB_EMOJI_MAP).length
 
@@ -146,6 +147,11 @@ export default class GitHubEmojiPlugin extends CortexPlugin {
 	onload() {
 		this.registerEditorExtension(emojiExtension())
 
+		this.registerMarkdownProcessor({
+			name: "github-emoji",
+			remarkPlugins: [remarkEmojiPlugin],
+		})
+
 		this.addCommand({
 			id: "insert-emoji",
 			label: "Insert Emoji",
@@ -169,7 +175,7 @@ export default class GitHubEmojiPlugin extends CortexPlugin {
 			},
 		})
 
-		this.api.ui.registerStatusBarItem({
+		this.registerStatusBarItem({
 			id: "emoji-status",
 			position: "right",
 			icon: "smile",
@@ -177,7 +183,7 @@ export default class GitHubEmojiPlugin extends CortexPlugin {
 			tooltip: "GitHub Emoji Plugin active",
 		})
 
-		this.api.ui.registerSettingsTab({
+		this.registerSettingsTab({
 			id: "github-emoji",
 			label: "Emoji",
 			icon: "smile",
@@ -236,7 +242,7 @@ export default class GitHubEmojiPlugin extends CortexPlugin {
 			render: renderEmojiView,
 		})
 
-		this.api.ui.registerSidebarItem({
+		this.registerSidebarItem({
 			id: "emoji-browser",
 			label: "Emoji",
 			icon: "smile",

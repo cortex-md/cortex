@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 export const AppearanceSettingsSchema = z.object({
-	theme: z.enum(["paper", "ink"] as const).default("ink"),
+	theme: z.string().default("default"),
 	colorscheme: z.enum(["light", "dark", "system"]).default("system"),
 	accentColor: z.string().default("#e8a83c"),
 	uiFontFamily: z.string().default("DM Sans"),

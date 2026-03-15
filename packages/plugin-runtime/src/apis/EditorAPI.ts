@@ -14,6 +14,7 @@ let nextExtensionId = 0
 
 export function setEditorViewRef(view: EditorViewLike | null): void {
 	editorViewRef = view
+	applyExtensions()
 }
 
 export function setReconfigurePluginExtensions(fn: ReconfigureFn): void {

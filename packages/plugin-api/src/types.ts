@@ -185,6 +185,7 @@ export interface PluginAPI {
 	}
 
 	settings: {
+		load(): Promise<void>
 		get<T>(key: string): T | undefined
 		set<T>(key: string, value: T): Promise<void>
 		getAll(): Record<string, unknown>

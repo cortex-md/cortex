@@ -1,4 +1,28 @@
-export type ThemeName = "paper" | "ink"
+export type ThemeName = string
+export type BuiltinThemeName = "paper" | "ink"
+
+export type DeepPartial<T> = {
+	[P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P]
+}
+
+export interface CommunityThemeManifest {
+	id: string
+	name: string
+	displayName: string
+	author: string
+	version: string
+	colorschemes: {
+		dark: string
+		light: string
+	}
+}
+
+export interface ThemeFamily {
+	name: string
+	displayName: string
+	darkTheme: string
+	lightTheme: string
+}
 
 export interface ThemeTokens {
 	primitive: {
@@ -58,6 +82,8 @@ export interface ThemeTokens {
 			type: string
 			operator: string
 			property: string
+			heading: string
+			meta: string
 		}
 	}
 	fonts: {

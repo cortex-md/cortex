@@ -73,6 +73,8 @@ export function generateCSSVariables(theme: Theme): Record<string, string> {
 	vars["--syntax-type"] = t.semantic.syntax.type
 	vars["--syntax-operator"] = t.semantic.syntax.operator
 	vars["--syntax-property"] = t.semantic.syntax.property
+	vars["--syntax-heading"] = t.semantic.syntax.heading
+	vars["--syntax-meta"] = t.semantic.syntax.meta
 
 	vars["--font-ui"] = t.fonts.ui
 	vars["--font-editor"] = t.fonts.editor
@@ -149,7 +151,7 @@ export function generateCSSVariables(theme: Theme): Record<string, string> {
 
 export function generateCSSString(theme: Theme): string {
 	const vars = generateCSSVariables(theme)
-	const selector = theme.isDark ? ".theme-ink" : ".theme-paper"
+	const selector = `.theme-${theme.name}`
 
 	const lines = [`${selector} {`]
 	Object.entries(vars).forEach(([key, value]) => {

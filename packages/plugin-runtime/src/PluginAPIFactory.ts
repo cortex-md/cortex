@@ -31,6 +31,7 @@ export function createPluginAPI(pluginId: string, getVaultPath: () => string | n
 		defineSchema(schema) {
 			usePluginStore.getState().setSettingsSchema(pluginId, schema)
 		},
+		load: settings.load,
 	}
 
 	return {

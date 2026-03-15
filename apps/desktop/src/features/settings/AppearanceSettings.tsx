@@ -1,7 +1,7 @@
 import type { FontInfo } from "@cortex/platform"
 import { getPlatform } from "@cortex/platform"
 import type { AppearanceSettings } from "@cortex/settings"
-import { getThemeManager } from "@cortex/theme"
+import { getThemeManager, type ThemeFamily } from "@cortex/theme"
 import { Label, NativeSelect, NativeSelectOption, Slider } from "@cortex/ui"
 import { useEffect, useState } from "react"
 import type { UpdateSettingFn } from "."
@@ -14,13 +14,24 @@ interface AppearanceSectionProps {
 
 export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps) {
 	const [systemFonts, setSystemFonts] = useState<FontInfo[]>([])
+	const [themeFamilies, setThemeFamilies] = useState<ThemeFamily[]>([])
 
 	useEffect(() => {
 		getPlatform().font.listSystemFonts().then(setSystemFonts)
+		setThemeFamilies(getThemeManager().getThemeFamilies())
+		const unsubscribe = getThemeManager().subscribe(() => {
+			setThemeFamilies(getThemeManager().getThemeFamilies())
+		})
+		return unsubscribe
 	}, [])
 
 	const applyOverrides = (partial: Partial<AppearanceSettings>) => {
 		getThemeManager().applyOverrides(buildAppearanceOverrides({ ...settings, ...partial }))
+	}
+
+	const handleThemeChange = (theme: string) => {
+		onUpdate("appearance", "theme", theme)
+		applyAppearanceSettings({ ...settings, theme })
 	}
 
 	const handleColorschemeChange = (colorscheme: "light" | "dark" | "system") => {
@@ -55,6 +66,7 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 
 	const handleLineHeightChange = (lineHeight: number) => {
 		onUpdate("appearance", "lineHeight", lineHeight)
+		applyOverrides({ lineHeight })
 	}
 
 	return (
@@ -63,6 +75,20 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
 					Theme
 				</h3>
+				<div className="flex items-center justify-between px-0 py-2 gap-4">
+					<Label htmlFor="theme">Theme</Label>
+					<NativeSelect
+						id="theme"
+						value={settings.theme}
+						onChange={(e) => handleThemeChange(e.target.value)}
+					>
+						{themeFamilies.map((family) => (
+							<NativeSelectOption key={family.name} value={family.name}>
+								{family.displayName}
+							</NativeSelectOption>
+						))}
+					</NativeSelect>
+				</div>
 				<div className="flex items-center justify-between px-0 py-2 gap-4">
 					<Label htmlFor="colorscheme">Colorscheme</Label>
 					<NativeSelect

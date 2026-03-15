@@ -5,6 +5,7 @@ import {
 	enablePlugin,
 	getCommunityPluginsDir,
 	type PluginRecord,
+	saveEnabledPlugins,
 	usePluginStore,
 } from "@cortex/plugin-runtime"
 import { Button, LucideIcon, Switch } from "@cortex/ui"
@@ -22,6 +23,9 @@ function PluginRow({ record }: { record: PluginRecord }) {
 				await enablePlugin(record.manifest.id, () => vault?.path ?? null)
 			} else {
 				await disablePlugin(record.manifest.id)
+			}
+			if (vault?.path) {
+				await saveEnabledPlugins(vault.path)
 			}
 		},
 		[record.manifest.id, vault],
@@ -57,10 +61,14 @@ export function PluginsSection() {
 
 	const handleOpenPluginsFolder = async () => {
 		const dir = getCommunityPluginsDir()
+		const platform = getPlatform()
 		try {
-			await getPlatform().dialog.revealFolder(dir)
+			await platform.fs.createDir(dir)
+		} catch {}
+		try {
+			await platform.dialog.revealFolder(dir)
 		} catch {
-			await getPlatform().dialog.showAlert(
+			await platform.dialog.showAlert(
 				"Plugins Folder",
 				`Community plugins directory: ${dir}\n\nCreate this folder to install community plugins.`,
 			)
@@ -101,7 +109,7 @@ export function PluginsSection() {
 				</div>
 				{communityPlugins.length === 0 ? (
 					<p className="text-xs text-text-muted py-2">
-						No community plugins installed. Place plugins in ~/.cortex/plugins/ to get started.
+						No community plugins installed. Place plugins in vault/.cortex/plugins/ to get started.
 					</p>
 				) : (
 					<div className="flex flex-col divide-y divide-border">

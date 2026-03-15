@@ -109,6 +109,8 @@ export const paperTheme: Theme = {
 				type: "#8b6914",
 				operator: "#6b6a62",
 				property: "#6b3a8a",
+				heading: "#a06a10",
+				meta: "#b3b2a8",
 			},
 		},
 		fonts: {

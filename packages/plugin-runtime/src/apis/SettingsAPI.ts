@@ -42,6 +42,10 @@ export function createSettingsAPI(
 	}
 
 	return {
+		async load(): Promise<void> {
+			await loadSettings()
+		},
+
 		get<T>(key: string): T | undefined {
 			if (!cache) return undefined
 			return cache[key] as T | undefined

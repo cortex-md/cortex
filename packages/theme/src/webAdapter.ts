@@ -21,6 +21,11 @@ export class WebThemeAdapter implements ThemeAdapter {
 		document.head.appendChild(style)
 	}
 
+	removeCSS(themeName: string): void {
+		const existing = document.querySelector(`style[data-theme="${themeName}"]`)
+		if (existing) existing.remove()
+	}
+
 	applyOverrides(overrides: Record<string, string>): void {
 		let style = document.getElementById(OVERRIDE_STYLE_ID) as HTMLStyleElement | null
 		if (!style) {

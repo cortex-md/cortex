@@ -1,4 +1,4 @@
-import { PluginSettingsRenderer, usePluginStore } from "@cortex/plugin-runtime"
+import { getPluginInstance, PluginSettingsRenderer, usePluginStore } from "@cortex/plugin-runtime"
 import { useSettingsStore } from "@cortex/settings"
 import {
 	Breadcrumb,
@@ -22,7 +22,7 @@ import {
 	SidebarProvider,
 } from "@cortex/ui"
 import { Blocks, Keyboard, Palette, RefreshCw, Settings, Type } from "lucide-react"
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { AppearanceSection } from "./AppearanceSettings"
 import { EditorSection } from "./EditorSettings"
 import { GeneralSection } from "./GeneralSettings"
@@ -50,14 +50,25 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 	const pluginSettingsTabs = usePluginStore((s) => s.settingsTabs)
 	const pluginSettingsSchemas = usePluginStore((s) => s.settingsSchemas)
 
+	const [pluginSettingsValues, setPluginSettingsValues] = useState<Record<string, unknown>>({})
+
 	const coreSection = coreSections.find((s) => s.id === activeSectionId)
 	const pluginTab = pluginSettingsTabs.find((t) => t.id === activeSectionId)
 	const activeName = coreSection?.name ?? pluginTab?.label ?? "Settings"
 
-	const handlePluginSettingUpdate = useCallback(
-		(_pluginId: string, _key: string, _value: unknown) => {},
-		[],
-	)
+	useEffect(() => {
+		if (!pluginTab) return
+		const instance = getPluginInstance(pluginTab.id)
+		if (!instance) return
+		setPluginSettingsValues(instance.api.settings.getAll())
+	}, [pluginTab])
+
+	const handlePluginSettingUpdate = useCallback((pluginId: string, key: string, value: unknown) => {
+		const instance = getPluginInstance(pluginId)
+		if (!instance) return
+		instance.api.settings.set(key, value)
+		setPluginSettingsValues((prev) => ({ ...prev, [key]: value }))
+	}, [])
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -137,7 +148,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 								<PluginSettingsRenderer
 									pluginId={pluginTab.id}
 									settings={pluginSettingsSchemas[pluginTab.id] ?? pluginTab.settings}
-									values={{}}
+									values={pluginSettingsValues}
 									onUpdate={(key, value) => handlePluginSettingUpdate(pluginTab.id, key, value)}
 								/>
 							)}

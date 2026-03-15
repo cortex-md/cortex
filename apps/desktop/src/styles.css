@@ -202,6 +202,8 @@
 	--syntax-type: #8b6914;
 	--syntax-operator: #6b6a62;
 	--syntax-property: #6b3a8a;
+	--syntax-heading: #a06a10;
+	--syntax-meta: #b3b2a8;
 
 	--font-ui: "DM Sans", system-ui, -apple-system, sans-serif;
 	--font-editor: "Lora", Georgia, "Times New Roman", serif;
@@ -363,6 +365,8 @@
 	--syntax-type: #f5c265;
 	--syntax-operator: #d4d3d1;
 	--syntax-property: #c8a0e0;
+	--syntax-heading: #f5c265;
+	--syntax-meta: #6a6866;
 
 	--font-ui: ui-sans-serif, -apple-system, sans-serif;
 	--font-editor: ui-sans-serif, -apple-system, serif;
@@ -562,7 +566,7 @@ body {
 	margin-inline: auto;
 	font-family: var(--font-editor);
 	font-size: var(--editor-font-size, 16px);
-	line-height: 1.7;
+	line-height: var(--line-height, 1.5);
 	color: var(--text-primary);
 }
 
@@ -633,7 +637,7 @@ body {
 .reading-view h4,
 .reading-view h5,
 .reading-view h6 {
-	color: var(--text-primary);
+	color: var(--syntax-heading, var(--text-primary));
 	font-weight: 600;
 	line-height: 1.3;
 	margin-top: 1.5em;
@@ -642,15 +646,16 @@ body {
 
 .reading-view h1 {
 	font-size: 1.8em;
+	font-weight: 700;
 }
 .reading-view h2 {
-	font-size: 1.4em;
+	font-size: 1.5em;
 }
 .reading-view h3 {
-	font-size: 1.2em;
+	font-size: 1.3em;
 }
 .reading-view h4 {
-	font-size: 1.05em;
+	font-size: 1.15em;
 }
 .reading-view h5,
 .reading-view h6 {
@@ -686,10 +691,10 @@ body {
 
 .reading-view code {
 	font-family: var(--font-mono);
-	font-size: 0.875em;
+	font-size: 0.9em;
 	background: var(--bg-code);
 	color: var(--text-primary);
-	padding: 0.1em 0.3em;
+	padding: 2px 5px;
 	border-radius: 3px;
 }
 
@@ -704,13 +709,13 @@ body {
 .reading-view pre code {
 	background: none;
 	padding: 0;
-	font-size: 0.875em;
+	font-size: 0.9em;
 	color: var(--text-primary);
 }
 
 .reading-view blockquote {
-	border-left: 3px solid var(--border-strong);
-	padding-left: 1em;
+	border-left: 2px solid var(--accent);
+	padding-left: 12px;
 	margin-left: 0;
 	color: var(--text-secondary);
 }

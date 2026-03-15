@@ -59,14 +59,16 @@
 }
 
 .cm-blockquote {
+	margin-left: 38px;
 	border-left: 2px solid var(--accent);
-	padding-left: 12px;
+	padding-left: 14px;
 	color: var(--text-secondary);
 }
 
 .cm-hr-line {
 	border-bottom: 1px solid var(--border);
-	padding: 0 40px !important;
+	margin-inline: 40px;
+	padding: 0 !important;
 	min-height: 1px;
 }
 
@@ -78,8 +80,9 @@
 
 .cm-codeblock-line {
 	background: var(--bg-code);
-	padding-left: 40px;
-	padding-right: 40px;
+	margin-inline: 24px;
+	padding-left: 16px;
+	padding-right: 16px;
 	position: relative;
 	font-family: var(--font-mono);
 	font-size: 0.9em;

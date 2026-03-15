@@ -35,21 +35,22 @@ export function buildAppearanceOverrides(appearance: AppearanceSettings): Record
 	overrides["font-size"] = `${appearance.uiFontSize}px`
 	overrides["--font-editor"] = buildFontStack(appearance.editorFontFamily, "serif")
 	overrides["--editor-font-size"] = `${appearance.editorFontSize}px`
+	overrides["--line-height"] = String(appearance.lineHeight)
 
 	return overrides
 }
 
+function resolveColorscheme(colorscheme: "light" | "dark" | "system"): "light" | "dark" {
+	if (colorscheme === "system") {
+		return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+	}
+	return colorscheme
+}
+
 export function applyAppearanceSettings(appearance: AppearanceSettings): void {
 	const themeManager = getThemeManager()
-
-	const themeName =
-		appearance.colorscheme === "system"
-			? window.matchMedia("(prefers-color-scheme: dark)").matches
-				? "ink"
-				: "paper"
-			: appearance.colorscheme === "dark"
-				? "ink"
-				: "paper"
+	const resolved = resolveColorscheme(appearance.colorscheme)
+	const themeName = themeManager.resolveTheme(appearance.theme, resolved)
 	themeManager.setActiveTheme(themeName)
 
 	const overrides = buildAppearanceOverrides(appearance)

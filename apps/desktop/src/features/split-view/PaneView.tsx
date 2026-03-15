@@ -3,6 +3,7 @@ import { noteCache, useEditorStore, useTagsStore, useWorkspaceStore } from "@cor
 import type { CursorInfo, EditorConfig } from "@cortex/editor"
 import { EditorView, ReadingView, SideBySideView } from "@cortex/editor"
 import { getPlatform } from "@cortex/platform"
+import { getRegisteredRendererPlugins, setEditorViewRef } from "@cortex/plugin-runtime"
 import { useSettingsStore } from "@cortex/settings"
 import {
 	Button,
@@ -92,9 +93,19 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 		[tab.filePath, tab.id, markTabDirty],
 	)
 
-	const handleViewReady = useCallback((view: CMView) => {
-		viewRef.current = view
-	}, [])
+	const handleViewReady = useCallback(
+		(view: CMView) => {
+			viewRef.current = view
+			if (isActive) setEditorViewRef(view as never)
+		},
+		[isActive],
+	)
+
+	useEffect(() => {
+		if (isActive && viewRef.current) {
+			setEditorViewRef(viewRef.current as never)
+		}
+	}, [isActive])
 
 	return (
 		<div
@@ -115,12 +126,13 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 			) : content === null ? (
 				<div className="flex-1 bg-bg-primary" />
 			) : mode === "reading" ? (
-				<ReadingView content={content} />
+				<ReadingView content={content} plugins={getRegisteredRendererPlugins()} />
 			) : mode === "side-by-side" ? (
 				<SideBySideView
 					content={content}
 					filePath={tab.filePath}
 					editorConfig={editorConfig}
+					rendererPlugins={getRegisteredRendererPlugins()}
 					onChange={handleChange}
 				/>
 			) : (

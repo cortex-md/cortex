@@ -44,6 +44,7 @@ export async function enablePlugin(
 		plugin.manifest = record.manifest
 		plugin.api = api
 
+		await api.settings.load()
 		await plugin.onload()
 
 		instances.set(pluginId, { plugin, manifest: record.manifest })
@@ -149,22 +150,27 @@ export async function loadEnabledPlugins(
 	vaultPath: string,
 	getVaultPath: () => string | null,
 ): Promise<void> {
-	const enabledIds = await readEnabledPlugins(vaultPath)
-	for (const pluginId of enabledIds) {
+	const { ids, isDefault } = await readEnabledPlugins(vaultPath)
+	for (const pluginId of ids) {
 		if (!bundledPlugins.has(pluginId)) continue
 		try {
 			await enablePlugin(pluginId, getVaultPath)
 		} catch {}
 	}
+	if (isDefault) {
+		await saveEnabledPlugins(vaultPath)
+	}
 }
 
-async function readEnabledPlugins(vaultPath: string): Promise<string[]> {
+async function readEnabledPlugins(
+	vaultPath: string,
+): Promise<{ ids: string[]; isDefault: boolean }> {
 	try {
 		const content = await getPlatform().fs.readFile(`${vaultPath}/.cortex/plugins.json`)
 		const data = JSON.parse(content) as { enabled?: string[] }
-		return data.enabled ?? []
+		return { ids: data.enabled ?? [], isDefault: false }
 	} catch {
-		return []
+		return { ids: Array.from(bundledPlugins.keys()), isDefault: true }
 	}
 }
 
