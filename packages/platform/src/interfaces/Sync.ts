@@ -52,7 +52,24 @@ export interface VersionInfo {
 	createdAt: string | null
 }
 
+export interface VaultEncryptionStatus {
+	hasKey: boolean
+}
+
+export interface SyncPreferences {
+	syncSettings: boolean
+	syncHotkeys: boolean
+	syncWorkspace: boolean
+	syncPluginMetadata: boolean
+	syncThemeMetadata: boolean
+	excludedPaths: string[]
+}
+
 export interface Sync {
+	updateSyncPreferences(preferences: SyncPreferences): Promise<void>
+	checkVaultEncryption(vaultId: string): Promise<VaultEncryptionStatus>
+	createVaultKey(vaultId: string, password: string): Promise<void>
+	unlockVaultKey(vaultId: string, password: string): Promise<void>
 	start(vaultId: string, vaultPath: string, serverUrl: string): Promise<void>
 	stop(): Promise<void>
 	forceSyncFile(path: string): Promise<void>
@@ -76,4 +93,5 @@ export interface Sync {
 	onInitialSyncProgress(callback: (event: InitialSyncProgressEvent) => void): Promise<() => void>
 	onConflict(callback: (event: SyncConflictEvent) => void): Promise<() => void>
 	onInitialSyncComplete(callback: () => void): Promise<() => void>
+	onVekRequired(callback: () => void): Promise<() => void>
 }

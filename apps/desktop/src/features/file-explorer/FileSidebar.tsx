@@ -1,4 +1,4 @@
-import { useTagsStore, useVaultStore, useWorkspaceStore } from "@cortex/core"
+import { useSyncStore, useTagsStore, useVaultStore, useWorkspaceStore } from "@cortex/core"
 import type { FileEntry } from "@cortex/platform"
 import { getPlatform } from "@cortex/platform"
 import {
@@ -17,6 +17,7 @@ import {
 import {
 	ChevronRightIcon,
 	ClipboardCopyIcon,
+	CloudOffIcon,
 	CopyIcon,
 	ExternalLinkIcon,
 	FileIcon,
@@ -129,6 +130,7 @@ function showNativeFileContextMenu(
 	position: { x: number; y: number },
 	actions: FileActions,
 ) {
+	const vault = useVaultStore.getState().vault
 	const items = buildFileContextMenuItems(
 		{
 			path: node.path,
@@ -149,6 +151,21 @@ function showNativeFileContextMenu(
 			copyRelativePath: (path) => actions.onCopyPath(path, "relative"),
 			showInExplorer: (path) => actions.onReveal(path),
 			showVersionHistory: (path) => actions.onViewHistory(path),
+			toggleSyncIgnore: (path, ignored) => {
+				if (!vault?.path) return
+				const relative = path.replace(`${vault.path}/`, "")
+				const normalized = node.isDir
+					? relative.endsWith("/")
+						? relative
+						: `${relative}/`
+					: relative
+				useSyncStore.getState().toggleExcludedPath(normalized, ignored)
+			},
+			isSyncIgnored: (path) => {
+				if (!vault?.path) return false
+				const relative = path.replace(`${vault.path}/`, "")
+				return useSyncStore.getState().isPathExcluded(relative)
+			},
 		},
 	)
 
@@ -410,6 +427,7 @@ function TreeNodeView({
 							<TrashIcon />
 							Delete
 						</ContextMenuItem>
+						<SyncExcludeMenuItem node={node} />
 					</ContextMenuContent>
 				</ContextMenu>
 			)}
@@ -462,6 +480,31 @@ function TreeNodeView({
 					))}
 				</>
 			)}
+		</>
+	)
+}
+
+function SyncExcludeMenuItem({ node }: { node: TreeNode }) {
+	const vaultPath = useVaultStore((s) => s.vault?.path)
+	const excludedPaths = useSyncStore((s) => s.syncPreferences.excludedPaths)
+
+	if (!vaultPath) return null
+
+	const relative = node.path.replace(`${vaultPath}/`, "")
+	const normalized = node.isDir ? (relative.endsWith("/") ? relative : `${relative}/`) : relative
+	const isExcluded = excludedPaths.some((excluded) =>
+		excluded.endsWith("/") ? relative.startsWith(excluded) : relative === excluded,
+	)
+
+	return (
+		<>
+			<ContextMenuSeparator />
+			<ContextMenuItem
+				onSelect={() => useSyncStore.getState().toggleExcludedPath(normalized, !isExcluded)}
+			>
+				<CloudOffIcon />
+				{isExcluded ? "Include in Sync" : "Exclude from Sync"}
+			</ContextMenuItem>
 		</>
 	)
 }

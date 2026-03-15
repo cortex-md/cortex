@@ -45,20 +45,30 @@ pub fn start_watching(app: AppHandle, path: String) -> Result<(), String> {
                 if let Some(kind_str) = event_kind_to_string(&event.kind) {
                     for path in &event.paths {
                         let path_str = path.to_string_lossy().to_string();
-                        if path_str.contains(".cortex") {
+                        let filename = path_str.rsplit('/').next().unwrap_or(&path_str);
+                        if matches!(filename, ".DS_Store" | "Thumbs.db" | "desktop.ini") {
                             continue;
                         }
-                        let _ = app_handle.emit(
-                            "vault-file-changed",
-                            VaultFileChanged {
-                                path: path_str.clone(),
-                                kind: kind_str.to_string(),
-                            },
-                        );
+
+                        let is_cortex_path = path_str.contains(".cortex");
+
+                        if !is_cortex_path {
+                            let _ = app_handle.emit(
+                                "vault-file-changed",
+                                VaultFileChanged {
+                                    path: path_str.clone(),
+                                    kind: kind_str.to_string(),
+                                },
+                            );
+                        }
+
                         if let Some(ref sender) = sync_sender {
-                            let _ = sender.try_send(SyncCommand::LocalFileChanged {
-                                path: path_str,
-                            });
+                            let cmd = if kind_str == "deleted" {
+                                SyncCommand::LocalFileDeleted { path: path_str }
+                            } else {
+                                SyncCommand::LocalFileChanged { path: path_str }
+                            };
+                            let _ = sender.try_send(cmd);
                         }
                     }
                 }

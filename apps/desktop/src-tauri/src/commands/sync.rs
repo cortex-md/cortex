@@ -1,7 +1,9 @@
+use serde::Serialize;
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::mpsc;
 
 use crate::sync::conflict::{ConflictInfo, ConflictResolver};
+use crate::sync::crypto;
 use crate::sync::db::SyncDb;
 use crate::sync::downloader::{Downloader, VersionInfo};
 use crate::sync::http::SyncHttpClient;
@@ -67,7 +69,8 @@ pub async fn sync_get_conflicts(
         .try_state::<SyncHttpClient>()
         .ok_or("No HTTP client")?;
     let db = SyncDb::open(&vault_path)?;
-    let vek = crate::sync::crypto::get_or_create_vek(&vault_id)?;
+    let vek = crate::sync::crypto::load_vek(&vault_id)?
+        .ok_or("Vault encryption key not available. Unlock the vault first.")?;
 
     let resolver = ConflictResolver::new(&client, &db, &vault_id, &vault_path, &vek);
     resolver.get_all_conflicts()
@@ -84,7 +87,8 @@ pub async fn sync_get_version_history(
         .try_state::<SyncHttpClient>()
         .ok_or("No HTTP client")?;
     let db = SyncDb::open(&vault_path)?;
-    let vek = crate::sync::crypto::get_or_create_vek(&vault_id)?;
+    let vek = crate::sync::crypto::load_vek(&vault_id)?
+        .ok_or("Vault encryption key not available. Unlock the vault first.")?;
 
     let downloader = Downloader::new(&client, &db, &vault_id, &vault_path, &vek);
     downloader.get_version_history(&file_path).await
@@ -102,7 +106,8 @@ pub async fn sync_restore_version(
         .try_state::<SyncHttpClient>()
         .ok_or("No HTTP client")?;
     let db = SyncDb::open(&vault_path)?;
-    let vek = crate::sync::crypto::get_or_create_vek(&vault_id)?;
+    let vek = crate::sync::crypto::load_vek(&vault_id)?
+        .ok_or("Vault encryption key not available. Unlock the vault first.")?;
 
     let downloader = Downloader::new(&client, &db, &vault_id, &vault_path, &vek);
     let content = downloader.download_version(&file_path, &version).await?;
@@ -146,9 +151,139 @@ pub async fn sync_download_version(
         .try_state::<SyncHttpClient>()
         .ok_or("No HTTP client")?;
     let db = SyncDb::open(&vault_path)?;
-    let vek = crate::sync::crypto::get_or_create_vek(&vault_id)?;
+    let vek = crate::sync::crypto::load_vek(&vault_id)?
+        .ok_or("Vault encryption key not available. Unlock the vault first.")?;
 
     let downloader = Downloader::new(&client, &db, &vault_id, &vault_path, &vek);
     let bytes = downloader.download_version(&file_path, &version).await?;
     String::from_utf8(bytes).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_update_preferences(
+    sender: State<'_, SyncCommandSender>,
+    sync_settings: bool,
+    sync_hotkeys: bool,
+    sync_workspace: bool,
+    sync_plugin_metadata: bool,
+    sync_theme_metadata: bool,
+    excluded_paths: Vec<String>,
+) -> Result<(), String> {
+    sender
+        .send(SyncCommand::UpdateSyncPreferences {
+            sync_settings,
+            sync_hotkeys,
+            sync_workspace,
+            sync_plugin_metadata,
+            sync_theme_metadata,
+            excluded_paths,
+        })
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultEncryptionStatus {
+    pub has_key: bool,
+}
+
+#[tauri::command]
+pub async fn sync_check_vault_encryption(
+    app: AppHandle,
+    vault_id: String,
+) -> Result<VaultEncryptionStatus, String> {
+    let client = app
+        .try_state::<SyncHttpClient>()
+        .ok_or("No HTTP client")?;
+
+    let api_path = format!("/sync/v1/vaults/{}/encryption", vault_id);
+    let response = client.get(&api_path).await?;
+
+    if !response.status().is_success() {
+        let body = response.text().await.unwrap_or_default();
+        return Err(format!("Check encryption failed: {}", body));
+    }
+
+    let body: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
+    let has_key = body["has_key"].as_bool().unwrap_or(false);
+    Ok(VaultEncryptionStatus { has_key })
+}
+
+#[tauri::command]
+pub async fn sync_create_vault_key(
+    app: AppHandle,
+    vault_id: String,
+    password: String,
+) -> Result<(), String> {
+    let client = app
+        .try_state::<SyncHttpClient>()
+        .ok_or("No HTTP client")?;
+
+    let vek = crypto::generate_vek();
+    let salt = crypto::generate_salt();
+    let derived_key = crypto::derive_key_from_password(&password, &salt)?;
+    let encrypted_vek = crypto::encrypt_vek(&vek, &derived_key)?;
+
+    let salt_b64 =
+        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &salt);
+    let evek_b64 =
+        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &encrypted_vek);
+
+    let body = serde_json::json!({
+        "salt": salt_b64,
+        "encrypted_vek": evek_b64,
+    });
+
+    let api_path = format!("/sync/v1/vaults/{}/encryption", vault_id);
+    let response = client.post_json(&api_path, &body).await?;
+
+    if !response.status().is_success() {
+        let body = response.text().await.unwrap_or_default();
+        return Err(format!("Create vault key failed: {}", body));
+    }
+
+    crypto::store_vek(&vault_id, &vek)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn sync_unlock_vault_key(
+    app: AppHandle,
+    vault_id: String,
+    password: String,
+) -> Result<(), String> {
+    let client = app
+        .try_state::<SyncHttpClient>()
+        .ok_or("No HTTP client")?;
+
+    let api_path = format!("/sync/v1/vaults/{}/encryption", vault_id);
+    let response = client.get(&api_path).await?;
+
+    if !response.status().is_success() {
+        let body = response.text().await.unwrap_or_default();
+        return Err(format!("Fetch encryption data failed: {}", body));
+    }
+
+    let body: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
+
+    let salt_b64 = body["salt"]
+        .as_str()
+        .ok_or("No salt in encryption data")?;
+    let evek_b64 = body["encrypted_vek"]
+        .as_str()
+        .ok_or("No encrypted_vek in encryption data")?;
+
+    let salt = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, salt_b64)
+        .map_err(|e| e.to_string())?;
+    let encrypted_vek =
+        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, evek_b64)
+            .map_err(|e| e.to_string())?;
+
+    let derived_key = crypto::derive_key_from_password(&password, &salt)?;
+    let vek = crypto::decrypt_vek(&encrypted_vek, &derived_key)
+        .map_err(|_| "Wrong password".to_string())?;
+
+    crypto::store_vek(&vault_id, &vek)?;
+    Ok(())
 }

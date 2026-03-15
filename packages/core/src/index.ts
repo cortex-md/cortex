@@ -41,6 +41,12 @@ export {
 	useWorkspaceStore,
 	type WorkspaceState,
 } from "./stores/workspaceStore"
+export type {
+	SyncPluginEntry,
+	SyncPluginsManifest,
+	SyncThemeEntry,
+	SyncThemesManifest,
+} from "./types/syncMetadata"
 export {
 	addTagToFrontmatter,
 	createDefaultFrontmatter,
@@ -54,3 +60,11 @@ export {
 	removeTagFromFrontmatter,
 	updateFrontmatterField,
 } from "./utils/frontmatter"
+export {
+	generatePluginMetadata,
+	generateThemeMetadata,
+	readSyncPluginMetadata,
+	readSyncThemeMetadata,
+	writeSyncPluginMetadata,
+	writeSyncThemeMetadata,
+} from "./utils/syncMetadata"

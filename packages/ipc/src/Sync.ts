@@ -5,7 +5,9 @@ import type {
 	Sync as ISync,
 	SyncConflictEvent,
 	SyncFileEvent,
+	SyncPreferences,
 	SyncStateEvent,
+	VaultEncryptionStatus,
 	VersionInfo,
 } from "@cortex/platform"
 import { invoke } from "@tauri-apps/api/core"
@@ -23,6 +25,29 @@ function toRustResolution(resolution: ConflictResolution): unknown {
 }
 
 export class Sync implements ISync {
+	async updateSyncPreferences(preferences: SyncPreferences): Promise<void> {
+		await invoke<void>("sync_update_preferences", {
+			syncSettings: preferences.syncSettings,
+			syncHotkeys: preferences.syncHotkeys,
+			syncWorkspace: preferences.syncWorkspace,
+			syncPluginMetadata: preferences.syncPluginMetadata,
+			syncThemeMetadata: preferences.syncThemeMetadata,
+			excludedPaths: preferences.excludedPaths,
+		})
+	}
+
+	async checkVaultEncryption(vaultId: string): Promise<VaultEncryptionStatus> {
+		return await invoke<VaultEncryptionStatus>("sync_check_vault_encryption", { vaultId })
+	}
+
+	async createVaultKey(vaultId: string, password: string): Promise<void> {
+		await invoke<void>("sync_create_vault_key", { vaultId, password })
+	}
+
+	async unlockVaultKey(vaultId: string, password: string): Promise<void> {
+		await invoke<void>("sync_unlock_vault_key", { vaultId, password })
+	}
+
 	async start(vaultId: string, vaultPath: string, serverUrl: string): Promise<void> {
 		await invoke<void>("sync_start", { vaultId, vaultPath, serverUrl })
 	}
@@ -121,6 +146,13 @@ export class Sync implements ISync {
 
 	async onInitialSyncComplete(callback: () => void): Promise<() => void> {
 		const unlisten = await listen("sync-initial-complete", () => {
+			callback()
+		})
+		return unlisten
+	}
+
+	async onVekRequired(callback: () => void): Promise<() => void> {
+		const unlisten = await listen("sync-vek-required", () => {
 			callback()
 		})
 		return unlisten

@@ -7,7 +7,7 @@ use tauri::{AppHandle, Emitter};
 use crate::sync::crypto;
 use crate::sync::db::{SyncDb, SyncState};
 use crate::sync::http::SyncHttpClient;
-use crate::sync::ignore::should_ignore;
+use crate::sync::ignore::{should_ignore, SyncPreferences};
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -50,6 +50,7 @@ pub struct InitialSync<'a> {
     vault_id: &'a str,
     vault_path: &'a str,
     vek: &'a [u8; 32],
+    sync_preferences: &'a SyncPreferences,
 }
 
 impl<'a> InitialSync<'a> {
@@ -60,6 +61,7 @@ impl<'a> InitialSync<'a> {
         vault_id: &'a str,
         vault_path: &'a str,
         vek: &'a [u8; 32],
+        sync_preferences: &'a SyncPreferences,
     ) -> Self {
         Self {
             app,
@@ -68,6 +70,7 @@ impl<'a> InitialSync<'a> {
             vault_id,
             vault_path,
             vek,
+            sync_preferences,
         }
     }
 
@@ -166,7 +169,7 @@ impl<'a> InitialSync<'a> {
                 .to_string_lossy()
                 .to_string();
 
-            if should_ignore(&relative) {
+            if should_ignore(&relative, self.sync_preferences) {
                 continue;
             }
 
@@ -212,7 +215,7 @@ impl<'a> InitialSync<'a> {
             if remote.deleted.unwrap_or(false) {
                 continue;
             }
-            if should_ignore(&remote.file_path) {
+            if should_ignore(&remote.file_path, self.sync_preferences) {
                 continue;
             }
 
@@ -257,7 +260,7 @@ impl<'a> InitialSync<'a> {
         }
 
         for (path, _local_info) in local_disk {
-            if !remote_map.contains_key(path.as_str()) && !should_ignore(path) {
+            if !remote_map.contains_key(path.as_str()) && !should_ignore(path, self.sync_preferences) {
                 actions.push(InitialSyncAction::Upload {
                     path: path.clone(),
                 });

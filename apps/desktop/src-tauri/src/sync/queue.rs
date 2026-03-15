@@ -22,6 +22,13 @@ pub enum SyncOp {
         old_path: String,
         new_path: String,
     },
+    DeleteRemote {
+        path: String,
+    },
+    RenameRemote {
+        old_path: String,
+        new_path: String,
+    },
     ResolveConflict {
         path: String,
         resolution: Option<ConflictResolution>,
@@ -36,7 +43,9 @@ impl SyncOp {
             SyncOp::Upload { .. } => "upload",
             SyncOp::Download { .. } => "download",
             SyncOp::Delete { .. } => "delete",
+            SyncOp::DeleteRemote { .. } => "delete_remote",
             SyncOp::Rename { .. } => "rename",
+            SyncOp::RenameRemote { .. } => "rename_remote",
             SyncOp::ResolveConflict { .. } => "resolve_conflict",
             SyncOp::InitialSync => "initial_sync",
             SyncOp::Reconcile => "reconcile",
@@ -48,7 +57,9 @@ impl SyncOp {
             SyncOp::Upload { path } => path,
             SyncOp::Download { path, .. } => path,
             SyncOp::Delete { path } => path,
+            SyncOp::DeleteRemote { path } => path,
             SyncOp::Rename { old_path, .. } => old_path,
+            SyncOp::RenameRemote { old_path, .. } => old_path,
             SyncOp::ResolveConflict { path, .. } => path,
             SyncOp::InitialSync => "",
             SyncOp::Reconcile => "",
@@ -59,6 +70,7 @@ impl SyncOp {
         match self {
             SyncOp::Download { version, .. } => Some(version.to_string()),
             SyncOp::Rename { new_path, .. } => Some(new_path.clone()),
+            SyncOp::RenameRemote { new_path, .. } => Some(new_path.clone()),
             SyncOp::ResolveConflict { resolution, .. } => resolution
                 .as_ref()
                 .and_then(|r| serde_json::to_string(r).ok()),
@@ -85,6 +97,16 @@ impl SyncOp {
             "delete" => Some(SyncOp::Delete {
                 path: row.path.clone(),
             }),
+            "delete_remote" => Some(SyncOp::DeleteRemote {
+                path: row.path.clone(),
+            }),
+            "rename_remote" => {
+                let new_path = row.extra_data.clone().unwrap_or_default();
+                Some(SyncOp::RenameRemote {
+                    old_path: row.path.clone(),
+                    new_path,
+                })
+            }
             "rename" => {
                 let new_path = row.extra_data.clone().unwrap_or_default();
                 Some(SyncOp::Rename {
@@ -322,6 +344,14 @@ impl SyncQueue {
 
     pub fn download(path: String, version: u64) -> (SyncOp, u32) {
         (SyncOp::Download { path, version }, 80)
+    }
+
+    pub fn delete_remote(path: String) -> (SyncOp, u32) {
+        (SyncOp::DeleteRemote { path }, 60)
+    }
+
+    pub fn rename_remote(old_path: String, new_path: String) -> (SyncOp, u32) {
+        (SyncOp::RenameRemote { old_path, new_path }, 60)
     }
 
     pub fn conflict(path: String) -> (SyncOp, u32) {

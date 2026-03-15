@@ -96,7 +96,12 @@ export function DeviceManager() {
 										<Badge variant="outline" className="ml-2 py-0">
 											This device
 										</Badge>
-									)}
+                    )}
+                  {device.revoked && (
+                    <Badge variant="destructive" className="ml-2 py-0">
+                        Revoked
+  									</Badge>
+                  )}
 								</span>
 								<span className="text-text-muted">
 									{device.lastSeenAt
@@ -106,7 +111,7 @@ export function DeviceManager() {
 							</>
 						)}
 					</div>
-					{!device.isCurrent && editingId !== device.id && (
+					{!device.isCurrent && editingId !== device.id && !device.revoked && (
 						<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
 							<Button
 								variant="ghost"

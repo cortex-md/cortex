@@ -109,6 +109,9 @@ pub enum SyncCommand {
     LocalFileChanged {
         path: String,
     },
+    LocalFileDeleted {
+        path: String,
+    },
     ForceSyncFile {
         path: String,
     },
@@ -135,4 +138,12 @@ pub enum SyncCommand {
     Reconcile,
     #[allow(dead_code)]
     PollTick,
+    UpdateSyncPreferences {
+        sync_settings: bool,
+        sync_hotkeys: bool,
+        sync_workspace: bool,
+        sync_plugin_metadata: bool,
+        sync_theme_metadata: bool,
+        excluded_paths: Vec<String>,
+    },
 }

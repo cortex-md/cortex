@@ -74,15 +74,92 @@ mod encoding {
     }
 }
 
-fn store_path() -> Result<PathBuf, String> {
+fn cortex_dir() -> Result<PathBuf, String> {
     let home = dirs::home_dir().ok_or("could not determine home directory")?;
-    Ok(home.join(".cortex").join("credentials.enc"))
+    Ok(home.join(".cortex"))
 }
 
-fn derive_key() -> Result<[u8; 32], String> {
-    let machine_id = machine_identity()?;
-    let hash = blake3::derive_key("cortex credential store v1", machine_id.as_bytes());
-    Ok(hash)
+fn store_path() -> Result<PathBuf, String> {
+    Ok(cortex_dir()?.join("credentials.enc"))
+}
+
+fn key_path() -> Result<PathBuf, String> {
+    Ok(cortex_dir()?.join("credentials.key"))
+}
+
+fn load_or_create_key() -> Result<[u8; 32], String> {
+    let path = key_path()?;
+
+    if path.exists() {
+        let raw = fs::read(&path).map_err(|e| e.to_string())?;
+        if raw.len() == 32 {
+            let mut key = [0u8; 32];
+            key.copy_from_slice(&raw);
+            return Ok(key);
+        }
+    }
+
+    let mut key = [0u8; 32];
+    OsRng.fill_bytes(&mut key);
+
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    fs::write(&path, &key).map_err(|e| e.to_string())?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let perms = std::fs::Permissions::from_mode(0o600);
+        fs::set_permissions(&path, perms).map_err(|e| e.to_string())?;
+    }
+
+    Ok(key)
+}
+
+fn migrate_legacy_store(new_key: &[u8; 32]) {
+    let dir = match cortex_dir() {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+    let legacy_path = dir.join("credentials.enc");
+    let migrated_marker = dir.join("credentials.enc.v1migrated");
+
+    if migrated_marker.exists() || !legacy_path.exists() {
+        return;
+    }
+
+    if let Ok(entries) = decrypt_legacy_store(&legacy_path) {
+        let new_store_path = store_path().unwrap();
+        let store = CredentialStore {
+            path: new_store_path,
+            key: *new_key,
+            entries,
+        };
+        let _ = store.flush();
+    }
+
+    let _ = fs::write(&migrated_marker, "migrated");
+}
+
+fn decrypt_legacy_store(
+    path: &std::path::Path,
+) -> Result<HashMap<String, String>, String> {
+    let raw = fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let payload: EncryptedPayload = serde_json::from_str(&raw).map_err(|e| e.to_string())?;
+    let nonce_bytes = encoding::decode(&payload.nonce)?;
+    let ciphertext = encoding::decode(&payload.data)?;
+
+    let machine_id = legacy_machine_identity()?;
+    let key = blake3::derive_key("cortex credential store v1", machine_id.as_bytes());
+
+    let cipher = Aes256Gcm::new_from_slice(&key).map_err(|e| e.to_string())?;
+    let nonce = Nonce::from_slice(&nonce_bytes);
+    let plaintext = cipher
+        .decrypt(nonce, ciphertext.as_ref())
+        .map_err(|_| "failed to decrypt legacy credential store".to_string())?;
+    let json = String::from_utf8(plaintext).map_err(|e| e.to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
 fn with_store<F, R>(f: F) -> Result<R, String>
@@ -91,8 +168,9 @@ where
 {
     let mut guard = STORE.lock().map_err(|e| e.to_string())?;
     if guard.is_none() {
+        let key = load_or_create_key()?;
+        migrate_legacy_store(&key);
         let path = store_path()?;
-        let key = derive_key()?;
         *guard = Some(CredentialStore::load(path, key));
     }
     f(guard.as_mut().unwrap())
@@ -117,7 +195,7 @@ pub fn delete(account: &str) -> Result<(), String> {
 }
 
 #[cfg(target_os = "macos")]
-fn machine_identity() -> Result<String, String> {
+fn legacy_machine_identity() -> Result<String, String> {
     let output = std::process::Command::new("ioreg")
         .args(["-rd1", "-c", "IOPlatformExpertDevice"])
         .output()
@@ -134,7 +212,7 @@ fn machine_identity() -> Result<String, String> {
 }
 
 #[cfg(target_os = "windows")]
-fn machine_identity() -> Result<String, String> {
+fn legacy_machine_identity() -> Result<String, String> {
     let output = std::process::Command::new("reg")
         .args([
             "query",
@@ -156,7 +234,7 @@ fn machine_identity() -> Result<String, String> {
 }
 
 #[cfg(target_os = "linux")]
-fn machine_identity() -> Result<String, String> {
+fn legacy_machine_identity() -> Result<String, String> {
     fs::read_to_string("/etc/machine-id")
         .map(|s| s.trim().to_string())
         .map_err(|e| format!("could not read /etc/machine-id: {}", e))

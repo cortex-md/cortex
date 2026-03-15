@@ -162,6 +162,7 @@ export default function App() {
 	const resetBookmarks = useBookmarksStore((s) => s.reset)
 	const pluginSidebarItems = usePluginStore((s) => s.sidebarItems)
 	const pluginViews = usePluginStore((s) => s.views)
+	const [communityThemesLoaded, setCommunityThemesLoaded] = useState(false)
 
 	const navItems = useMemo<NavItem[]>(() => {
 		const pluginNavItems: NavItem[] = pluginSidebarItems.map((item) => ({
@@ -468,13 +469,21 @@ export default function App() {
 	}, [vault, files, indexVault, buildTagIndex])
 
 	useEffect(() => {
-		if (!vault) return
-		loadCommunityThemes(`${vault.path}/.cortex/themes`)
-		return () => unloadCommunityThemes()
+		if (!vault) {
+			setCommunityThemesLoaded(false)
+			return
+		}
+		loadCommunityThemes(`${vault.path}/.cortex/themes`).then(() => {
+			setCommunityThemesLoaded(true)
+		})
+		return () => {
+			unloadCommunityThemes()
+			setCommunityThemesLoaded(false)
+		}
 	}, [vault])
 
 	useEffect(() => {
-		if (!vault) return
+		if (!vault || !communityThemesLoaded) return
 		applyAppearanceSettings(settings.appearance)
 
 		if (settings.appearance.colorscheme === "system") {
@@ -485,7 +494,7 @@ export default function App() {
 			mediaQuery.addEventListener("change", handleSystemThemeChange)
 			return () => mediaQuery.removeEventListener("change", handleSystemThemeChange)
 		}
-	}, [vault, settings.appearance])
+	}, [vault, communityThemesLoaded, settings.appearance])
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: persist when workspace state changes
 	useEffect(() => {

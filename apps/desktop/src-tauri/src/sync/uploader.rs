@@ -91,4 +91,68 @@ impl<'a> Uploader<'a> {
 
         Ok(())
     }
+
+    pub async fn delete_remote_file(&self, file_path: &str) -> Result<(), String> {
+        let api_path = format!(
+            "/sync/v1/vaults/{}/files?path={}",
+            self.vault_id,
+            urlencoded(file_path)
+        );
+
+        let response = self.client.delete(&api_path).await?;
+        let status = response.status();
+
+        if !status.is_success() && status.as_u16() != 404 {
+            let body = response.text().await.unwrap_or_default();
+            return Err(format!(
+                "Delete failed: HTTP {}: {}",
+                status.as_u16(),
+                body
+            ));
+        }
+
+        self.db.delete_sync_state(file_path)?;
+        Ok(())
+    }
+
+    pub async fn rename_remote_file(
+        &self,
+        old_path: &str,
+        new_path: &str,
+    ) -> Result<(), String> {
+        let api_path = format!("/sync/v1/vaults/{}/files/rename", self.vault_id);
+
+        let body = serde_json::json!({
+            "old_path": old_path,
+            "new_path": new_path,
+        });
+
+        let response = self.client.post_json(&api_path, &body).await?;
+        let status = response.status();
+
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(format!(
+                "Rename failed: HTTP {}: {}",
+                status.as_u16(),
+                body
+            ));
+        }
+
+        if let Some(mut state) = self.db.get_sync_state(old_path)? {
+            self.db.delete_sync_state(old_path)?;
+            state.file_path = new_path.to_string();
+            self.db.upsert_sync_state(&state)?;
+        }
+
+        Ok(())
+    }
+}
+
+fn urlencoded(s: &str) -> String {
+    s.replace('%', "%25")
+        .replace(' ', "%20")
+        .replace('#', "%23")
+        .replace('&', "%26")
+        .replace('?', "%3F")
 }

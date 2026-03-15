@@ -3,6 +3,8 @@ import type {
 	ConflictResolution,
 	InitialSyncProgressEvent,
 	SyncEngineState,
+	SyncPreferences,
+	VaultEncryptionStatus,
 	VersionInfo,
 } from "@cortex/platform"
 import { getPlatform } from "@cortex/platform"
@@ -19,7 +21,16 @@ export interface SyncState {
 	conflicts: Record<string, ConflictInfo>
 	initialSyncProgress: InitialSyncProgressEvent | null
 	initialSyncComplete: boolean
+	vekRequired: boolean
+	syncPreferences: SyncPreferences
 
+	loadSyncPreferences: (vaultPath: string) => Promise<void>
+	updateSyncPreference: (
+		key: keyof Omit<SyncPreferences, "excludedPaths">,
+		value: boolean,
+	) => Promise<void>
+	toggleExcludedPath: (relativePath: string, excluded: boolean) => Promise<void>
+	isPathExcluded: (relativePath: string) => boolean
 	startSync: (vaultId: string, vaultPath: string, serverUrl: string) => Promise<void>
 	stopSync: () => Promise<void>
 	forceSyncFile: (path: string) => Promise<void>
@@ -42,6 +53,9 @@ export interface SyncState {
 		filePath: string,
 		version: string,
 	) => Promise<void>
+	checkVaultEncryption: (vaultId: string) => Promise<VaultEncryptionStatus>
+	createVaultKey: (vaultId: string, password: string) => Promise<void>
+	unlockVaultKey: (vaultId: string, password: string) => Promise<void>
 	subscribeEvents: () => Promise<void>
 	unsubscribeEvents: () => void
 }
@@ -57,9 +71,100 @@ export const useSyncStore = create<SyncState>()(
 			conflicts: {},
 			initialSyncProgress: null,
 			initialSyncComplete: false,
+			vekRequired: false,
+			syncPreferences: {
+				syncSettings: false,
+				syncHotkeys: false,
+				syncWorkspace: false,
+				syncPluginMetadata: false,
+				syncThemeMetadata: false,
+				excludedPaths: [],
+			},
+
+			loadSyncPreferences: async (vaultPath) => {
+				const platform = getPlatform()
+				const filePath = `${vaultPath}/.cortex/sync-preferences.json`
+				try {
+					const content = await platform.fs.readFile(filePath)
+					const parsed = JSON.parse(content) as Partial<SyncPreferences>
+					const prefs: SyncPreferences = {
+						syncSettings: parsed.syncSettings ?? false,
+						syncHotkeys: parsed.syncHotkeys ?? false,
+						syncWorkspace: parsed.syncWorkspace ?? false,
+						syncPluginMetadata: parsed.syncPluginMetadata ?? false,
+						syncThemeMetadata: parsed.syncThemeMetadata ?? false,
+						excludedPaths: Array.isArray(parsed.excludedPaths) ? parsed.excludedPaths : [],
+					}
+					set((state) => {
+						state.syncPreferences = prefs
+					})
+					await platform.sync.updateSyncPreferences(prefs)
+				} catch {
+					const defaults: SyncPreferences = {
+						syncSettings: false,
+						syncHotkeys: false,
+						syncWorkspace: false,
+						syncPluginMetadata: false,
+						syncThemeMetadata: false,
+						excludedPaths: [],
+					}
+					set((state) => {
+						state.syncPreferences = defaults
+					})
+					await platform.sync.updateSyncPreferences(defaults)
+				}
+			},
+
+			updateSyncPreference: async (key, value) => {
+				const platform = getPlatform()
+				set((state) => {
+					;(state.syncPreferences as Record<string, unknown>)[key] = value
+				})
+				const prefs = get().syncPreferences
+				const { vault } = await import("./vaultStore").then((m) => m.useVaultStore.getState())
+				if (vault) {
+					const filePath = `${vault.path}/.cortex/sync-preferences.json`
+					await platform.fs.writeFile(filePath, JSON.stringify(prefs, null, "\t"))
+				}
+				await platform.sync.updateSyncPreferences(prefs)
+			},
+
+			toggleExcludedPath: async (relativePath, excluded) => {
+				const platform = getPlatform()
+				set((state) => {
+					const paths = state.syncPreferences.excludedPaths
+					if (excluded) {
+						if (!paths.includes(relativePath)) {
+							paths.push(relativePath)
+						}
+					} else {
+						state.syncPreferences.excludedPaths = paths.filter((p) => p !== relativePath)
+					}
+				})
+				const prefs = get().syncPreferences
+				const { vault } = await import("./vaultStore").then((m) => m.useVaultStore.getState())
+				if (vault) {
+					const filePath = `${vault.path}/.cortex/sync-preferences.json`
+					await platform.fs.writeFile(filePath, JSON.stringify(prefs, null, "\t"))
+				}
+				await platform.sync.updateSyncPreferences(prefs)
+			},
+
+			isPathExcluded: (relativePath) => {
+				const { excludedPaths } = get().syncPreferences
+				for (const excluded of excludedPaths) {
+					if (excluded.endsWith("/")) {
+						if (relativePath.startsWith(excluded)) return true
+					} else if (relativePath === excluded) {
+						return true
+					}
+				}
+				return false
+			},
 
 			startSync: async (vaultId, vaultPath, serverUrl) => {
 				try {
+					await get().loadSyncPreferences(vaultPath)
 					const platform = getPlatform()
 					await platform.sync.start(vaultId, vaultPath, serverUrl)
 					await get().subscribeEvents()
@@ -81,6 +186,7 @@ export const useSyncStore = create<SyncState>()(
 						state.conflicts = {}
 						state.initialSyncProgress = null
 						state.initialSyncComplete = false
+						state.vekRequired = false
 					})
 				} catch (e) {
 					set((state) => {
@@ -152,6 +258,24 @@ export const useSyncStore = create<SyncState>()(
 				}
 			},
 
+			checkVaultEncryption: async (vaultId) => {
+				const platform = getPlatform()
+				return platform.sync.checkVaultEncryption(vaultId)
+			},
+
+			createVaultKey: async (vaultId, password) => {
+				const platform = getPlatform()
+				await platform.sync.createVaultKey(vaultId, password)
+			},
+
+			unlockVaultKey: async (vaultId, password) => {
+				const platform = getPlatform()
+				await platform.sync.unlockVaultKey(vaultId, password)
+				set((state) => {
+					state.vekRequired = false
+				})
+			},
+
 			subscribeEvents: async () => {
 				const platform = getPlatform()
 
@@ -203,6 +327,12 @@ export const useSyncStore = create<SyncState>()(
 					})
 				})
 
+				const unlistenVek = await platform.sync.onVekRequired(() => {
+					set((state) => {
+						state.vekRequired = true
+					})
+				})
+
 				set((state) => {
 					state.unlisteners = [
 						unlistenState,
@@ -210,6 +340,7 @@ export const useSyncStore = create<SyncState>()(
 						unlistenProgress,
 						unlistenConflict,
 						unlistenComplete,
+						unlistenVek,
 					]
 				})
 			},

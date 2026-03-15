@@ -1,7 +1,6 @@
 import { tauriPlatform } from "@cortex/ipc"
 import { initPlatform } from "@cortex/platform"
 import { initThemeManager, WebThemeAdapter } from "@cortex/theme"
-import React from "react"
 import ReactDOM from "react-dom/client"
 import App from "./App"
 import { AuthGuard } from "./features/auth/AuthGuard"
@@ -15,9 +14,7 @@ const platform = ua.includes("macintosh") ? "macos" : ua.includes("windows") ? "
 document.body.setAttribute("data-platform", platform)
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-	<React.StrictMode>
 		<AuthGuard>
 			<App />
 		</AuthGuard>
-	</React.StrictMode>,
 )

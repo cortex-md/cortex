@@ -12,7 +12,7 @@ use crate::sync::crypto;
 use crate::sync::db::SyncDb;
 use crate::sync::downloader::{DownloadResult, Downloader};
 use crate::sync::http::SyncHttpClient;
-use crate::sync::ignore::should_ignore;
+use crate::sync::ignore::{should_ignore, SyncPreferences};
 use crate::sync::initial::InitialSync;
 use crate::sync::queue::{SyncOp, SyncQueue};
 use crate::sync::reconcile::Reconciler;
@@ -21,6 +21,7 @@ use crate::sync::state::{ConnectionMode, SyncCommand, SyncEngineState};
 use crate::sync::uploader::Uploader;
 
 const UPLOAD_DEBOUNCE: Duration = Duration::from_secs(5);
+const DELETE_CORRELATION_WINDOW: Duration = Duration::from_millis(1000);
 const POLL_INTERVAL: Duration = Duration::from_secs(30);
 const RETRY_RELOAD_INTERVAL: Duration = Duration::from_secs(60);
 
@@ -47,9 +48,11 @@ pub struct SyncEngine {
     db: Option<Arc<SyncDb>>,
     vek: Option<[u8; 32]>,
     pending_uploads: HashMap<String, Instant>,
+    pending_deletes: HashMap<String, (Instant, Option<String>)>,
     sse_cancel: Option<CancellationToken>,
     connection_mode: ConnectionMode,
     last_event_id: Option<String>,
+    sync_preferences: SyncPreferences,
 }
 
 impl SyncEngine {
@@ -64,9 +67,11 @@ impl SyncEngine {
             db: None,
             vek: None,
             pending_uploads: HashMap::new(),
+            pending_deletes: HashMap::new(),
             sse_cancel: None,
             connection_mode: ConnectionMode::Disconnected,
             last_event_id: None,
+            sync_preferences: SyncPreferences::default(),
         }
     }
 
@@ -105,9 +110,15 @@ impl SyncEngine {
                             self.handle_stop();
                         }
                         Some(SyncCommand::LocalFileChanged { path }) => {
-                            if !should_ignore(&path) {
-                                let relative = self.to_relative_path(&path);
-                                self.pending_uploads.insert(relative, Instant::now());
+                            let relative = self.to_relative_path(&path);
+                            if !should_ignore(&relative, &self.sync_preferences) {
+                                self.handle_local_file_changed(relative);
+                            }
+                        }
+                        Some(SyncCommand::LocalFileDeleted { path }) => {
+                            let relative = self.to_relative_path(&path);
+                            if !should_ignore(&relative, &self.sync_preferences) {
+                                self.handle_local_file_deleted(relative);
                             }
                         }
                         Some(SyncCommand::ForceSyncFile { path }) => {
@@ -145,11 +156,29 @@ impl SyncEngine {
                         Some(SyncCommand::PollTick) => {
                             self.handle_poll_tick().await;
                         }
+                        Some(SyncCommand::UpdateSyncPreferences {
+                            sync_settings,
+                            sync_hotkeys,
+                            sync_workspace,
+                            sync_plugin_metadata,
+                            sync_theme_metadata,
+                            excluded_paths,
+                        }) => {
+                            self.handle_update_sync_preferences(
+                                sync_settings,
+                                sync_hotkeys,
+                                sync_workspace,
+                                sync_plugin_metadata,
+                                sync_theme_metadata,
+                                excluded_paths,
+                            );
+                        }
                         None => break,
                     }
                 }
                 _ = debounce_interval.tick() => {
                     self.flush_pending_uploads();
+                    self.flush_pending_deletes();
                 }
                 _ = poll_interval.tick() => {
                     if matches!(self.connection_mode, ConnectionMode::Polling) && self.vault_id.is_some() {
@@ -164,6 +193,66 @@ impl SyncEngine {
             }
 
             self.process_queue().await;
+        }
+    }
+
+    fn handle_local_file_changed(&mut self, relative: String) {
+        if let Some(vault_path) = &self.vault_path {
+            let full_path = std::path::Path::new(vault_path).join(&relative);
+            if let Ok(content) = std::fs::read(&full_path) {
+                let new_hash = blake3::hash(&content).to_hex().to_string();
+
+                let mut matched_old_path: Option<String> = None;
+                for (del_path, (del_time, del_hash)) in &self.pending_deletes {
+                    if Instant::now().duration_since(*del_time) <= DELETE_CORRELATION_WINDOW {
+                        if let Some(ref h) = del_hash {
+                            if h == &new_hash {
+                                matched_old_path = Some(del_path.clone());
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if let Some(old_path) = matched_old_path {
+                    self.pending_deletes.remove(&old_path);
+                    let (op, priority) =
+                        SyncQueue::rename_remote(old_path, relative);
+                    self.queue.push(op, priority);
+                    return;
+                }
+            }
+        }
+
+        self.pending_uploads.insert(relative, Instant::now());
+    }
+
+    fn handle_local_file_deleted(&mut self, relative: String) {
+        self.pending_uploads.remove(&relative);
+
+        let last_hash = self
+            .db
+            .as_ref()
+            .and_then(|db| db.get_sync_state(&relative).ok().flatten())
+            .and_then(|state| state.local_hash);
+
+        self.pending_deletes
+            .insert(relative, (Instant::now(), last_hash));
+    }
+
+    fn flush_pending_deletes(&mut self) {
+        let now = Instant::now();
+        let ready: Vec<String> = self
+            .pending_deletes
+            .iter()
+            .filter(|(_, (when, _))| now.duration_since(*when) > DELETE_CORRELATION_WINDOW)
+            .map(|(path, _)| path.clone())
+            .collect();
+
+        for path in ready {
+            self.pending_deletes.remove(&path);
+            let (op, priority) = SyncQueue::delete_remote(path);
+            self.queue.push(op, priority);
         }
     }
 
@@ -188,8 +277,13 @@ impl SyncEngine {
             }
         }
 
-        match crypto::get_or_create_vek(&vault_id) {
-            Ok(vek) => self.vek = Some(vek),
+        match crypto::load_vek(&vault_id) {
+            Ok(Some(vek)) => self.vek = Some(vek),
+            Ok(None) => {
+                let _ = self.app.emit("sync-vek-required", ());
+                self.set_state(SyncEngineState::Idle);
+                return;
+            }
             Err(e) => {
                 self.emit_file_event("", &format!("vek-error: {}", e));
                 self.set_state(SyncEngineState::Idle);
@@ -231,10 +325,56 @@ impl SyncEngine {
         self.db = None;
         self.vek = None;
         self.pending_uploads.clear();
+        self.pending_deletes.clear();
         self.connection_mode = ConnectionMode::Disconnected;
         self.last_event_id = None;
         self.queue = SyncQueue::new();
         self.set_state(SyncEngineState::Idle);
+    }
+
+    fn handle_update_sync_preferences(
+        &mut self,
+        sync_settings: bool,
+        sync_hotkeys: bool,
+        sync_workspace: bool,
+        sync_plugin_metadata: bool,
+        sync_theme_metadata: bool,
+        excluded_paths: Vec<String>,
+    ) {
+        let old = self.sync_preferences.clone();
+        self.sync_preferences = SyncPreferences {
+            sync_settings,
+            sync_hotkeys,
+            sync_workspace,
+            sync_plugin_metadata,
+            sync_theme_metadata,
+            excluded_paths,
+        };
+
+        if self.vault_path.is_none() {
+            return;
+        }
+
+        let newly_enabled: Vec<&str> = vec![
+            (!old.sync_settings && sync_settings)
+                .then_some(".cortex/app.json"),
+            (!old.sync_hotkeys && sync_hotkeys)
+                .then_some(".cortex/hotkeys.json"),
+            (!old.sync_workspace && sync_workspace)
+                .then_some(".cortex/workspace.json"),
+            (!old.sync_plugin_metadata && sync_plugin_metadata)
+                .then_some(".cortex/sync-plugins.json"),
+            (!old.sync_theme_metadata && sync_theme_metadata)
+                .then_some(".cortex/sync-themes.json"),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+
+        for file_path in newly_enabled {
+            let (op, priority) = SyncQueue::upload(file_path.to_string());
+            self.queue.push(op, priority);
+        }
     }
 
     async fn handle_sse_connected(&mut self) {
@@ -273,7 +413,7 @@ impl SyncEngine {
         };
         let client = &*client_state;
 
-        let reconciler = Reconciler::new(&self.app, client, db, vault_id, vault_path, vek);
+        let reconciler = Reconciler::new(&self.app, client, db, vault_id, vault_path, vek, &self.sync_preferences);
         match reconciler.run(self.last_event_id.as_deref()).await {
             Ok(Some(new_event_id)) => {
                 self.last_event_id = Some(new_event_id.clone());
@@ -339,7 +479,7 @@ impl SyncEngine {
             if event.device_id == own_device_id {
                 continue;
             }
-            if should_ignore(&event.file_path) {
+            if should_ignore(&event.file_path, &self.sync_preferences) {
                 continue;
             }
 
@@ -402,6 +542,14 @@ impl SyncEngine {
 
         for path in ready {
             self.pending_uploads.remove(&path);
+
+            if let Some(ref vault_path) = self.vault_path {
+                let full_path = std::path::Path::new(vault_path).join(&path);
+                if !full_path.exists() {
+                    continue;
+                }
+            }
+
             let (op, priority) = SyncQueue::upload(path);
             self.queue.push(op, priority);
         }
@@ -423,42 +571,27 @@ impl SyncEngine {
 
     fn start_sse_listener(&mut self) -> bool {
         let Some(ref vault_id) = self.vault_id else {
-            eprintln!("start_sse_listener: no vault_id, SSE not started");
             return false;
         };
         let Some(ref server_url) = self.server_url else {
-            eprintln!("start_sse_listener: no server_url, SSE not started");
             return false;
         };
 
         let device_id = match crate::device::get_device_id() {
             Ok(id) => id,
-            Err(e) => {
-                eprintln!("start_sse_listener: failed to get device_id: {}, SSE not started", e);
-                return false;
-            }
+            Err(_) => return false,
         };
 
         match crate::keychain::get("access_token") {
             Ok(Some(_)) => {}
-            Ok(None) => {
-                eprintln!("start_sse_listener: no access_token in keychain, SSE not started");
-                return false;
-            }
-            Err(e) => {
-                eprintln!("start_sse_listener: keychain error reading access_token: {}, SSE not started", e);
-                return false;
-            }
+            _ => return false,
         }
 
         let url = format!("{}/sync/v1/vaults/{}/events", server_url, vault_id);
 
         let tx = match self.app.try_state::<mpsc::Sender<SyncCommand>>() {
             Some(s) => (*s).clone(),
-            None => {
-                eprintln!("start_sse_listener: SyncCommand sender not in Tauri state, SSE not started");
-                return false;
-            }
+            None => return false,
         };
 
         if let Some(cancel) = self.sse_cancel.take() {
@@ -494,7 +627,7 @@ impl SyncEngine {
         };
         let client = &*client_state;
 
-        let initial = InitialSync::new(&self.app, client, db, vault_id, vault_path, vek);
+        let initial = InitialSync::new(&self.app, client, db, vault_id, vault_path, vek, &self.sync_preferences);
         if let Err(e) = initial.run().await {
             self.emit_file_event("", &format!("initial-sync-error: {}", e));
         }
@@ -572,6 +705,20 @@ impl SyncEngine {
                         }
                     }
                 }
+                SyncOp::DeleteRemote { ref path } => {
+                    self.emit_file_event(path, "deleting-remote");
+                    let uploader = Uploader::new(client, db, vault_id, vault_path, vek);
+                    match uploader.delete_remote_file(path).await {
+                        Ok(()) => {
+                            self.emit_file_event(path, "deleted");
+                            Ok(())
+                        }
+                        Err(e) => {
+                            self.emit_file_event(path, &format!("error: {}", e));
+                            Err(e)
+                        }
+                    }
+                }
                 SyncOp::Rename {
                     ref old_path,
                     ref new_path,
@@ -579,6 +726,23 @@ impl SyncEngine {
                     self.emit_file_event(old_path, "renaming");
                     let downloader = Downloader::new(client, db, vault_id, vault_path, vek);
                     match downloader.rename_local_file(old_path, new_path).await {
+                        Ok(()) => {
+                            self.emit_file_event(new_path, "synced");
+                            Ok(())
+                        }
+                        Err(e) => {
+                            self.emit_file_event(old_path, &format!("error: {}", e));
+                            Err(e)
+                        }
+                    }
+                }
+                SyncOp::RenameRemote {
+                    ref old_path,
+                    ref new_path,
+                } => {
+                    self.emit_file_event(old_path, "renaming-remote");
+                    let uploader = Uploader::new(client, db, vault_id, vault_path, vek);
+                    match uploader.rename_remote_file(old_path, new_path).await {
                         Ok(()) => {
                             self.emit_file_event(new_path, "synced");
                             Ok(())

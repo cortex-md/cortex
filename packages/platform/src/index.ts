@@ -35,7 +35,9 @@ export type {
 	SyncConflictEvent,
 	SyncEngineState,
 	SyncFileEvent,
+	SyncPreferences,
 	SyncStateEvent,
+	VaultEncryptionStatus,
 	VersionInfo,
 } from "./interfaces/Sync"
 export type { Vault, VaultMetadata, VaultRegistryEntry } from "./interfaces/Vault"

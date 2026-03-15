@@ -6,6 +6,7 @@ import { DeviceManager } from "../sync/DeviceManager"
 import { InvitesPanel } from "../sync/InvitesPanel"
 import { MembersPanel } from "../sync/MembersPanel"
 import { VaultLinkModal } from "../sync/VaultLinkModal"
+import { ExcludedPathsSettings } from "./ExcludedPathsSettings"
 
 interface ServerSectionProps {
 	selfHosted: boolean
@@ -169,6 +170,10 @@ export function SyncSection() {
 							</div>
 						</>
 					)}
+
+					<Separator className="my-4" />
+
+					<ExcludedPathsSettings />
 
 					<VaultLinkModal open={linkModalOpen} onOpenChange={setLinkModalOpen} />
 				</>

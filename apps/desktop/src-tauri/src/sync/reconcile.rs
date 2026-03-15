@@ -7,7 +7,7 @@ use tauri::{AppHandle, Emitter};
 use crate::sync::db::{SyncDb, SyncState};
 use crate::sync::downloader::{DownloadResult, Downloader};
 use crate::sync::http::SyncHttpClient;
-use crate::sync::ignore::should_ignore;
+use crate::sync::ignore::{should_ignore, SyncPreferences};
 use crate::sync::uploader::Uploader;
 
 const LONG_OFFLINE_THRESHOLD_SECS: i64 = 30 * 24 * 60 * 60;
@@ -67,6 +67,7 @@ pub struct Reconciler<'a> {
     vault_path: &'a str,
     vek: &'a [u8; 32],
     own_device_id: String,
+    sync_preferences: &'a SyncPreferences,
 }
 
 impl<'a> Reconciler<'a> {
@@ -77,6 +78,7 @@ impl<'a> Reconciler<'a> {
         vault_id: &'a str,
         vault_path: &'a str,
         vek: &'a [u8; 32],
+        sync_preferences: &'a SyncPreferences,
     ) -> Self {
         let own_device_id = crate::device::get_device_id().unwrap_or_default();
         Self {
@@ -87,6 +89,7 @@ impl<'a> Reconciler<'a> {
             vault_path,
             vek,
             own_device_id,
+            sync_preferences,
         }
     }
 
@@ -192,7 +195,7 @@ impl<'a> Reconciler<'a> {
             if event.device_id == self.own_device_id {
                 continue;
             }
-            if should_ignore(&event.file_path) {
+            if should_ignore(&event.file_path, self.sync_preferences) {
                 continue;
             }
 
@@ -266,7 +269,7 @@ impl<'a> Reconciler<'a> {
             if remote.deleted.unwrap_or(false) {
                 continue;
             }
-            if should_ignore(&remote.file_path) {
+            if should_ignore(&remote.file_path, self.sync_preferences) {
                 continue;
             }
 
@@ -310,7 +313,7 @@ impl<'a> Reconciler<'a> {
         }
 
         for (path, _) in local_disk {
-            if !remote_map.contains_key(path.as_str()) && !should_ignore(path) {
+            if !remote_map.contains_key(path.as_str()) && !should_ignore(path, self.sync_preferences) {
                 let db_state = state_map.get(path.as_str());
                 if db_state.is_some() {
                     actions.push(ReconcileAction::Delete {
@@ -444,7 +447,7 @@ impl<'a> Reconciler<'a> {
                 .to_string_lossy()
                 .to_string();
 
-            if should_ignore(&relative) {
+            if should_ignore(&relative, self.sync_preferences) {
                 continue;
             }
 

@@ -1,5 +1,6 @@
 use aes_gcm::aead::Aead;
 use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
+use argon2::Argon2;
 use rand::RngCore;
 
 use crate::keychain;
@@ -34,12 +35,33 @@ pub fn load_vek(vault_id: &str) -> Result<Option<[u8; 32]>, String> {
     }
 }
 
-pub fn get_or_create_vek(vault_id: &str) -> Result<[u8; 32], String> {
-    if let Some(vek) = load_vek(vault_id)? {
-        return Ok(vek);
+pub fn generate_salt() -> [u8; 16] {
+    let mut salt = [0u8; 16];
+    rand::thread_rng().fill_bytes(&mut salt);
+    salt
+}
+
+pub fn derive_key_from_password(password: &str, salt: &[u8]) -> Result<[u8; 32], String> {
+    let params = argon2::Params::new(19456, 2, 1, Some(32)).map_err(|e| e.to_string())?;
+    let argon2 = Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params);
+    let mut derived = [0u8; 32];
+    argon2
+        .hash_password_into(password.as_bytes(), salt, &mut derived)
+        .map_err(|e| e.to_string())?;
+    Ok(derived)
+}
+
+pub fn encrypt_vek(vek: &[u8; 32], derived_key: &[u8; 32]) -> Result<Vec<u8>, String> {
+    encrypt(vek, derived_key)
+}
+
+pub fn decrypt_vek(encrypted: &[u8], derived_key: &[u8; 32]) -> Result<[u8; 32], String> {
+    let decrypted = decrypt(encrypted, derived_key)?;
+    if decrypted.len() != 32 {
+        return Err("Invalid VEK length after decryption".to_string());
     }
-    let vek = generate_vek();
-    store_vek(vault_id, &vek)?;
+    let mut vek = [0u8; 32];
+    vek.copy_from_slice(&decrypted);
     Ok(vek)
 }
 
