@@ -10,6 +10,8 @@ struct RemoteVaultResponse {
     description: Option<String>,
     owner_id: String,
     role: String,
+    #[serde(default)]
+    member_count: u32,
     created_at: String,
     updated_at: String,
 }
@@ -22,6 +24,7 @@ pub struct RemoteVault {
     pub description: Option<String>,
     pub owner_id: String,
     pub role: String,
+    pub member_count: u32,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -34,6 +37,7 @@ impl From<RemoteVaultResponse> for RemoteVault {
             description: r.description,
             owner_id: r.owner_id,
             role: r.role,
+            member_count: r.member_count,
             created_at: r.created_at,
             updated_at: r.updated_at,
         }
@@ -124,41 +128,77 @@ pub async fn remote_vault_delete(
     Ok(())
 }
 
+fn read_sync_config(vault_path: &str) -> serde_json::Value {
+    let config_path = std::path::Path::new(vault_path)
+        .join(".cortex")
+        .join("sync-config.json");
+    if !config_path.exists() {
+        return serde_json::json!({});
+    }
+    std::fs::read_to_string(&config_path)
+        .ok()
+        .and_then(|c| serde_json::from_str(&c).ok())
+        .unwrap_or_else(|| serde_json::json!({}))
+}
+
+fn write_sync_config(vault_path: &str, config: &serde_json::Value) -> Result<(), String> {
+    let config_dir = std::path::Path::new(vault_path).join(".cortex");
+    std::fs::create_dir_all(&config_dir).map_err(|e| e.to_string())?;
+    let config_path = config_dir.join("sync-config.json");
+    std::fs::write(&config_path, serde_json::to_string_pretty(config).unwrap())
+        .map_err(|e| e.to_string())
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncConfig {
+    pub remote_vault_id: Option<String>,
+    pub self_hosted: bool,
+    pub server_url: Option<String>,
+    pub offline_mode: bool,
+}
+
 #[tauri::command]
 pub fn remote_vault_link(
     vault_path: String,
     remote_vault_id: String,
 ) -> Result<(), String> {
-    let config_dir = std::path::Path::new(&vault_path).join(".cortex");
-    std::fs::create_dir_all(&config_dir).map_err(|e| e.to_string())?;
-    let config_path = config_dir.join("sync-config.json");
-    let config = serde_json::json!({
-        "remoteVaultId": remote_vault_id,
-    });
-    std::fs::write(&config_path, serde_json::to_string_pretty(&config).unwrap())
-        .map_err(|e| e.to_string())
+    let mut config = read_sync_config(&vault_path);
+    config["remoteVaultId"] = serde_json::json!(remote_vault_id);
+    write_sync_config(&vault_path, &config)
 }
 
 #[tauri::command]
 pub fn remote_vault_unlink(vault_path: String) -> Result<(), String> {
-    let config_path = std::path::Path::new(&vault_path)
-        .join(".cortex")
-        .join("sync-config.json");
-    if config_path.exists() {
-        std::fs::remove_file(&config_path).map_err(|e| e.to_string())?;
-    }
-    Ok(())
+    let mut config = read_sync_config(&vault_path);
+    config.as_object_mut().map(|o| o.remove("remoteVaultId"));
+    write_sync_config(&vault_path, &config)
 }
 
 #[tauri::command]
 pub fn remote_vault_get_link(vault_path: String) -> Result<Option<String>, String> {
-    let config_path = std::path::Path::new(&vault_path)
-        .join(".cortex")
-        .join("sync-config.json");
-    if !config_path.exists() {
-        return Ok(None);
-    }
-    let content = std::fs::read_to_string(&config_path).map_err(|e| e.to_string())?;
-    let json: serde_json::Value = serde_json::from_str(&content).map_err(|e| e.to_string())?;
-    Ok(json["remoteVaultId"].as_str().map(|s| s.to_string()))
+    let config = read_sync_config(&vault_path);
+    Ok(config["remoteVaultId"].as_str().map(|s| s.to_string()))
+}
+
+#[tauri::command]
+pub fn sync_config_read(vault_path: String) -> Result<SyncConfig, String> {
+    let config = read_sync_config(&vault_path);
+    Ok(SyncConfig {
+        remote_vault_id: config["remoteVaultId"].as_str().map(|s| s.to_string()),
+        self_hosted: config["selfHosted"].as_bool().unwrap_or(false),
+        server_url: config["serverUrl"].as_str().map(|s| s.to_string()),
+        offline_mode: config["offlineMode"].as_bool().unwrap_or(false),
+    })
+}
+
+#[tauri::command]
+pub fn sync_config_update(
+    vault_path: String,
+    key: String,
+    value: serde_json::Value,
+) -> Result<(), String> {
+    let mut config = read_sync_config(&vault_path);
+    config[key] = value;
+    write_sync_config(&vault_path, &config)
 }

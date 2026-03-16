@@ -196,10 +196,18 @@ pub async fn vault_invite_create(
     role: String,
     encrypted_vault_key: String,
 ) -> Result<VaultInvite, String> {
+    let key = if encrypted_vault_key.is_empty() {
+        let vek = crate::sync::crypto::load_vek(&vault_id)?
+            .ok_or("Vault encryption key not available. Unlock the vault first.")?;
+        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &vek)
+    } else {
+        encrypted_vault_key
+    };
+
     let body = CreateInviteRequest {
         invitee_email,
         role,
-        encrypted_vault_key,
+        encrypted_vault_key: key,
     };
     let response = client
         .post_json(&format!("/vaults/v1/{}/invites/", vault_id), &body)

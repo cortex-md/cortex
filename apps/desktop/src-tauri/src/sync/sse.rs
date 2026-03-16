@@ -127,6 +127,10 @@ impl SseClient {
         if !response.status().is_success() {
             let status = response.status().as_u16();
             let body = response.text().await.unwrap_or_default();
+            eprintln!(
+                "SSE connection failed: HTTP {} - {} (url: {}, device: {})",
+                status, body, url, device_id
+            );
             return Err(format!("SSE connection failed: HTTP {}: {}", status, body));
         }
 

@@ -415,9 +415,17 @@ export default function App() {
 
 	useEffect(() => {
 		if (autoOpenAttempted.current || vault) return
+		autoOpenAttempted.current = true
+
+		const params = new URLSearchParams(window.location.search)
+		const vaultFromUrl = params.get("vault")
+		if (vaultFromUrl) {
+			openVault(decodeURIComponent(vaultFromUrl))
+			return
+		}
+
 		if (recentVaults.length === 0) return
 		if (!settings.general.autoOpenLastVault) return
-		autoOpenAttempted.current = true
 		const lastVault = recentVaults[0]
 		openVault(lastVault.path, { name: lastVault.name })
 	}, [recentVaults, vault, settings.general.autoOpenLastVault, openVault])
@@ -515,6 +523,12 @@ export default function App() {
 
 	useEffect(() => {
 		const unlisteners = [
+			listen<string>("dock-open-vault", (event) => {
+				const path = event.payload
+				if (path && path !== vault?.path) {
+					closeVault().then(() => openVault(path))
+				}
+			}),
 			listen("menu-new-note", () => {
 				if (vault) createFile(vault.path, "Untitled").then((filePath) => openTab(filePath))
 			}),

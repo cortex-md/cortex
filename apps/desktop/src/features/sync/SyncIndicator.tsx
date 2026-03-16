@@ -1,8 +1,9 @@
-import { useSyncStore } from "@cortex/core"
+import { useAuthStore, useRemoteVaultStore, useSyncStore, useVaultStore } from "@cortex/core"
 import {
 	CheckCircleIcon,
 	CloudIcon,
 	CloudOffIcon,
+	LinkIcon,
 	LoaderIcon,
 	LockIcon,
 	RefreshCwIcon,
@@ -19,17 +20,22 @@ export function SyncIndicator() {
 		vekRequired,
 		lastSyncedAt,
 	} = useSyncStore()
-	const activeSyncCount = Object.keys(syncingFiles).length
+	const authenticated = useAuthStore((s) => s.authenticated)
+	const selfHosted = useAuthStore((s) => s.selfHosted)
+	const vault = useVaultStore((s) => s.vault)
+	const linkedVaultId = useRemoteVaultStore((s) => s.linkedVaultId)
+	const activeSyncCount = Object.values(syncingFiles).filter((s) => !s.startsWith("error:")).length
 	const [unlockModalOpen, setUnlockModalOpen] = useState(false)
+	const [linkModalOpen, setLinkModalOpen] = useState(false)
 
-	if (engineState === "idle" && !vekRequired) return null
+	const hasAuth = authenticated || selfHosted
 
 	if (vekRequired) {
 		return (
 			<>
 				<button
 					type="button"
-					className="statusbar-item flex items-center gap-1.5 cursor-pointer hover:opacity-80"
+					className="statusbar-item flex items-center gap-1.5 cursor-pointer text-status-warning hover:opacity-80"
 					onClick={() => setUnlockModalOpen(true)}
 				>
 					<LockIcon className="w-3 h-3" />
@@ -39,6 +45,24 @@ export function SyncIndicator() {
 			</>
 		)
 	}
+
+	if (engineState === "idle" && hasAuth && vault && !linkedVaultId) {
+		return (
+			<>
+				<button
+					type="button"
+					className="statusbar-item flex items-center gap-1.5 cursor-pointer text-text-muted hover:text-text-primary"
+					onClick={() => setLinkModalOpen(true)}
+				>
+					<LinkIcon className="w-3 h-3" />
+					<span>Set up sync</span>
+				</button>
+				<VaultLinkModal open={linkModalOpen} onOpenChange={setLinkModalOpen} />
+			</>
+		)
+	}
+
+	if (engineState === "idle") return null
 
 	if (initialSyncProgress && !initialSyncComplete) {
 		const { total, completed } = initialSyncProgress

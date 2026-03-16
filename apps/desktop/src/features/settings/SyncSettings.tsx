@@ -8,28 +8,38 @@ import { MembersPanel } from "../sync/MembersPanel"
 import { VaultLinkModal } from "../sync/VaultLinkModal"
 import { ExcludedPathsSettings } from "./ExcludedPathsSettings"
 
-interface ServerSectionProps {
-	selfHosted: boolean
-	onSelfHostChange: (val: boolean) => void
-}
-
-function ServerSection({ selfHosted, onSelfHostChange }: ServerSectionProps) {
-	const { serverUrl, saveServerUrl } = useAuthStore()
+function ServerSection() {
+	const { serverUrl, saveServerUrl, selfHosted, setSelfHosted } = useAuthStore()
+	const vault = useVaultStore((s) => s.vault)
 	const [inputValue, setInputValue] = useState(serverUrl)
-	const [saved, setSaved] = useState(false)
+	const [saving, setSaving] = useState(false)
 
 	useEffect(() => {
 		setInputValue(serverUrl)
 	}, [serverUrl])
 
 	const handleSave = async () => {
-		await saveServerUrl(inputValue.trim())
-		setSaved(true)
-		setTimeout(() => setSaved(false), 2000)
+		const trimmed = inputValue.trim()
+		if (!trimmed || trimmed === serverUrl) return
+		setSaving(true)
+		await saveServerUrl(trimmed)
+		if (vault?.path) {
+			const platform = (await import("@cortex/platform")).getPlatform()
+			await platform.remoteVault.updateSyncConfig(vault.path, "serverUrl", trimmed)
+		}
+		setSaving(false)
 	}
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === "Enter") handleSave()
+	}
+
+	const handleSelfHostToggle = async (checked: boolean) => {
+		await setSelfHosted(checked)
+		if (vault?.path) {
+			const platform = (await import("@cortex/platform")).getPlatform()
+			await platform.remoteVault.updateSyncConfig(vault.path, "selfHosted", checked)
+		}
 	}
 
 	return (
@@ -39,7 +49,7 @@ function ServerSection({ selfHosted, onSelfHostChange }: ServerSectionProps) {
 			</h3>
 			<Field>
 				<FieldLabel>Self-hosted sync</FieldLabel>
-				<Switch checked={selfHosted} onCheckedChange={onSelfHostChange} />
+				<Switch checked={selfHosted} onCheckedChange={handleSelfHostToggle} />
 			</Field>
 			{selfHosted && (
 				<Field>
@@ -52,9 +62,16 @@ function ServerSection({ selfHosted, onSelfHostChange }: ServerSectionProps) {
 							onChange={(e) => setInputValue(e.target.value)}
 							onKeyDown={handleKeyDown}
 							placeholder="http://localhost:8080"
+							disabled={saving}
 						/>
-						<Button variant="secondary" size="sm" onClick={handleSave} className="shrink-0">
-							{saved ? "Saved" : "Save"}
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={handleSave}
+							disabled={saving}
+							className="shrink-0"
+						>
+							{saving ? <Loader2 size={14} className="animate-spin" /> : "Save"}
 						</Button>
 					</div>
 				</Field>
@@ -63,13 +80,41 @@ function ServerSection({ selfHosted, onSelfHostChange }: ServerSectionProps) {
 	)
 }
 
+function SyncPreferencesSection() {
+	const { syncPreferences, updateSyncPreference } = useSyncStore()
+
+	const preferences = [
+		{ key: "syncSettings" as const, label: "Sync app settings" },
+		{ key: "syncHotkeys" as const, label: "Sync keyboard shortcuts" },
+		{ key: "syncWorkspace" as const, label: "Sync workspace layout" },
+		{ key: "syncPluginMetadata" as const, label: "Sync plugin configuration" },
+		{ key: "syncThemeMetadata" as const, label: "Sync theme configuration" },
+	]
+
+	return (
+		<div className="mb-6">
+			<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
+				Sync Preferences
+			</h3>
+			{preferences.map(({ key, label }) => (
+				<Field key={key}>
+					<FieldLabel>{label}</FieldLabel>
+					<Switch
+						checked={syncPreferences[key]}
+						onCheckedChange={(checked) => updateSyncPreference(key, checked)}
+					/>
+				</Field>
+			))}
+		</div>
+	)
+}
+
 export function SyncSection() {
-	const { authenticated } = useAuthStore()
+	const { authenticated, selfHosted } = useAuthStore()
 	const { vault } = useVaultStore()
-	const { linkedVaultId, loadLink } = useRemoteVaultStore()
+	const { linkedVaultId, remoteVaults, loadLink, fetchRemoteVaults } = useRemoteVaultStore()
 	const { engineState } = useSyncStore()
 	const [linkModalOpen, setLinkModalOpen] = useState(false)
-	const [selfHosted, setSelfHosted] = useState(false)
 
 	useEffect(() => {
 		if (vault?.path) {
@@ -79,9 +124,15 @@ export function SyncSection() {
 
 	const showContent = authenticated || selfHosted
 
+	useEffect(() => {
+		if (showContent) {
+			fetchRemoteVaults()
+		}
+	}, [showContent, fetchRemoteVaults])
+
 	return (
 		<section>
-			<ServerSection selfHosted={selfHosted} onSelfHostChange={setSelfHosted} />
+			<ServerSection />
 
 			{!showContent && (
 				<>
@@ -166,10 +217,17 @@ export function SyncSection() {
 								<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
 									Vault Members & Invites
 								</h3>
-								<MembersPanel vaultId={linkedVaultId} />
+								<MembersPanel
+									vaultId={linkedVaultId}
+									currentUserRole={remoteVaults.find((v) => v.id === linkedVaultId)?.role}
+								/>
 							</div>
 						</>
 					)}
+
+					<Separator className="my-4" />
+
+					<SyncPreferencesSection />
 
 					<Separator className="my-4" />
 

@@ -110,6 +110,7 @@ pub async fn logout(client: &SyncHttpClient, all_devices: bool) -> Result<(), St
     http::clear_tokens()?;
     crate::keychain::delete("user_id")?;
     crate::keychain::delete("user_email")?;
+    crate::keychain::delete("device_id")?;
 
     Ok(())
 }

@@ -164,10 +164,17 @@ export const useSyncStore = create<SyncState>()(
 
 			startSync: async (vaultId, vaultPath, serverUrl) => {
 				try {
-					await get().loadSyncPreferences(vaultPath)
+					get().unsubscribeEvents()
+					set((state) => {
+						state.syncingFiles = {}
+						state.initialSyncProgress = null
+						state.initialSyncComplete = false
+						state.error = null
+					})
 					const platform = getPlatform()
-					await platform.sync.start(vaultId, vaultPath, serverUrl)
 					await get().subscribeEvents()
+					await platform.sync.start(vaultId, vaultPath, serverUrl)
+					await get().loadSyncPreferences(vaultPath)
 				} catch (e) {
 					set((state) => {
 						state.error = String(e)
@@ -290,11 +297,15 @@ export const useSyncStore = create<SyncState>()(
 
 				const unlistenFile = await platform.sync.onFileEvent((event) => {
 					set((state) => {
-						if (event.status === "synced" || event.status === "merged") {
+						if (
+							event.status === "synced" ||
+							event.status === "merged" ||
+							event.status === "deleted"
+						) {
 							delete state.syncingFiles[event.path]
 							state.lastSyncedAt = Date.now()
-						} else if (event.status === "conflict") {
-							state.syncingFiles[event.path] = event.status
+						} else if (event.status.startsWith("error:") || event.status === "conflict") {
+							delete state.syncingFiles[event.path]
 						} else {
 							state.syncingFiles[event.path] = event.status
 						}

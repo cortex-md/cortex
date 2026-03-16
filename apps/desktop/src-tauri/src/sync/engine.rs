@@ -305,9 +305,9 @@ impl SyncEngine {
         self.vault_path = Some(vault_path);
         self.server_url = Some(server_url);
 
-        self.run_initial_sync().await;
+        let initial_ok = self.run_initial_sync().await;
         let sse_started = self.start_sse_listener();
-        if sse_started {
+        if initial_ok && sse_started {
             self.set_state(SyncEngineState::Live);
         } else {
             self.connection_mode = ConnectionMode::Polling;
@@ -614,22 +614,31 @@ impl SyncEngine {
         true
     }
 
-    async fn run_initial_sync(&self) {
+    async fn run_initial_sync(&self) -> bool {
         let (Some(ref db), Some(ref vek), Some(ref vault_id), Some(ref vault_path)) =
             (&self.db, &self.vek, &self.vault_id, &self.vault_path)
         else {
-            return;
+            return false;
         };
 
         let client_state = match self.app.try_state::<SyncHttpClient>() {
             Some(c) => c,
-            None => return,
+            None => return false,
         };
         let client = &*client_state;
 
+        eprintln!("[sync] initial sync starting for vault {}", vault_id);
         let initial = InitialSync::new(&self.app, client, db, vault_id, vault_path, vek, &self.sync_preferences);
-        if let Err(e) = initial.run().await {
-            self.emit_file_event("", &format!("initial-sync-error: {}", e));
+        match initial.run().await {
+            Ok(()) => {
+                eprintln!("[sync] initial sync completed successfully");
+                true
+            }
+            Err(e) => {
+                eprintln!("[sync] initial sync failed: {}", e);
+                self.emit_file_event("", &format!("initial-sync-error: {}", e));
+                false
+            }
         }
     }
 

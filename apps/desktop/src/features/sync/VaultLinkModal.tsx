@@ -11,7 +11,7 @@ import {
 	Input,
 	Label,
 } from "@cortex/ui"
-import { Cloud, Link, Lock, Plus, Unlink } from "lucide-react"
+import { Cloud, Link, Lock, Plus, Unlink, Users } from "lucide-react"
 import { useEffect, useState } from "react"
 
 interface VaultLinkModalProps {
@@ -374,6 +374,12 @@ export function VaultLinkModal({ open, onOpenChange, unlockMode }: VaultLinkModa
 												</span>
 											)}
 										</div>
+										{rv.memberCount > 1 && (
+											<span className="flex items-center gap-1 text-[10px] text-text-muted shrink-0">
+												<Users size={10} />
+												{rv.memberCount}
+											</span>
+										)}
 										<Link size={12} className="text-text-muted shrink-0" />
 									</button>
 								))}

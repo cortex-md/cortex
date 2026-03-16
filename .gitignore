@@ -6,4 +6,5 @@ target
 bun.lock
 .next/
 docs/internal/
+/infra/
 /sync/

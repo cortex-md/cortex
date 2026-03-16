@@ -21,6 +21,7 @@ export interface RemoteVaultState {
 	linkVault: (vaultPath: string, remoteVaultId: string) => Promise<void>
 	unlinkVault: (vaultPath: string) => Promise<void>
 	loadLink: (vaultPath: string) => Promise<void>
+	clearLink: () => void
 	clearError: () => void
 }
 
@@ -112,6 +113,11 @@ export const useRemoteVaultStore = create<RemoteVaultState>()(
 					})
 				}
 			},
+
+			clearLink: () =>
+				set((state) => {
+					state.linkedVaultId = null
+				}),
 
 			clearError: () =>
 				set((state) => {

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react"
 export function useSyncLifecycle() {
 	const vault = useVaultStore((s) => s.vault)
 	const authenticated = useAuthStore((s) => s.authenticated)
+	const selfHosted = useAuthStore((s) => s.selfHosted)
 	const serverUrl = useAuthStore((s) => s.serverUrl)
 	const { linkedVaultId, loadLink } = useRemoteVaultStore()
 	const { startSync, stopSync } = useSyncStore()
@@ -19,7 +20,8 @@ export function useSyncLifecycle() {
 	}, [vault, loadLink])
 
 	useEffect(() => {
-		const canSync = authenticated && vault !== null && linkedVaultId !== null && serverUrl !== ""
+		const hasAuth = authenticated || selfHosted
+		const canSync = hasAuth && vault !== null && linkedVaultId !== null && serverUrl !== ""
 
 		if (canSync) {
 			if (!syncActiveRef.current) {
@@ -32,7 +34,7 @@ export function useSyncLifecycle() {
 				stopSync()
 			}
 		}
-	}, [authenticated, vault, linkedVaultId, serverUrl, startSync, stopSync])
+	}, [authenticated, selfHosted, vault, linkedVaultId, serverUrl, startSync, stopSync])
 
 	useEffect(() => {
 		return () => {

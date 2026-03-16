@@ -49,9 +49,12 @@ export const useMembersStore = create<MembersState>()(
 						state.loading = false
 					})
 				} catch (e) {
+					const message = String(e)
 					set((state) => {
 						state.loading = false
-						state.error = String(e)
+						if (!message.includes("403")) {
+							state.error = message
+						}
 					})
 				}
 			},

@@ -18,7 +18,7 @@ pub struct InitialSyncProgress {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "snake_case")]
 struct RemoteFileInfo {
     file_path: String,
     checksum: Option<String>,
@@ -96,25 +96,17 @@ impl<'a> InitialSync<'a> {
                 for queued_action in &batch {
                     match queued_action {
                         InitialSyncAction::Download { path, version: _ } => {
-                            if let Err(e) = self.download_file(path).await {
-                                let _ = self.app.emit(
-                                    "sync-file-event",
-                                    serde_json::json!({
-                                        "path": path,
-                                        "status": format!("error: {}", e)
-                                    }),
-                                );
+                            self.emit_file_event(path, "downloading");
+                            match self.download_file(path).await {
+                                Ok(()) => self.emit_file_event(path, "synced"),
+                                Err(e) => self.emit_file_event(path, &format!("error: {}", e)),
                             }
                         }
                         InitialSyncAction::Upload { path } => {
-                            if let Err(e) = self.upload_file(path).await {
-                                let _ = self.app.emit(
-                                    "sync-file-event",
-                                    serde_json::json!({
-                                        "path": path,
-                                        "status": format!("error: {}", e)
-                                    }),
-                                );
+                            self.emit_file_event(path, "uploading");
+                            match self.upload_file(path).await {
+                                Ok(()) => self.emit_file_event(path, "synced"),
+                                Err(e) => self.emit_file_event(path, &format!("error: {}", e)),
                             }
                         }
                         InitialSyncAction::Conflict { path } => {
@@ -406,6 +398,13 @@ impl<'a> InitialSync<'a> {
         );
 
         Ok(())
+    }
+
+    fn emit_file_event(&self, path: &str, status: &str) {
+        let _ = self.app.emit(
+            "sync-file-event",
+            serde_json::json!({ "path": path, "status": status }),
+        );
     }
 
     fn emit_progress(&self, total: usize, completed: usize, phase: &str) {

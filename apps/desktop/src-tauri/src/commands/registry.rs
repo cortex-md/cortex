@@ -33,6 +33,7 @@ pub fn read_vault_registry() -> Result<Vec<VaultRegistryEntry>, String> {
 
 #[tauri::command]
 pub fn update_vault_registry(
+    app: tauri::AppHandle,
     uuid: String,
     path: String,
     name: String,
@@ -74,11 +75,19 @@ pub fn update_vault_registry(
     }
 
     let content = serde_json::to_string_pretty(&entries).map_err(|e| e.to_string())?;
-    fs::write(&reg_path, content).map_err(|e| e.to_string())
+    fs::write(&reg_path, content).map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "macos")]
+    crate::dock_menu::refresh_dock_menu(&app);
+
+    #[cfg(not(target_os = "macos"))]
+    let _ = &app;
+
+    Ok(())
 }
 
 #[tauri::command]
-pub fn remove_from_vault_registry(uuid: String) -> Result<(), String> {
+pub fn remove_from_vault_registry(app: tauri::AppHandle, uuid: String) -> Result<(), String> {
     let reg_path = registry_path()?;
     if !reg_path.exists() {
         return Ok(());
@@ -90,5 +99,13 @@ pub fn remove_from_vault_registry(uuid: String) -> Result<(), String> {
     entries.retain(|e| e.uuid != uuid);
 
     let content = serde_json::to_string_pretty(&entries).map_err(|e| e.to_string())?;
-    fs::write(&reg_path, content).map_err(|e| e.to_string())
+    fs::write(&reg_path, content).map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "macos")]
+    crate::dock_menu::refresh_dock_menu(&app);
+
+    #[cfg(not(target_os = "macos"))]
+    let _ = &app;
+
+    Ok(())
 }

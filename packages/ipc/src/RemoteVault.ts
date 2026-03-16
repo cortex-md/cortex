@@ -1,4 +1,4 @@
-import type { RemoteVault as IRemoteVault, RemoteVaultInfo } from "@cortex/platform"
+import type { RemoteVault as IRemoteVault, RemoteVaultInfo, SyncConfig } from "@cortex/platform"
 import { invoke } from "@tauri-apps/api/core"
 
 export class RemoteVault implements IRemoteVault {
@@ -43,5 +43,13 @@ export class RemoteVault implements IRemoteVault {
 
 	async getLink(vaultPath: string): Promise<string | null> {
 		return await invoke<string | null>("remote_vault_get_link", { vaultPath })
+	}
+
+	async readSyncConfig(vaultPath: string): Promise<SyncConfig> {
+		return await invoke<SyncConfig>("sync_config_read", { vaultPath })
+	}
+
+	async updateSyncConfig(vaultPath: string, key: string, value: unknown): Promise<void> {
+		await invoke<void>("sync_config_update", { vaultPath, key, value })
 	}
 }

@@ -7,9 +7,10 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 interface MembersPanelProps {
 	vaultId: string
+	currentUserRole?: string
 }
 
-export function MembersPanel({ vaultId }: MembersPanelProps) {
+export function MembersPanel({ vaultId, currentUserRole }: MembersPanelProps) {
 	const {
 		members,
 		invites,
@@ -25,15 +26,23 @@ export function MembersPanel({ vaultId }: MembersPanelProps) {
 	} = useMembersStore()
 
 	const [inviteEmail, setInviteEmail] = useState("")
-	const [inviteRole, setInviteRole] = useState("member")
+	const [inviteRole, setInviteRole] = useState("editor")
 	const [inviting, setInviting] = useState(false)
 
 	const isValidEmail = EMAIL_REGEX.test(inviteEmail.trim())
+	const canManage = currentUserRole === "owner" || currentUserRole === "admin"
 
 	useEffect(() => {
-		fetchMembers(vaultId)
-		fetchInvites(vaultId)
-	}, [vaultId, fetchMembers, fetchInvites])
+		if (currentUserRole) {
+			fetchMembers(vaultId)
+		}
+	}, [vaultId, fetchMembers, currentUserRole])
+
+	useEffect(() => {
+		if (canManage) {
+			fetchInvites(vaultId)
+		}
+	}, [vaultId, fetchInvites, canManage])
 
 	const handleInvite = async () => {
 		if (!isValidEmail) return
@@ -75,21 +84,32 @@ export function MembersPanel({ vaultId }: MembersPanelProps) {
 					<div className="flex flex-col gap-1">
 						{members.map((member) => (
 							<div key={member.userId} className="flex items-center gap-3 py-1.5 group">
+								<div className="w-7 h-7 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs font-medium uppercase shrink-0">
+									{member.displayName?.charAt(0) || "?"}
+								</div>
 								<div className="flex flex-col min-w-0 flex-1">
 									<span className="font-medium truncate">{member.displayName}</span>
 									<span className="text-text-muted truncate">{member.email}</span>
 								</div>
-								<NativeSelect
-									className="bg-transparent border border-border rounded px-1 py-0.5 outline-none"
-									value={member.role}
-									onChange={(e) => handleChangeRole(member.userId, e.target.value)}
-								>
-									<option value="owner">Owner</option>
-									<option value="admin">Admin</option>
-									<option value="member">Member</option>
-									<option value="viewer">Viewer</option>
-								</NativeSelect>
-								{member.role !== "owner" && (
+								{canManage ? (
+									<NativeSelect
+										className="bg-transparent border border-border rounded px-1 py-0.5 outline-none"
+										value={member.role}
+										onChange={(e) => handleChangeRole(member.userId, e.target.value)}
+									>
+										{currentUserRole === "owner" && (
+											<option value="owner">Owner</option>
+										)}
+										<option value="admin">Admin</option>
+										<option value="editor">Editor</option>
+										<option value="viewer">Viewer</option>
+									</NativeSelect>
+								) : (
+									<span className="text-xs text-text-muted capitalize">
+										{member.role}
+									</span>
+								)}
+								{canManage && member.role !== "owner" && (
 									<Button
 										variant="ghost"
 										size="icon"
@@ -105,43 +125,45 @@ export function MembersPanel({ vaultId }: MembersPanelProps) {
 				)}
 			</div>
 
-			<div>
-				<h4 className="text-[10px] font-bold m-0 mb-2 text-text-muted uppercase tracking-wide">
-					Invite
-				</h4>
-				<div className="flex items-center gap-2">
-					<Input
-						className="h-7 flex-1"
-						placeholder="email@example.com"
-						value={inviteEmail}
-						onChange={(e) => setInviteEmail(e.target.value)}
-						onKeyDown={(e) => {
-							if (e.key === "Enter") handleInvite()
-						}}
-					/>
-					<NativeSelect
-						className="bg-transparent border border-border rounded px-1 py-1 outline-none h-7"
-						value={inviteRole}
-						onChange={(e) => setInviteRole(e.target.value)}
-					>
-						<NativeSelectOption value="admin">Admin</NativeSelectOption>
-						<NativeSelectOption value="editor">Editor</NativeSelectOption>
-						<NativeSelectOption value="viewer">Viewer</NativeSelectOption>
-					</NativeSelect>
-					<Button
-						variant="secondary"
-						size="sm"
-						onClick={handleInvite}
-						disabled={inviting || !isValidEmail}
-						className="h-7"
-					>
-						<Plus size={12} />
+			{canManage && (
+				<div>
+					<h4 className="text-[10px] font-bold m-0 mb-2 text-text-muted uppercase tracking-wide">
 						Invite
-					</Button>
+					</h4>
+					<div className="flex items-center gap-2">
+						<Input
+							className="h-7 flex-1"
+							placeholder="email@example.com"
+							value={inviteEmail}
+							onChange={(e) => setInviteEmail(e.target.value)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") handleInvite()
+							}}
+						/>
+						<NativeSelect
+							className="bg-transparent border border-border rounded px-1 py-1 outline-none h-7"
+							value={inviteRole}
+							onChange={(e) => setInviteRole(e.target.value)}
+						>
+							<NativeSelectOption value="admin">Admin</NativeSelectOption>
+							<NativeSelectOption value="editor">Editor</NativeSelectOption>
+							<NativeSelectOption value="viewer">Viewer</NativeSelectOption>
+						</NativeSelect>
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={handleInvite}
+							disabled={inviting || !isValidEmail}
+							className="h-7"
+						>
+							<Plus size={12} />
+							Invite
+						</Button>
+					</div>
 				</div>
-			</div>
+			)}
 
-			{invites.length > 0 && (
+			{canManage && invites.length > 0 && (
 				<div>
 					<h4 className="text-[10px] font-bold m-0 mb-2 text-text-muted uppercase tracking-wide">
 						Pending Invites

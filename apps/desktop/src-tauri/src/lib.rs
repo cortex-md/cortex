@@ -1,5 +1,6 @@
 mod commands;
 mod device;
+mod dock_menu;
 mod keychain;
 mod sync;
 
@@ -59,6 +60,8 @@ pub fn run() {
             commands::remote_vault::remote_vault_link,
             commands::remote_vault::remote_vault_unlink,
             commands::remote_vault::remote_vault_get_link,
+            commands::remote_vault::sync_config_read,
+            commands::remote_vault::sync_config_update,
             commands::members::vault_members_list,
             commands::members::vault_member_update_role,
             commands::members::vault_member_remove,
@@ -97,7 +100,10 @@ pub fn run() {
                     .expect("Failed to build menu");
                 app.set_menu(menu).expect("Failed to set menu");
                 commands::menu::setup_menu_event_handler(app.handle());
+                dock_menu::setup_dock_menu(app.handle());
             }
+
+            let _ = dock_menu::setup_tray(app);
 
             Ok(())
         })

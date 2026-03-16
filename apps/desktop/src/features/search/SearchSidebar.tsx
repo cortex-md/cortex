@@ -80,7 +80,7 @@ function parseSearchQuery(raw: string): ParsedQuery {
 }
 
 export function SearchSidebar() {
-	const { query, results, search, setQuery, indexing, documentCount } = useSearchStore()
+	const { query, results, search, setQuery, indexing } = useSearchStore()
 	const { openTab } = useWorkspaceStore()
 	const vault = useVaultStore((s) => s.vault)
 	const inputRef = useRef<HTMLInputElement>(null)

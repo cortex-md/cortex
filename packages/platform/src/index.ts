@@ -25,7 +25,7 @@ export type { Font, FontInfo } from "./interfaces/Font"
 export type { Http } from "./interfaces/Http"
 export type { Keychain } from "./interfaces/Keychain"
 export type { AcceptInviteResult, Members, VaultInvite, VaultMember } from "./interfaces/Members"
-export type { RemoteVault, RemoteVaultInfo } from "./interfaces/RemoteVault"
+export type { RemoteVault, RemoteVaultInfo, SyncConfig } from "./interfaces/RemoteVault"
 export type { Storage } from "./interfaces/Storage"
 export type {
 	ConflictInfo,

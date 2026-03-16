@@ -4,8 +4,16 @@ export interface RemoteVaultInfo {
 	description: string | null
 	ownerId: string
 	role: string
+	memberCount: number
 	createdAt: string
 	updatedAt: string
+}
+
+export interface SyncConfig {
+	remoteVaultId: string | null
+	selfHosted: boolean
+	serverUrl: string | null
+	offlineMode: boolean
 }
 
 export interface RemoteVault {
@@ -17,4 +25,6 @@ export interface RemoteVault {
 	link(vaultPath: string, remoteVaultId: string): Promise<void>
 	unlink(vaultPath: string): Promise<void>
 	getLink(vaultPath: string): Promise<string | null>
+	readSyncConfig(vaultPath: string): Promise<SyncConfig>
+	updateSyncConfig(vaultPath: string, key: string, value: unknown): Promise<void>
 }

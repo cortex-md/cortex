@@ -31,7 +31,7 @@ struct ChangeEvent {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "snake_case")]
 struct RemoteFileInfo {
     file_path: String,
     checksum: Option<String>,

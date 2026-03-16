@@ -12,15 +12,15 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-	const { authenticated, offline, checkAuth, loadServerUrl, setOffline, logout } = useAuthStore()
+	const { authenticated, offline, checkAuth, loadPreferences, logout } = useAuthStore()
 	const [authView, setAuthView] = useState<AuthView>("login")
 	const [checked, setChecked] = useState(false)
 
 	useEffect(() => {
-		loadServerUrl()
+		loadPreferences()
 			.then(() => checkAuth())
 			.finally(() => setChecked(true))
-	}, [checkAuth, loadServerUrl])
+	}, [checkAuth, loadPreferences])
 
 	useEffect(() => {
 		const unlisten = listen("auth-session-expired", () => {
@@ -38,7 +38,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
 	if (authView === "register") {
 		return (
 			<RegisterPage
-				onStayOffline={() => setOffline(true)}
+				onStayOffline={() => useAuthStore.getState().setOffline(true)}
 				onSwitchToLogin={() => setAuthView("login")}
 			/>
 		)
@@ -46,7 +46,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
 	return (
 		<LoginPage
-			onStayOffline={() => setOffline(true)}
+			onStayOffline={() => useAuthStore.getState().setOffline(true)}
 			onSwitchToRegister={() => setAuthView("register")}
 		/>
 	)
