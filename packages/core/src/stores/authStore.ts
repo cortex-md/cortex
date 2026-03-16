@@ -160,11 +160,19 @@ export const useAuthStore = create<AuthState>()(
 
 			logout: async (allDevices = false) => {
 				try {
+					const { useSyncStore } = await import("./syncStore")
+					await useSyncStore.getState().stopSync()
 					const platform = getPlatform()
 					await platform.auth.logout(allDevices)
 					await platform.keychain.set(OFFLINE_MODE_KEY, "false")
 					const { useRemoteVaultStore } = await import("./remoteVaultStore")
-					useRemoteVaultStore.getState().clearLink()
+					const { useVaultStore } = await import("./vaultStore")
+					const { vault } = useVaultStore.getState()
+					if (vault?.path) {
+						await useRemoteVaultStore.getState().unlinkVault(vault.path)
+					} else {
+						useRemoteVaultStore.getState().clearLink()
+					}
 				} finally {
 					set((state) => {
 						state.authenticated = false

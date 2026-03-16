@@ -254,6 +254,57 @@ export interface UIState {
 
 **Usage**: `const { leftSidebarWidth, setLeftSidebarWidth } = useUIStore()`
 
+### syncStore
+Manages the active sync engine state, file sync status, conflicts, and event subscriptions:
+
+```typescript
+export interface SyncState {
+  engineState: SyncEngineState  // "idle" | "connecting" | "live" | "offline" | "recovering" | "denied"
+  syncingFiles: Record<string, string>
+  lastSyncedAt: number | null
+  error: string | null
+  conflicts: Record<string, ConflictInfo>
+  vekRequired: boolean
+  syncPreferences: SyncPreferences
+
+  startSync: (vaultId, vaultPath, serverUrl) => Promise<void>
+  stopSync: () => Promise<void>
+  subscribeEvents: () => Promise<void>   // Listens to Tauri events from Rust engine
+  unsubscribeEvents: () => void
+}
+```
+
+`subscribeEvents()` bridges Rust engine events to Zustand state. It also listens for `sync-log` events from Rust and pipes them into `syncLogStore`. The `onVaultAccessDenied` listener auto-unlinks the vault when a 403 is received.
+
+**Usage**: `const { engineState, startSync, stopSync } = useSyncStore()`
+
+### syncLogStore
+Platform-independent in-memory log buffer (500 entries, FIFO). No platform imports — ready for React Native.
+
+```typescript
+export interface SyncLogState {
+  entries: SyncLogEntry[]  // { id, timestamp, level, message, metadata? }
+  log: (level: SyncLogLevel, message: string, metadata?: Record<string, string>) => void
+  clear: () => void
+}
+```
+
+**Logging responsibility split**:
+- **Rust** emits `sync-log` events for all engine-originated logs (state changes, sync errors, conflicts, initial sync). These are bridged to this store via `syncStore.subscribeEvents()`.
+- **Frontend** calls `useSyncLogStore.getState().log()` directly only for events it originates (lifecycle start/stop in `useSyncLifecycle.ts`, access denied handling).
+- Never duplicate: if Rust already emits a log for an event, the frontend must NOT add its own log call for the same event.
+
+**Usage**: `const { entries, clear } = useSyncLogStore()`
+
+### authStore
+Manages authentication state and account lifecycle:
+
+- `logout()` stops sync first, then clears auth tokens, then unlinks the vault from disk (not just memory)
+- `login()` unlinks any existing vault link to prevent stale remote vault references
+
+### remoteVaultStore
+Manages remote vault linking. `linkedVaultId` is persisted on disk at `vault_path/.cortex/sync-config.json`. `clearLink()` clears memory only; `unlinkVault(path)` clears both memory and disk.
+
 ## NoteCache
 
 The `NoteCache` class manages file contents with caching and auto-save:
@@ -352,6 +403,22 @@ workspaceStore (layout)
 uiStore (UI chrome)
   └─ no dependencies
 
+syncStore (sync engine state)
+  ├─ uses getPlatform().sync → Tauri sync commands + event listeners
+  ├─ imports syncLogStore → bridges Rust sync-log events
+  ├─ dynamic imports vaultStore, remoteVaultStore → auto-unlink on access denied
+  └─ subscribes to 8 Tauri events (state, file, progress, conflict, complete, vek, log, denied)
+
+syncLogStore (sync log buffer)
+  └─ no dependencies (pure in-memory store, platform-independent)
+
+authStore (auth state)
+  ├─ uses getPlatform().auth + keychain
+  └─ dynamic imports syncStore, vaultStore, remoteVaultStore → stopSync + unlinkVault on logout
+
+remoteVaultStore (vault linking)
+  └─ uses getPlatform().remoteVault → reads/writes sync-config.json
+
 tagsStore (tag management)
   ├─ uses getPlatform() → file I/O
   ├─ uses noteCache.writeExternal() when file is open (syncs to editor)
@@ -362,7 +429,7 @@ noteCache (file cache)
   └─ triggered by editor/workspace
 ```
 
-Keep dependencies minimal. If you need state from another store, use `useOtherStore.getState()` inside an action (not in component).
+Keep dependencies minimal. If you need state from another store, use `useOtherStore.getState()` inside an action (not in component). Use dynamic imports (`await import("./otherStore")`) to avoid circular dependency issues between sync-related stores.
 
 ## Zustand DevTools
 

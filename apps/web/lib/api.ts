@@ -27,7 +27,7 @@ export async function apiFetch<T>(
 			} else {
 				error = json.error?.message || json.message || "An error occurred"
 			}
-		} catch (e) {
+		} catch (_e) {
 			if (!response.ok) {
 				error = response.statusText || "An error occurred"
 			}

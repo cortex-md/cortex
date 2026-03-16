@@ -1,5 +1,6 @@
 import { useAuthStore, useRemoteVaultStore, useSyncStore, useVaultStore } from "@cortex/core"
 import {
+	AlertTriangleIcon,
 	CheckCircleIcon,
 	CloudIcon,
 	CloudOffIcon,
@@ -9,6 +10,7 @@ import {
 	RefreshCwIcon,
 } from "lucide-react"
 import { useState } from "react"
+import { SyncLogsModal } from "./SyncLogsModal"
 import { VaultLinkModal } from "./VaultLinkModal"
 
 export function SyncIndicator() {
@@ -19,6 +21,7 @@ export function SyncIndicator() {
 		initialSyncComplete,
 		vekRequired,
 		lastSyncedAt,
+		error,
 	} = useSyncStore()
 	const authenticated = useAuthStore((s) => s.authenticated)
 	const selfHosted = useAuthStore((s) => s.selfHosted)
@@ -27,6 +30,7 @@ export function SyncIndicator() {
 	const activeSyncCount = Object.values(syncingFiles).filter((s) => !s.startsWith("error:")).length
 	const [unlockModalOpen, setUnlockModalOpen] = useState(false)
 	const [linkModalOpen, setLinkModalOpen] = useState(false)
+	const [logsOpen, setLogsOpen] = useState(false)
 
 	const hasAuth = authenticated || selfHosted
 
@@ -42,6 +46,38 @@ export function SyncIndicator() {
 					<span>Unlock Required</span>
 				</button>
 				<VaultLinkModal open={unlockModalOpen} onOpenChange={setUnlockModalOpen} unlockMode />
+			</>
+		)
+	}
+
+	if (engineState === "denied") {
+		return (
+			<>
+				<button
+					type="button"
+					className="statusbar-item flex items-center gap-1.5 cursor-pointer text-destructive hover:opacity-80"
+					onClick={() => setLogsOpen(true)}
+				>
+					<AlertTriangleIcon className="w-3 h-3" />
+					<span>Access Denied</span>
+				</button>
+				<SyncLogsModal open={logsOpen} onOpenChange={setLogsOpen} />
+			</>
+		)
+	}
+
+	if (error && engineState !== "live" && engineState !== "idle") {
+		return (
+			<>
+				<button
+					type="button"
+					className="statusbar-item flex items-center gap-1.5 cursor-pointer text-destructive hover:opacity-80"
+					onClick={() => setLogsOpen(true)}
+				>
+					<AlertTriangleIcon className="w-3 h-3" />
+					<span>Sync Error</span>
+				</button>
+				<SyncLogsModal open={logsOpen} onOpenChange={setLogsOpen} />
 			</>
 		)
 	}
@@ -64,24 +100,37 @@ export function SyncIndicator() {
 
 	if (engineState === "idle") return null
 
+	const renderSyncButton = (children: React.ReactNode) => (
+		<>
+			<button
+				type="button"
+				className="statusbar-item flex items-center gap-1.5 cursor-pointer hover:opacity-80"
+				onClick={() => setLogsOpen(true)}
+			>
+				{children}
+			</button>
+			<SyncLogsModal open={logsOpen} onOpenChange={setLogsOpen} />
+		</>
+	)
+
 	if (initialSyncProgress && !initialSyncComplete) {
 		const { total, completed } = initialSyncProgress
 		const label = total > 0 ? `Syncing ${completed}/${total} files...` : "Syncing..."
-		return (
-			<div className="statusbar-item flex items-center gap-1.5">
+		return renderSyncButton(
+			<>
 				<CloudIcon className="w-3.5 h-3.5" />
 				<LoaderIcon className="w-3 h-3 animate-spin" />
 				<span>{label}</span>
-			</div>
+			</>,
 		)
 	}
 
 	if (activeSyncCount > 0) {
-		return (
-			<div className="statusbar-item flex items-center gap-1.5">
+		return renderSyncButton(
+			<>
 				<LoaderIcon className="w-3 h-3 animate-spin" />
 				<span>Syncing {activeSyncCount} file(s)...</span>
-			</div>
+			</>,
 		)
 	}
 
@@ -109,10 +158,10 @@ export function SyncIndicator() {
 
 	const Icon = config.icon
 
-	return (
-		<div className="statusbar-item flex items-center gap-1.5">
+	return renderSyncButton(
+		<>
 			<Icon className={`w-3 h-3 ${config.className}`} />
 			<span>{config.label}</span>
-		</div>
+		</>,
 	)
 }

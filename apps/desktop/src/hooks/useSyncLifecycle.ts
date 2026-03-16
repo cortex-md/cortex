@@ -1,4 +1,10 @@
-import { useAuthStore, useRemoteVaultStore, useSyncStore, useVaultStore } from "@cortex/core"
+import {
+	useAuthStore,
+	useRemoteVaultStore,
+	useSyncLogStore,
+	useSyncStore,
+	useVaultStore,
+} from "@cortex/core"
 import { useEffect, useRef } from "react"
 
 export function useSyncLifecycle() {
@@ -26,11 +32,16 @@ export function useSyncLifecycle() {
 		if (canSync) {
 			if (!syncActiveRef.current) {
 				syncActiveRef.current = true
+				useSyncLogStore.getState().log("info", "Sync lifecycle: starting sync", {
+					serverUrl,
+					vaultId: linkedVaultId!,
+				})
 				startSync(linkedVaultId!, vault!.path, serverUrl)
 			}
 		} else {
 			if (syncActiveRef.current) {
 				syncActiveRef.current = false
+				useSyncLogStore.getState().log("info", "Sync lifecycle: stopping sync")
 				stopSync()
 			}
 		}

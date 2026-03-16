@@ -1,41 +1,139 @@
-## How to create your first plugin
+# Building Your First Plugin
 
-lloremloremloremloremloremloremloremloremloremloremloremloreloreloreloreloremmmmmorem
-lorem
+Cortex's plugin system lets you extend the editor with custom commands, UI panels, and file processors. Plugins are TypeScript modules that implement a well-defined contract from `@cortex/plugin-api`.
 
-lloremloremloremloremloremloremloremloremloremloremloremloreloreloreloreloremmmmmorem
-lloremloremloremloremloremloremloremloremloremloremloremloreloreloreloreloremmmmmorem
-lloremloremloremloremloremloremloremloremloremloremloremloreloreloreloreloremmmmmorem
-lorem
-lorem
-lorem
+## Prerequisites
 
-```ts
-import { CortexPlugin  } from "@cortex/plugin-api"
+Before building a plugin, make sure you have:
 
-export class MyPlugin extends CortexPlugin {
-  render() {
-    console.log("Ola mundo")
+- Node.js 18+ or Bun installed
+- A Cortex vault open with plugin dev mode enabled
+- Basic familiarity with TypeScript
+
+## Plugin Structure
+
+Every Cortex plugin is a class that extends `CortexPlugin`:
+
+```typescript
+import { CortexPlugin, type PluginContext } from "@cortex/plugin-api"
+
+export class WordCountPlugin extends CortexPlugin {
+  id = "word-count"
+  name = "Word Count"
+  version = "1.0.0"
+
+  onActivate(ctx: PluginContext): void {
+    ctx.statusBar.addItem({
+      id: "word-count",
+      render: () => this.countWords(ctx.editor.getValue()),
+    })
+  }
+
+  private countWords(text: string): string {
+    const count = text.trim().split(/\s+/).filter(Boolean).length
+    return `${count} words`
   }
 }
 ```
 
----
+## The PluginContext API
 
+The `PluginContext` object is your gateway to Cortex internals. It is passed to `onActivate` when the plugin loads.
 
-lloremloremloremloremloremloremloremloremloremloremloremloreloreloreloreloremmmmmorem
-lloremloremloremloremloremloremloremloremloremloremloremloreloreloreloreloremmmmmorem
-lloremloremloremloremloremloremloremloremloremloremloremloreloreloreloreloremmmmmorem
-lloremloremloremloremloremloremloremloremloremloremloremloreloreloreloreloremmmmmorem
-lloremloremloremloremloremloremloremloremloremloremloremloreloreloreloreloremmmmmorem
-lloremloremloremloremloremloremloremloremloremloremloremloreloreloreloreloremmmmmorem
-lloremloremloremloremloremloremloremloremloremloremloremloreloreloreloreloremmmmmorem
-lloremloremloremloremloremloremloremloremloremloremloremloreloreloreloreloremmmmmorem
-lorem
-lorem
-lorem
-lorem
-lorem
-lorem
-lorem
-lorem
+### Available Namespaces
+
+| Namespace       | Purpose                                      |
+|-----------------|----------------------------------------------|
+| `ctx.editor`    | Read/write the active document               |
+| `ctx.vault`     | List, read, and watch files in the vault     |
+| `ctx.commands`  | Register new commands in the command palette |
+| `ctx.statusBar` | Add items to the bottom status bar           |
+| `ctx.settings`  | Persist plugin configuration                 |
+| `ctx.events`    | Subscribe to vault and editor events         |
+
+## Registering a Command
+
+Commands appear in the quick switcher (`Cmd+P`) and can be assigned keyboard shortcuts:
+
+```typescript
+onActivate(ctx: PluginContext): void {
+  ctx.commands.register({
+    id: "word-count:show",
+    name: "Show word count",
+    shortcut: "Cmd+Shift+W",
+    execute: () => {
+      const count = this.countWords(ctx.editor.getValue())
+      ctx.toast.info(`Document has ${count}`)
+    },
+  })
+}
+```
+
+## Persisting Settings
+
+Use `ctx.settings` to store and retrieve plugin configuration. Settings are validated with Zod schemas:
+
+```typescript
+import { z } from "zod"
+
+const settingsSchema = z.object({
+  showInStatusBar: z.boolean().default(true),
+  countCharacters: z.boolean().default(false),
+})
+
+type Settings = z.infer<typeof settingsSchema>
+
+export class WordCountPlugin extends CortexPlugin {
+  private settings!: Settings
+
+  async onActivate(ctx: PluginContext): Promise<void> {
+    this.settings = await ctx.settings.load(settingsSchema)
+
+    if (this.settings.showInStatusBar) {
+      this.registerStatusBarItem(ctx)
+    }
+  }
+}
+```
+
+## Responding to Events
+
+Listen for file changes, active note switches, and editor events:
+
+```typescript
+onActivate(ctx: PluginContext): void {
+  ctx.events.on("editor:change", (event) => {
+    this.updateWordCount(event.content)
+  })
+
+  ctx.events.on("vault:file-created", (event) => {
+    console.log("New file:", event.path)
+  })
+}
+```
+
+## Lifecycle Hooks
+
+| Hook            | Called when                                   |
+|-----------------|-----------------------------------------------|
+| `onActivate`    | Plugin is loaded (vault open or manual enable)|
+| `onDeactivate`  | Plugin is unloaded (vault close or disable)   |
+| `onSettingsChange` | User changes plugin settings              |
+
+Always clean up subscriptions in `onDeactivate`:
+
+```typescript
+private unsubscribe?: () => void
+
+onActivate(ctx: PluginContext): void {
+  this.unsubscribe = ctx.events.on("editor:change", this.handleChange)
+}
+
+onDeactivate(): void {
+  this.unsubscribe?.()
+}
+```
+
+## Publishing Your Plugin
+
+> Plugin publishing is coming in a future release. For now, you can share plugins as local folders by placing them in `<vault>/.cortex/plugins/`.

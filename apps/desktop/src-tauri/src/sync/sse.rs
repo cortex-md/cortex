@@ -82,6 +82,17 @@ impl SseClient {
                     if cancel.is_cancelled() {
                         return Ok(());
                     }
+
+                    if e.contains("HTTP 403") {
+                        let _ = self
+                            .command_tx
+                            .send(SyncCommand::VaultAccessDenied {
+                                reason: e,
+                            })
+                            .await;
+                        return Ok(());
+                    }
+
                     let _ = self
                         .command_tx
                         .send(SyncCommand::SseDisconnected {

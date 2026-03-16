@@ -16,7 +16,7 @@ interface Props {
 	onContextMenu?: (tabId: string, event: React.MouseEvent) => void
 }
 
-export function TabBar({ tabs, activeTabId, onActivate,  onContextMenu }: Props) {
+export function TabBar({ tabs, activeTabId, onActivate, onContextMenu }: Props) {
 	if (tabs.length === 0) return null
 
 	const activeTab = tabs.find((t) => t.id === activeTabId)

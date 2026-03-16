@@ -14,7 +14,7 @@ const platform = ua.includes("macintosh") ? "macos" : ua.includes("windows") ? "
 document.body.setAttribute("data-platform", platform)
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-		<AuthGuard>
-			<App />
-		</AuthGuard>
+	<AuthGuard>
+		<App />
+	</AuthGuard>,
 )

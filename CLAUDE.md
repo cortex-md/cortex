@@ -283,6 +283,25 @@ UI doesn't directly access files; it reads/writes through noteCache.
 - Use native event handlers (`onKeyDown` checks `event.key`, `event.metaKey`)
 - No library (too opinionated for this app)
 
+### Sync Logging Architecture
+Sync logs follow a **single-source-of-truth** model — Rust is the authority for engine events, the frontend only logs what it originates:
+
+**Rust (engine.rs → `emit_log` → `sync-log` Tauri event)**:
+- State transitions (connecting, live, offline, denied, etc.)
+- Initial sync start/complete/fail
+- DB errors, VEK errors, reconciliation errors
+- File sync operation errors (from process_queue)
+- Conflicts detected
+- Vault access denied (403)
+
+**Frontend (useSyncLogStore.getState().log() directly)**:
+- Sync lifecycle start/stop decisions (useSyncLifecycle.ts)
+- Vault access denied handling on JS side (auto-unlink)
+
+**Never duplicate**: If an event originates in Rust, only Rust logs it. The frontend `onSyncLog` listener bridges Rust logs into `syncLogStore`. Frontend code must NOT add its own log call for the same event.
+
+**Never log tokens or secrets**. Server URLs and vault IDs are safe for debugging self-hosted setups.
+
 ### File Watching
 - Rust `notify` crate emits `vault-file-changed` events
 - `vaultStore.refreshFiles()` polls vault on file changes

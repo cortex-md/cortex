@@ -10,6 +10,11 @@ export interface DocsDocument {
 	content: ComponentType<MDXProps>
 }
 
+export interface DocsDocumentMetadata {
+	slug: string
+	title: string
+}
+
 export interface DocsSection {
 	id: string
 	title: string

@@ -38,6 +38,13 @@ struct SyncFileEvent {
     status: String,
 }
 
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct SyncLogEvent {
+    level: String,
+    message: String,
+}
+
 pub struct SyncEngine {
     app: AppHandle,
     state: SyncEngineState,
@@ -78,10 +85,23 @@ impl SyncEngine {
     fn set_state(&mut self, new_state: SyncEngineState) {
         if self.state != new_state {
             self.state = new_state.clone();
+            if let Ok(state_str) = serde_json::to_value(&new_state) {
+                self.emit_log("info", &format!("Sync state: {}", state_str.as_str().unwrap_or("unknown")));
+            }
             let _ = self
                 .app
                 .emit("sync-state-changed", SyncStateEvent { state: new_state });
         }
+    }
+
+    fn emit_log(&self, level: &str, message: &str) {
+        let _ = self.app.emit(
+            "sync-log",
+            SyncLogEvent {
+                level: level.to_string(),
+                message: message.to_string(),
+            },
+        );
     }
 
     fn emit_file_event(&self, path: &str, status: &str) {
@@ -143,6 +163,9 @@ impl SyncEngine {
                                 SyncOp::ResolveConflict { path, resolution: Some(resolution) },
                                 priority,
                             );
+                        }
+                        Some(SyncCommand::VaultAccessDenied { reason }) => {
+                            self.handle_vault_access_denied(&reason);
                         }
                         Some(SyncCommand::SseConnected) => {
                             self.handle_sse_connected().await;
@@ -271,6 +294,7 @@ impl SyncEngine {
                 self.db = Some(db);
             }
             Err(e) => {
+                self.emit_log("error", &format!("Sync database error: {}", e));
                 self.emit_file_event("", &format!("db-error: {}", e));
                 self.set_state(SyncEngineState::Idle);
                 return;
@@ -280,11 +304,13 @@ impl SyncEngine {
         match crypto::load_vek(&vault_id) {
             Ok(Some(vek)) => self.vek = Some(vek),
             Ok(None) => {
+                self.emit_log("warn", "Vault encryption key required");
                 let _ = self.app.emit("sync-vek-required", ());
                 self.set_state(SyncEngineState::Idle);
                 return;
             }
             Err(e) => {
+                self.emit_log("error", &format!("Vault encryption key error: {}", e));
                 self.emit_file_event("", &format!("vek-error: {}", e));
                 self.set_state(SyncEngineState::Idle);
                 return;
@@ -315,7 +341,7 @@ impl SyncEngine {
         }
     }
 
-    fn handle_stop(&mut self) {
+    fn reset_engine(&mut self) {
         if let Some(cancel) = self.sse_cancel.take() {
             cancel.cancel();
         }
@@ -329,7 +355,20 @@ impl SyncEngine {
         self.connection_mode = ConnectionMode::Disconnected;
         self.last_event_id = None;
         self.queue = SyncQueue::new();
+    }
+
+    fn handle_stop(&mut self) {
+        self.reset_engine();
         self.set_state(SyncEngineState::Idle);
+    }
+
+    fn handle_vault_access_denied(&mut self, reason: &str) {
+        let _ = self.app.emit(
+            "sync-vault-access-denied",
+            serde_json::json!({ "reason": reason }),
+        );
+        self.reset_engine();
+        self.set_state(SyncEngineState::Denied);
     }
 
     fn handle_update_sync_preferences(
@@ -423,6 +462,7 @@ impl SyncEngine {
             }
             Ok(None) => {}
             Err(e) => {
+                self.emit_log("error", &format!("Reconciliation failed: {}", e));
                 self.emit_file_event("", &format!("reconcile-error: {}", e));
             }
         }
@@ -451,6 +491,12 @@ impl SyncEngine {
             Ok(r) => r,
             Err(_) => return,
         };
+
+        if response.status().as_u16() == 403 {
+            let body = response.text().await.unwrap_or_default();
+            self.handle_vault_access_denied(&format!("HTTP 403: {}", body));
+            return;
+        }
 
         if !response.status().is_success() {
             return;
@@ -627,15 +673,15 @@ impl SyncEngine {
         };
         let client = &*client_state;
 
-        eprintln!("[sync] initial sync starting for vault {}", vault_id);
+        self.emit_log("info", &format!("Initial sync starting for vault {}", vault_id));
         let initial = InitialSync::new(&self.app, client, db, vault_id, vault_path, vek, &self.sync_preferences);
         match initial.run().await {
             Ok(()) => {
-                eprintln!("[sync] initial sync completed successfully");
+                self.emit_log("info", "Initial sync completed successfully");
                 true
             }
             Err(e) => {
-                eprintln!("[sync] initial sync failed: {}", e);
+                self.emit_log("error", &format!("Initial sync failed: {}", e));
                 self.emit_file_event("", &format!("initial-sync-error: {}", e));
                 false
             }
@@ -688,6 +734,7 @@ impl SyncEngine {
                         }
                         Ok(DownloadResult::Conflict { .. }) => {
                             self.emit_file_event(path, "conflict");
+                            self.emit_log("warn", &format!("Conflict detected: {}", path));
                             let _ = self.app.emit(
                                 "sync-conflict",
                                 serde_json::json!({ "path": path }),
@@ -793,6 +840,7 @@ impl SyncEngine {
                     self.queue.mark_completed(&item);
                 }
                 Err(ref e) => {
+                    self.emit_log("error", &format!("Sync operation failed: {}", e));
                     let retriable = !e.contains("HTTP 4");
                     self.queue.mark_failed(item, e, retriable);
                 }

@@ -157,4 +157,20 @@ export class Sync implements ISync {
 		})
 		return unlisten
 	}
+
+	async onVaultAccessDenied(callback: (event: { reason: string }) => void): Promise<() => void> {
+		const unlisten = await listen<{ reason: string }>("sync-vault-access-denied", (e) => {
+			callback(e.payload)
+		})
+		return unlisten
+	}
+
+	async onSyncLog(
+		callback: (event: { level: string; message: string }) => void,
+	): Promise<() => void> {
+		const unlisten = await listen<{ level: string; message: string }>("sync-log", (e) => {
+			callback(e.payload)
+		})
+		return unlisten
+	}
 }

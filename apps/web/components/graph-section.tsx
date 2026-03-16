@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import ScrollReveal from "@/components/scroll-reveal"
 
 interface GraphNode {
 	label: string
@@ -165,6 +164,12 @@ export default function GraphSection() {
 			const h = canvas!.height / (window.devicePixelRatio || 1)
 			ctx!.clearRect(0, 0, w, h)
 
+			const style = getComputedStyle(document.documentElement)
+			const nodeColor = style.getPropertyValue("--graph-node").trim() || "#414040"
+			const edgeColor = style.getPropertyValue("--graph-edge").trim() || "rgba(65,64,64,0.6)"
+			const accentColor = style.getPropertyValue("--accent").trim() || "#E8A83C"
+			const labelColor = style.getPropertyValue("--text-muted").trim() || "#6A6866"
+
 			ctx!.save()
 			ctx!.translate(state.offsetX, state.offsetY)
 			ctx!.scale(state.scale, state.scale)
@@ -173,7 +178,7 @@ export default function GraphSection() {
 				ctx!.beginPath()
 				ctx!.moveTo(state.nodes[a].x, state.nodes[a].y)
 				ctx!.lineTo(state.nodes[b].x, state.nodes[b].y)
-				ctx!.strokeStyle = "rgba(65,64,64,0.6)"
+				ctx!.strokeStyle = edgeColor
 				ctx!.lineWidth = 1
 				ctx!.stroke()
 			}
@@ -189,13 +194,13 @@ export default function GraphSection() {
 
 				ctx!.beginPath()
 				ctx!.arc(node.x, node.y, node.size, 0, Math.PI * 2)
-				ctx!.fillStyle = node.accent ? "#E8A83C" : "rgba(65,64,64,0.9)"
+				ctx!.fillStyle = node.accent ? accentColor : nodeColor
 				ctx!.fill()
 				ctx!.strokeStyle = node.accent ? "rgba(232,168,60,0.5)" : "rgba(100,100,100,0.3)"
 				ctx!.lineWidth = 1
 				ctx!.stroke()
 
-				ctx!.fillStyle = node.accent ? "#E8A83C" : "#6A6866"
+				ctx!.fillStyle = node.accent ? accentColor : labelColor
 				ctx!.font = `${node.accent ? "600" : "400"} 10px DM Sans`
 				ctx!.textAlign = "center"
 				ctx!.fillText(node.label, node.x, node.y + node.size + 13)
@@ -258,85 +263,118 @@ export default function GraphSection() {
 	}, [])
 
 	const graphPoints = [
-		"Clique em qualquer nó para navegar até a nota",
-		"Filtre por tags, pastas ou profundidade de conexão",
-		'Identifique notas "hub" com muitas conexões',
-		"Descubra orphan notes que precisam de contexto",
+		"Click any node to open the note",
+		"Filter by tag, folder, or connection depth",
+		"Identify hub notes with many connections",
+		"Discover orphan notes that need more context",
 	]
 
 	return (
-		<section className="bg-primary py-24 px-10 overflow-hidden" id="graph">
-			<div className="max-w-[1100px] mx-auto">
-				<div className="grid gap-20 items-center" style={{ gridTemplateColumns: "1fr 1fr" }}>
-					<ScrollReveal>
+		<section
+			className="overflow-hidden px-6 py-24"
+			id="graph"
+			style={{ background: "var(--bg-primary)" }}
+		>
+			<div className="mx-auto max-w-[1100px]">
+				<div className="grid items-center gap-16" style={{ gridTemplateColumns: "1fr 1fr" }}>
+					{/* Left: copy */}
+					<div>
 						<div
-							className="text-[11.5px] font-semibold uppercase text-accent mb-3.5"
-							style={{ letterSpacing: "0.08em" }}
+							className="mb-3.5 text-[11.5px] font-semibold uppercase"
+							style={{ letterSpacing: "0.08em", color: "var(--accent)" }}
 						>
-							04 — Graph View
+							03 — Graph View
 						</div>
 						<h2
-							className="font-editor font-bold text-primary mb-7"
+							className="mb-6 font-editor font-bold text-primary"
 							style={{
-								fontSize: "clamp(28px, 4vw, 42px)",
-								lineHeight: 1.15,
+								fontSize: "clamp(28px, 4vw, 44px)",
+								lineHeight: 1.12,
 								letterSpacing: "-0.025em",
 							}}
 						>
-							Veja seu
+							See your knowledge
 							<br />
-							conhecimento
-							<br />
-							<em className="not-italic text-accent">ganhar forma.</em>
+							<em className="not-italic" style={{ color: "var(--accent)" }}>
+								take shape.
+							</em>
 						</h2>
 						<p
-							className="text-[16px] text-muted mb-7"
-							style={{ lineHeight: 1.7, maxWidth: "540px" }}
+							className="mb-7 text-muted-foreground"
+							style={{ fontSize: "16px", lineHeight: 1.7, maxWidth: "440px" }}
 						>
-							Cada nota é um nó. Cada link é uma aresta. O grafo revela padrões, clusters temáticos
-							e conexões inesperadas que você nunca perceberia lendo nota por nota.
+							Each note is a node. Each link is an edge. The graph reveals clusters, themes, and
+							unexpected connections you'd never spot reading note by note.
 						</p>
-						<ul className="list-none flex flex-col gap-2.5" style={{ maxWidth: "380px" }}>
+						<ul className="flex list-none flex-col gap-2.5" style={{ maxWidth: "380px" }}>
 							{graphPoints.map((point) => (
-								<li key={point} className="flex items-start gap-2.5 text-[13.5px] text-muted">
-									<span className="w-[5px] h-[5px] rounded-full bg-accent flex-shrink-0 mt-[7px]" />
+								<li
+									key={point}
+									className="flex items-start gap-2.5 text-[13.5px] text-muted-foreground"
+								>
+									<span
+										className="mt-[7px] flex-shrink-0 rounded-full"
+										style={{ width: "5px", height: "5px", background: "var(--accent)" }}
+									/>
 									{point}
 								</li>
 							))}
 						</ul>
-					</ScrollReveal>
+					</div>
 
-					<ScrollReveal delay={0.2}>
+					{/* Right: graph canvas in app window */}
+					<div
+						className="relative overflow-hidden"
+						style={{
+							height: "460px",
+							background: "var(--bg-primary)",
+							borderRadius: "12px",
+							border: "1px solid var(--border)",
+							boxShadow: "0 24px 56px rgba(0,0,0,0.18), 0 6px 20px rgba(0,0,0,0.1)",
+						}}
+					>
+						{/* App toolbar */}
 						<div
-							className="relative border border-border overflow-hidden"
+							className="flex items-center gap-3 px-4 py-[9px]"
 							style={{
-								height: "440px",
-								background: "var(--color-bg-primary)",
-								borderRadius: "14px",
+								background: "var(--sidebar-bg)",
+								borderBottom: "1px solid var(--border-subtle)",
 							}}
 						>
-							<canvas
-								ref={canvasRef}
-								className="w-full h-full cursor-grab active:cursor-grabbing"
-							/>
-							<div className="absolute bottom-3.5 right-3.5 flex gap-2">
+							<div className="flex items-center gap-[6px]">
+								<div className="h-3 w-3 rounded-full" style={{ background: "#ff5f57" }} />
+								<div className="h-3 w-3 rounded-full" style={{ background: "#febc2e" }} />
+								<div className="h-3 w-3 rounded-full" style={{ background: "#28c840" }} />
+							</div>
+							<span className="flex-1 text-center font-mono text-[11px] text-muted-foreground">
+								Graph View — Meu Vault
+							</span>
+							<div className="flex items-center gap-1.5">
 								{[
-									{ label: "+", action: zoomIn },
-									{ label: "−", action: zoomOut },
-								].map(({ label, action }) => (
+									{ label: "+", action: zoomIn, title: "Zoom in" },
+									{ label: "−", action: zoomOut, title: "Zoom out" },
+								].map(({ label, action, title }) => (
 									<button
 										key={label}
 										type="button"
 										onClick={action}
-										className="w-7 h-7 border border-border bg-secondary text-muted cursor-pointer text-[16px] flex items-center justify-center transition-colors duration-150 hover:bg-secondary hover:text-primary"
-										style={{ borderRadius: "var(--radius-md)" }}
+										title={title}
+										className="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded text-[14px] text-muted-foreground transition-colors duration-150 hover:text-primary"
+										style={{
+											background: "var(--bg-secondary)",
+											border: "1px solid var(--border-subtle)",
+										}}
 									>
 										{label}
 									</button>
 								))}
 							</div>
 						</div>
-					</ScrollReveal>
+						<canvas
+							ref={canvasRef}
+							className="h-[calc(100%-37px)] w-full cursor-grab active:cursor-grabbing"
+						/>
+					</div>
 				</div>
 			</div>
 		</section>

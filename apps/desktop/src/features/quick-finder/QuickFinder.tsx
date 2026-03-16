@@ -8,9 +8,12 @@ import {
 	DialogDescription,
 	DialogTitle,
 	Input,
+	InputGroup,
+	InputGroupAddon,
+	InputGroupInput,
 	Kbd,
 } from "@cortex/ui"
-import { XIcon } from "lucide-react"
+import { Search, XIcon } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 function titleFromPath(filePath: string): string {
@@ -180,23 +183,24 @@ export function QuickFinder() {
 				</DialogDescription>
 
 				<div className="flex items-center border-b border-border px-1 pb-2">
-					<Input
-						ref={inputRef}
-						type="text"
-						value={query}
-						onChange={(e) => setQuery(e.target.value)}
-						placeholder="Search files..."
-						className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-					/>
-					<Button
-						type="button"
-						variant="ghost"
-						size="sm"
-						onClick={() => toggleQuickFinder()}
-						className="p-1 h-auto hover:bg-transparent hover:text-foreground"
-					>
-						<XIcon className="size-4 text-muted-foregound" />
-					</Button>
+					<InputGroup className="w-full">
+						<InputGroupInput
+							ref={inputRef}
+							placeholder="Search..."
+							type="text"
+							value={query}
+							onChange={(e) => setQuery(e.target.value)}
+							className="w-full flex-1 bg-transparent ring-0 text-sm outline-none placeholder:text-muted-foreground"
+						/>
+						<InputGroupAddon>
+							<Search />
+						</InputGroupAddon>
+						<InputGroupAddon align="inline-end" onClick={() => toggleQuickFinder()}>
+							<Kbd>
+								<span>Esc</span>
+							</Kbd>
+						</InputGroupAddon>
+					</InputGroup>
 				</div>
 
 				<div ref={resultsRef} className="overflow-y-auto max-h-[350px] py-1">

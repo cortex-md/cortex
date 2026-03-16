@@ -1,5 +1,6 @@
 "use client"
 
+import { TooltipProvider } from "@cortex/ui"
 import { ThemeProvider as NextThemesProvider } from "next-themes"
 import type { ComponentProps } from "react"
 
@@ -16,7 +17,7 @@ export function ThemeProvider({ children, ...props }: ComponentProps<typeof Next
 			}}
 			{...props}
 		>
-			{children}
+			<TooltipProvider>{children}</TooltipProvider>
 		</NextThemesProvider>
 	)
 }

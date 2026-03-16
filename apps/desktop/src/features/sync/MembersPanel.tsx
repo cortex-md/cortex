@@ -97,17 +97,13 @@ export function MembersPanel({ vaultId, currentUserRole }: MembersPanelProps) {
 										value={member.role}
 										onChange={(e) => handleChangeRole(member.userId, e.target.value)}
 									>
-										{currentUserRole === "owner" && (
-											<option value="owner">Owner</option>
-										)}
+										{currentUserRole === "owner" && <option value="owner">Owner</option>}
 										<option value="admin">Admin</option>
 										<option value="editor">Editor</option>
 										<option value="viewer">Viewer</option>
 									</NativeSelect>
 								) : (
-									<span className="text-xs text-text-muted capitalize">
-										{member.role}
-									</span>
+									<span className="text-xs text-text-muted capitalize">{member.role}</span>
 								)}
 								{canManage && member.role !== "owner" && (
 									<Button

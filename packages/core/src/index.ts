@@ -17,6 +17,12 @@ export {
 } from "./stores/editorStore"
 export { type MembersState, useMembersStore } from "./stores/membersStore"
 export { type RemoteVaultState, useRemoteVaultStore } from "./stores/remoteVaultStore"
+export {
+	type SyncLogEntry,
+	type SyncLogLevel,
+	type SyncLogState,
+	useSyncLogStore,
+} from "./stores/syncLogStore"
 export { type SyncState, useSyncStore } from "./stores/syncStore"
 export {
 	type TagColor,

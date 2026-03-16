@@ -11,6 +11,7 @@ import { getPlatform } from "@cortex/platform"
 import { create } from "zustand"
 import { devtools } from "zustand/middleware"
 import { immer } from "zustand/middleware/immer"
+import { useSyncLogStore } from "./syncLogStore"
 
 export interface SyncState {
 	engineState: SyncEngineState
@@ -291,6 +292,7 @@ export const useSyncStore = create<SyncState>()(
 						state.engineState = event.state
 						if (event.state === "live") {
 							state.lastSyncedAt = Date.now()
+							state.error = null
 						}
 					})
 				})
@@ -344,6 +346,30 @@ export const useSyncStore = create<SyncState>()(
 					})
 				})
 
+				const unlistenLog = await platform.sync.onSyncLog((event) => {
+					const level = event.level === "error" ? "error" : event.level === "warn" ? "warn" : "info"
+					useSyncLogStore.getState().log(level, event.message)
+					if (level === "error") {
+						set((state) => {
+							state.error = event.message
+						})
+					}
+				})
+
+				const unlistenDenied = await platform.sync.onVaultAccessDenied(async (event) => {
+					set((state) => {
+						state.engineState = "denied"
+						state.error = event.reason
+					})
+					useSyncLogStore.getState().log("error", `Vault access denied: ${event.reason}`)
+					const { useVaultStore } = await import("./vaultStore")
+					const { vault } = useVaultStore.getState()
+					if (vault?.path) {
+						const { useRemoteVaultStore } = await import("./remoteVaultStore")
+						await useRemoteVaultStore.getState().unlinkVault(vault.path)
+					}
+				})
+
 				set((state) => {
 					state.unlisteners = [
 						unlistenState,
@@ -352,6 +378,8 @@ export const useSyncStore = create<SyncState>()(
 						unlistenConflict,
 						unlistenComplete,
 						unlistenVek,
+						unlistenLog,
+						unlistenDenied,
 					]
 				})
 			},

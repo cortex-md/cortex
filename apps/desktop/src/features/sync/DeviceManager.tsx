@@ -96,12 +96,12 @@ export function DeviceManager() {
 										<Badge variant="outline" className="ml-2 py-0">
 											This device
 										</Badge>
-                    )}
-                  {device.revoked && (
-                    <Badge variant="destructive" className="ml-2 py-0">
-                        Revoked
-  									</Badge>
-                  )}
+									)}
+									{device.revoked && (
+										<Badge variant="destructive" className="ml-2 py-0">
+											Revoked
+										</Badge>
+									)}
 								</span>
 								<span className="text-text-muted">
 									{device.lastSeenAt

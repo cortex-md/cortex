@@ -1,25 +1,21 @@
 import Cta from "@/components/cta"
-import DemoSection from "@/components/demo-section"
-import Features from "@/components/features"
+import EditorSection from "@/components/editor-section"
 import Footer from "@/components/footer"
 import GraphSection from "@/components/graph-section"
 import Hero from "@/components/hero"
 import Nav from "@/components/nav"
-import Stats from "@/components/stats"
-import Testimonials from "@/components/testimonials"
-import UseCases from "@/components/use-cases"
+import PluginsSection from "@/components/plugins-section"
+import SyncSection from "@/components/sync-section"
 
 export default function Home() {
 	return (
 		<>
 			<Nav />
 			<Hero />
-			<Features />
-			<DemoSection />
-			<UseCases />
+			<EditorSection />
 			<GraphSection />
-			<Stats />
-			<Testimonials />
+			<SyncSection />
+			<PluginsSection />
 			<Cta />
 			<Footer />
 		</>

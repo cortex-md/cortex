@@ -12,6 +12,7 @@ pub enum SyncEngineState {
     Live,
     Offline,
     Recovering,
+    Denied,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -133,6 +134,9 @@ pub enum SyncCommand {
     SseConnected,
     SseDisconnected {
         last_event_id: Option<String>,
+    },
+    VaultAccessDenied {
+        reason: String,
     },
     #[allow(dead_code)]
     Reconcile,

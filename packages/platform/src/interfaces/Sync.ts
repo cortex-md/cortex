@@ -6,6 +6,7 @@ export type SyncEngineState =
 	| "live"
 	| "offline"
 	| "recovering"
+	| "denied"
 
 export interface SyncStateEvent {
 	state: SyncEngineState
@@ -94,4 +95,6 @@ export interface Sync {
 	onConflict(callback: (event: SyncConflictEvent) => void): Promise<() => void>
 	onInitialSyncComplete(callback: () => void): Promise<() => void>
 	onVekRequired(callback: () => void): Promise<() => void>
+	onVaultAccessDenied(callback: (event: { reason: string }) => void): Promise<() => void>
+	onSyncLog(callback: (event: { level: string; message: string }) => void): Promise<() => void>
 }

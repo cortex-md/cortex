@@ -103,8 +103,6 @@ pub fn run() {
                 dock_menu::setup_dock_menu(app.handle());
             }
 
-            let _ = dock_menu::setup_tray(app);
-
             Ok(())
         })
         .run(tauri::generate_context!())
