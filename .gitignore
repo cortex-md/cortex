@@ -8,3 +8,6 @@ bun.lock
 docs/internal/
 /infra/
 /sync/
+/apps/web
+/apps/cli
+.claudeignore

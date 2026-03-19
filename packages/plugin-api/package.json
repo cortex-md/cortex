@@ -1,11 +1,38 @@
 {
-	"name": "@cortex/plugin-api",
-	"private": true,
+	"name": "cortex-plugin-api",
 	"version": "0.1.0",
 	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"exports": {
-		".": "./src/index.ts"
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
 	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"scripts": {
+		"build": "tsc",
+		"prepublishOnly": "bun run build"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cortex-md/cortex.git",
+		"directory": "packages/plugin-api"
+	},
+	"keywords": [
+		"cortex",
+		"plugin",
+		"api",
+		"markdown",
+		"editor"
+	],
 	"devDependencies": {
 		"typescript": "~5.8.3"
 	}

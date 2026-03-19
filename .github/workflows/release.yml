@@ -1,0 +1,141 @@
+name: Release Desktop
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.1.0)'
+        required: false
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest"
+            os: "macos"
+            args: "--target aarch64-apple-darwin"
+            target: "aarch64-apple-darwin"
+          - platform: "macos-latest"
+            os: "macos"
+            args: "--target x86_64-apple-darwin"
+            target: "x86_64-apple-darwin"
+          - platform: "ubuntu-22.04"
+            os: "linux"
+            args: ""
+            target: ""
+          - platform: "windows-latest"
+            os: "windows"
+            args: ""
+            target: ""
+
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          
+          if [[ "$VERSION" == *-* ]]; then
+            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Free disk space (Linux only)
+        if: matrix.os == 'linux'
+        run: |
+          echo "Cleaning up disk..."
+          df -h
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL || true
+          sudo docker system prune -af || true
+          sudo apt-get clean
+          echo "Disk usage after cleanup:"
+          df -h
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Ensure Rust target is installed
+        if: matrix.target != ''
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workdir: apps/desktop/src-tauri
+          cache-on-failure: true
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies (Linux only)
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        run: bun install
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop
+          tagName: v${{ steps.version.outputs.version }}
+          releaseName: Cortex v${{ steps.version.outputs.version }}
+          releaseBody: |
+            ## Cortex v${{ steps.version.outputs.version }}
+            
+            Desktop markdown editor with powerful plugin system.
+            
+            ### Installation
+            
+            - **macOS**: Download the `.dmg` file
+            - **Windows**: Download the `.msi` installer
+            - **Linux**: Download the `.deb` or `.AppImage` file
+            
+            ### What's New
+            
+            See the [CHANGELOG](https://github.com/cortex-md/cortex/blob/main/CHANGELOG.md) for detailed changes.
+            
+            ---
+            
+            Full changelog: https://github.com/cortex-md/cortex/compare/v${{ steps.version.outputs.previous }}...v${{ steps.version.outputs.version }}
+          releaseDraft: false
+          prerelease: ${{ steps.version.outputs.is_prerelease }}
+          args: ${{ matrix.args }}
