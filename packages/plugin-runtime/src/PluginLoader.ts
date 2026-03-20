@@ -1,6 +1,6 @@
 import { getPlatform } from "@cortex/platform"
-import type { PluginManifest } from "@cortex/plugin-api"
-import { CortexPlugin } from "@cortex/plugin-api"
+import type { PluginManifest } from "cortex-plugin-api"
+import { CortexPlugin } from "cortex-plugin-api"
 import { createPluginAPI } from "./PluginAPIFactory"
 import { usePluginStore } from "./pluginStore"
 
@@ -76,7 +76,7 @@ export async function disableAllPlugins(): Promise<void> {
 }
 
 const communityPluginExternals: Record<string, unknown> = {
-	"@cortex/plugin-api": { CortexPlugin },
+	"cortex-plugin-api": { CortexPlugin },
 }
 
 export function setCommunityPluginExternal(moduleId: string, moduleExports: unknown): void {

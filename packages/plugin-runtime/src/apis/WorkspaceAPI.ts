@@ -1,4 +1,4 @@
-import type { Disposable, PluginAPI } from "@cortex/plugin-api"
+import type { Disposable, PluginAPI } from "cortex-plugin-api"
 
 type OpenFileFn = (path: string) => void
 type GetOpenFilesFn = () => string[]

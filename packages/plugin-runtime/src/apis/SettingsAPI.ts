@@ -1,5 +1,5 @@
 import { getPlatform } from "@cortex/platform"
-import type { Disposable, PluginAPI, PluginSettingDefinition } from "@cortex/plugin-api"
+import type { Disposable, PluginAPI, PluginSettingDefinition } from "cortex-plugin-api"
 
 type SettingsChangeCallback = (value: unknown, oldValue: unknown) => void
 

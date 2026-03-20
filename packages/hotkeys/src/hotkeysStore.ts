@@ -9,6 +9,7 @@ type HotkeyHandler = () => void
 interface HotkeysState {
 	bindings: HotkeyBinding[]
 	handlers: Record<string, HotkeyHandler>
+	dynamicBindingIds: Set<string>
 
 	loadOverrides: (vaultPath: string) => Promise<void>
 	saveOverrides: (vaultPath: string) => Promise<void>
@@ -18,11 +19,14 @@ interface HotkeysState {
 	registerHandler: (id: string, handler: HotkeyHandler) => void
 	unregisterHandler: (id: string) => void
 	handleKeyEvent: (event: KeyboardEvent) => boolean
+	addDynamicBinding: (binding: HotkeyBinding) => void
+	removeDynamicBinding: (id: string) => void
 }
 
 export const useHotkeysStore = create<HotkeysState>((set, get) => ({
 	bindings: DEFAULT_HOTKEYS.map((h) => ({ ...h })),
 	handlers: {},
+	dynamicBindingIds: new Set<string>(),
 
 	loadOverrides: async (vaultPath) => {
 		try {
@@ -31,19 +35,36 @@ export const useHotkeysStore = create<HotkeysState>((set, get) => ({
 			const raw = await platform.fs.readFile(`${configDir}/hotkeys.json`)
 			const overrides: HotkeyOverrides = JSON.parse(raw)
 
+			const { dynamicBindingIds, bindings: currentBindings } = get()
+			const dynamicBindings = currentBindings.filter((b) => dynamicBindingIds.has(b.id))
+
+			const defaultBindingsWithOverrides = DEFAULT_HOTKEYS.map((defaultBinding) => {
+				const override = overrides[defaultBinding.id]
+				if (!override) return { ...defaultBinding }
+				return {
+					...defaultBinding,
+					keys: override.keys ?? defaultBinding.defaultKeys,
+					enabled: override.enabled ?? defaultBinding.enabled,
+				}
+			})
+
+			const dynamicBindingsWithOverrides = dynamicBindings.map((binding) => {
+				const override = overrides[binding.id]
+				if (!override) return binding
+				return {
+					...binding,
+					keys: override.keys ?? binding.defaultKeys,
+					enabled: override.enabled ?? binding.enabled,
+				}
+			})
+
 			set({
-				bindings: DEFAULT_HOTKEYS.map((defaultBinding) => {
-					const override = overrides[defaultBinding.id]
-					if (!override) return { ...defaultBinding }
-					return {
-						...defaultBinding,
-						keys: override.keys ?? defaultBinding.defaultKeys,
-						enabled: override.enabled ?? defaultBinding.enabled,
-					}
-				}),
+				bindings: [...defaultBindingsWithOverrides, ...dynamicBindingsWithOverrides],
 			})
 		} catch (_e) {
-			set({ bindings: DEFAULT_HOTKEYS.map((h) => ({ ...h })) })
+			const { dynamicBindingIds, bindings: currentBindings } = get()
+			const dynamicBindings = currentBindings.filter((b) => dynamicBindingIds.has(b.id))
+			set({ bindings: [...DEFAULT_HOTKEYS.map((h) => ({ ...h })), ...dynamicBindings] })
 		}
 	},
 
@@ -85,7 +106,9 @@ export const useHotkeysStore = create<HotkeysState>((set, get) => ({
 	},
 
 	resetAll: () => {
-		set({ bindings: DEFAULT_HOTKEYS.map((h) => ({ ...h })) })
+		const { dynamicBindingIds, bindings: currentBindings } = get()
+		const dynamicBindings = currentBindings.filter((b) => dynamicBindingIds.has(b.id))
+		set({ bindings: [...DEFAULT_HOTKEYS.map((h) => ({ ...h })), ...dynamicBindings] })
 	},
 
 	registerHandler: (id, handler) => {
@@ -95,6 +118,27 @@ export const useHotkeysStore = create<HotkeysState>((set, get) => ({
 	unregisterHandler: (id) => {
 		const { [id]: _, ...rest } = get().handlers
 		set({ handlers: rest })
+	},
+
+	addDynamicBinding: (binding) => {
+		const { bindings, dynamicBindingIds } = get()
+		if (bindings.some((b) => b.id === binding.id)) return
+		const newDynamicIds = new Set(dynamicBindingIds)
+		newDynamicIds.add(binding.id)
+		set({
+			bindings: [...bindings, binding],
+			dynamicBindingIds: newDynamicIds,
+		})
+	},
+
+	removeDynamicBinding: (id) => {
+		const { bindings, dynamicBindingIds } = get()
+		const newDynamicIds = new Set(dynamicBindingIds)
+		newDynamicIds.delete(id)
+		set({
+			bindings: bindings.filter((b) => b.id !== id),
+			dynamicBindingIds: newDynamicIds,
+		})
 	},
 
 	handleKeyEvent: (event) => {

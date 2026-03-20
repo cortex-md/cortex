@@ -1,4 +1,4 @@
-import type { Disposable, PluginAPI, RendererPlugin } from "@cortex/plugin-api"
+import type { Disposable, PluginAPI, RendererPlugin } from "cortex-plugin-api"
 
 const registeredRendererPlugins = new Map<string, RendererPlugin>()
 let nextPluginId = 0

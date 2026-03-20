@@ -2,12 +2,12 @@
 	"name": "cortex-plugin-api",
 	"version": "0.1.0",
 	"type": "module",
-	"main": "./dist/index.js",
-	"types": "./dist/index.d.ts",
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
 	"exports": {
 		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
+			"types": "./src/index.ts",
+			"default": "./src/index.ts"
 		}
 	},
 	"files": [
@@ -19,7 +19,15 @@
 		"prepublishOnly": "bun run build"
 	},
 	"publishConfig": {
-		"access": "public"
+		"access": "public",
+		"main": "./dist/index.js",
+		"types": "./dist/index.d.ts",
+		"exports": {
+			".": {
+				"types": "./dist/index.d.ts",
+				"import": "./dist/index.js"
+			}
+		}
 	},
 	"repository": {
 		"type": "git",

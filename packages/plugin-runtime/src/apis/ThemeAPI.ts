@@ -1,4 +1,4 @@
-import type { Disposable, PluginAPI, Theme } from "@cortex/plugin-api"
+import type { Disposable, PluginAPI, Theme } from "cortex-plugin-api"
 
 interface ThemeManagerLike {
 	registerTheme(theme: {

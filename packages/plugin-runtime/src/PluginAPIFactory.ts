@@ -1,4 +1,5 @@
-import type { PluginAPI } from "@cortex/plugin-api"
+import type { PluginAPI } from "cortex-plugin-api"
+import { createBookmarksAPI } from "./apis/BookmarksAPI"
 import { createCommandsAPI } from "./apis/CommandsAPI"
 import { createDataAPI } from "./apis/DataAPI"
 import { createEditorAPI } from "./apis/EditorAPI"
@@ -25,6 +26,7 @@ export function createPluginAPI(pluginId: string, getVaultPath: () => string | n
 	const metadata = createMetadataAPI()
 	const theme = createThemeAPI()
 	const workspace = createWorkspaceAPI()
+	const bookmarks = createBookmarksAPI()
 
 	const settingsWithSchema: PluginAPI["settings"] = {
 		...settings,
@@ -45,6 +47,7 @@ export function createPluginAPI(pluginId: string, getVaultPath: () => string | n
 		metadata,
 		theme,
 		workspace,
+		bookmarks,
 
 		ui: {
 			registerView(registration) {

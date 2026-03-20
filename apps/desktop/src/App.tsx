@@ -8,7 +8,7 @@ import {
 	useVaultStore,
 	useWorkspaceStore,
 } from "@cortex/core"
-import { reconfigurePluginExtensions } from "@cortex/editor"
+import { buildPluginLivePreview, reconfigurePluginExtensions } from "@cortex/editor"
 import { useHotkey, useHotkeyListener, useHotkeysStore } from "@cortex/hotkeys"
 import { getPlatform } from "@cortex/platform"
 import GitHubEmojiPlugin from "@cortex/plugin-github-emoji"
@@ -20,9 +20,14 @@ import {
 	PluginViewRenderer,
 	registerBundledPlugin,
 	registerCommand,
+	setBookmarksFunctions,
 	setCommunityPluginExternal,
 	setCommunityPluginsDir,
+	setDynamicBindingFunctions,
+	setHotkeyHandlerFunctions,
+	setLivePreviewBuilder,
 	setReconfigurePluginExtensions,
+	setSettingsControls,
 	setWorkspaceFunctions,
 	usePluginStore,
 } from "@cortex/plugin-runtime"
@@ -53,6 +58,7 @@ import { SplitPaneView } from "./features/layout/SplitPane"
 import { QuickFinder } from "./features/quick-finder/QuickFinder"
 import { SearchSidebar } from "./features/search/SearchSidebar"
 import { applyAppearanceSettings } from "./features/settings/applyAppearance"
+import { desktopSettingsControls } from "./features/settings/desktopSettingsControls"
 import { SettingsModal } from "./features/settings/SettingsModal"
 import { PaneView } from "./features/split-view/PaneView"
 import { StatusBar } from "./features/statusbar/StatusBar"
@@ -72,6 +78,38 @@ const CORE_NAV_ITEMS: NavItem[] = [
 const NAV_BOTTOM_ITEMS: NavItem[] = [{ id: "settings", icon: SettingsIcon, label: "Settings" }]
 
 setReconfigurePluginExtensions(reconfigurePluginExtensions as never)
+setLivePreviewBuilder(buildPluginLivePreview as never)
+setSettingsControls(desktopSettingsControls)
+setHotkeyHandlerFunctions(
+	useHotkeysStore.getState().registerHandler,
+	useHotkeysStore.getState().unregisterHandler,
+)
+setDynamicBindingFunctions(
+	useHotkeysStore.getState().addDynamicBinding,
+	useHotkeysStore.getState().removeDynamicBinding,
+)
+
+setBookmarksFunctions({
+	getAll: () => useBookmarksStore.getState().bookmarks,
+	add: (filePath: string) => {
+		const vaultPath = useVaultStore.getState().vault?.path
+		if (vaultPath) return useBookmarksStore.getState().addBookmark(vaultPath, filePath)
+		return Promise.resolve()
+	},
+	remove: (filePath: string) => {
+		const vaultPath = useVaultStore.getState().vault?.path
+		if (vaultPath) return useBookmarksStore.getState().removeBookmark(vaultPath, filePath)
+		return Promise.resolve()
+	},
+	isBookmarked: (filePath: string) => useBookmarksStore.getState().isBookmarked(filePath),
+	subscribe: (callback: (bookmarks: string[]) => void) => {
+		return useBookmarksStore.subscribe((state, prevState) => {
+			if (state.bookmarks !== prevState.bookmarks) {
+				callback(state.bookmarks)
+			}
+		})
+	},
+})
 
 setWorkspaceFunctions({
 	openFile: (path: string) => {

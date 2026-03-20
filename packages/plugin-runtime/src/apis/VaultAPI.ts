@@ -1,5 +1,5 @@
 import { getPlatform } from "@cortex/platform"
-import type { Disposable, PluginAPI, VaultFileEvent } from "@cortex/plugin-api"
+import type { Disposable, PluginAPI, VaultFileEvent } from "cortex-plugin-api"
 
 function validateRelativePath(relativePath: string): void {
 	if (

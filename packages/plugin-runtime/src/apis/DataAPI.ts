@@ -1,5 +1,5 @@
 import { getPlatform } from "@cortex/platform"
-import type { PluginAPI } from "@cortex/plugin-api"
+import type { PluginAPI } from "cortex-plugin-api"
 
 function validateFilename(filename: string): void {
 	if (filename.includes("..") || filename.startsWith("/") || filename.startsWith("\\")) {

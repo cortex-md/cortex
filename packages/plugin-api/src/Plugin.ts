@@ -2,6 +2,7 @@ import type {
 	CodeBlockHandler,
 	ContextMenuItemRegistration,
 	Disposable,
+	LivePreviewDeclaration,
 	PluginAPI,
 	PluginCommand,
 	PluginManifest,
@@ -31,6 +32,12 @@ export abstract class CortexPlugin {
 
 	registerEditorExtension(extension: unknown): Disposable {
 		const disposable = this.api.editor.registerExtension(extension)
+		this._disposables.add(disposable)
+		return disposable
+	}
+
+	registerLivePreview(declaration: LivePreviewDeclaration): Disposable {
+		const disposable = this.api.editor.registerLivePreview(declaration)
 		this._disposables.add(disposable)
 		return disposable
 	}
@@ -68,6 +75,14 @@ export abstract class CortexPlugin {
 	registerSettingsTab(tab: SettingsTabRegistration): Disposable {
 		const disposable = this.api.ui.registerSettingsTab(tab)
 		this._disposables.add(disposable)
+
+		for (const definition of tab.settings) {
+			if (definition.onChange) {
+				const onChangeDisposable = this.api.settings.onChange(definition.key, definition.onChange)
+				this._disposables.add(onChangeDisposable)
+			}
+		}
+
 		return disposable
 	}
 

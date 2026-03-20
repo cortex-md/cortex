@@ -1,6 +1,5 @@
-import type { ViewDescriptor, ViewDispatch, ViewState } from "@cortex/plugin-api"
-import { CortexPlugin } from "@cortex/plugin-api"
-import { emojiExtension } from "./emojiExtension"
+import type { ViewDescriptor, ViewDispatch, ViewState } from "cortex-plugin-api"
+import { CortexPlugin } from "cortex-plugin-api"
 import { EMOJI_CATEGORIES, GITHUB_EMOJI_MAP } from "./emojiMap"
 import { remarkEmojiPlugin } from "./emojiRemarkPlugin"
 
@@ -145,7 +144,26 @@ function renderEmojiView(viewState: ViewState, _dispatch: ViewDispatch): ViewDes
 
 export default class GitHubEmojiPlugin extends CortexPlugin {
 	onload() {
-		this.registerEditorExtension(emojiExtension())
+		this.registerLivePreview({
+			id: "emoji-preview",
+			inlineRules: [
+				{
+					pattern: ":([a-z0-9_+-]+):",
+					flags: "gi",
+					replacement: {
+						type: "widget",
+						render: (match) => {
+							const emoji = GITHUB_EMOJI_MAP[match[1].toLowerCase()]
+							return {
+								tag: "span",
+								textContent: emoji ?? match[0],
+								className: "cm-emoji-widget",
+							}
+						},
+					},
+				},
+			],
+		})
 
 		this.registerMarkdownProcessor({
 			name: "github-emoji",
@@ -156,6 +174,7 @@ export default class GitHubEmojiPlugin extends CortexPlugin {
 			id: "insert-emoji",
 			label: "Insert Emoji",
 			icon: "smile",
+			defaultHotkey: "mod+shift+e",
 			execute: () => {
 				this.api.editor.insertAtCursor(":rocket: ")
 			},
@@ -194,6 +213,7 @@ export default class GitHubEmojiPlugin extends CortexPlugin {
 					description: "Replace :emoji_code: with emoji characters in the editor",
 					type: "boolean",
 					default: true,
+					onChange: () => this.api.ui.showNotice("Restart editor to apply live preview changes"),
 				},
 				{
 					key: "emojiSize",

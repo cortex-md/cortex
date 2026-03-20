@@ -1,4 +1,4 @@
-import type { Disposable, PluginAPI } from "@cortex/plugin-api"
+import type { Disposable, LivePreviewDeclaration, PluginAPI } from "cortex-plugin-api"
 
 type EditorViewLike = {
 	dispatch: (spec: { changes?: unknown }) => void
@@ -6,9 +6,11 @@ type EditorViewLike = {
 }
 
 type ReconfigureFn = (view: EditorViewLike, extensions: unknown[]) => void
+type LivePreviewBuilderFn = (declaration: LivePreviewDeclaration) => unknown
 
 let editorViewRef: EditorViewLike | null = null
 let reconfigureFn: ReconfigureFn | null = null
+let livePreviewBuilderFn: LivePreviewBuilderFn | null = null
 const registeredExtensions = new Map<string, unknown>()
 let nextExtensionId = 0
 
@@ -19,6 +21,10 @@ export function setEditorViewRef(view: EditorViewLike | null): void {
 
 export function setReconfigurePluginExtensions(fn: ReconfigureFn): void {
 	reconfigureFn = fn
+}
+
+export function setLivePreviewBuilder(fn: LivePreviewBuilderFn): void {
+	livePreviewBuilderFn = fn
 }
 
 function applyExtensions(): void {
@@ -32,6 +38,22 @@ export function createEditorAPI(
 ): PluginAPI["editor"] {
 	return {
 		registerExtension(extension: unknown): Disposable {
+			const id = `ext-${nextExtensionId++}`
+			registeredExtensions.set(id, extension)
+			applyExtensions()
+			return {
+				dispose() {
+					registeredExtensions.delete(id)
+					applyExtensions()
+				},
+			}
+		},
+
+		registerLivePreview(declaration: LivePreviewDeclaration): Disposable {
+			if (!livePreviewBuilderFn) {
+				return { dispose() {} }
+			}
+			const extension = livePreviewBuilderFn(declaration)
 			const id = `ext-${nextExtensionId++}`
 			registeredExtensions.set(id, extension)
 			applyExtensions()

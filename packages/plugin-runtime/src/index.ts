@@ -1,3 +1,4 @@
+export { setBookmarksFunctions } from "./apis/BookmarksAPI"
 export {
 	type CommandEntry,
 	type CommandIcon,
@@ -5,9 +6,12 @@ export {
 	getCommands,
 	registerCommand,
 } from "./apis/CommandsAPI"
-
-export { setEditorViewRef, setReconfigurePluginExtensions } from "./apis/EditorAPI"
-export { setHotkeyHandlerFunctions } from "./apis/HotkeysAPI"
+export {
+	setEditorViewRef,
+	setLivePreviewBuilder,
+	setReconfigurePluginExtensions,
+} from "./apis/EditorAPI"
+export { setDynamicBindingFunctions, setHotkeyHandlerFunctions } from "./apis/HotkeysAPI"
 export { setMetadataFunctions } from "./apis/MetadataAPI"
 export { getRegisteredRendererPlugins } from "./apis/RendererAPI"
 export { setThemeManagerRef } from "./apis/ThemeAPI"
@@ -31,3 +35,4 @@ export { usePluginStore } from "./pluginStore"
 
 export { PluginSettingsRenderer } from "./rendering/PluginSettingsRenderer"
 export { PluginViewRenderer } from "./rendering/PluginViewRenderer"
+export { type SettingsControlComponents, setSettingsControls } from "./rendering/settingsControls"

@@ -100,7 +100,9 @@ function SyncLogsContent() {
 									{formatTimestamp(entry.timestamp)}
 								</span>
 								<span className={`shrink-0 uppercase w-10 ${LEVEL_COLORS[entry.level]}`}>
-									<Badge className=							"text-[10px]"variant={LEVEL_VARIANTS[entry.level]}>{entry.level}</Badge>
+									<Badge className="text-[10px]" variant={LEVEL_VARIANTS[entry.level]}>
+										{entry.level}
+									</Badge>
 								</span>
 								<span className="text-foreground">{entry.message}</span>
 								{entry.metadata && (

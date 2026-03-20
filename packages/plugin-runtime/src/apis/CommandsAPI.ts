@@ -1,5 +1,6 @@
-import type { Disposable, PluginAPI, PluginCommand } from "@cortex/plugin-api"
+import type { Disposable, PluginAPI, PluginCommand } from "cortex-plugin-api"
 import type { ComponentType } from "react"
+import { registerCommandHotkey } from "./HotkeysAPI"
 
 export type CommandIcon = ComponentType<{ className?: string }> | string
 
@@ -36,15 +37,33 @@ export function createCommandsAPI(pluginId: string): PluginAPI["commands"] {
 	return {
 		register(command: PluginCommand): Disposable {
 			const prefixedId = `${pluginId}:${command.id}`
+			const category = command.category ?? pluginId
 			const unregister = registerCommand({
 				id: prefixedId,
 				label: command.label,
-				category: command.category ?? pluginId,
+				category,
 				icon: command.icon,
 				shortcut: command.shortcut,
 				execute: () => command.execute(),
 			})
-			return { dispose: unregister }
+
+			let hotkeyDisposable: Disposable | null = null
+			if (command.defaultHotkey) {
+				hotkeyDisposable = registerCommandHotkey(
+					prefixedId,
+					command.label,
+					category,
+					command.defaultHotkey,
+					() => command.execute(),
+				)
+			}
+
+			return {
+				dispose() {
+					unregister()
+					hotkeyDisposable?.dispose()
+				},
+			}
 		},
 		execute(commandId: string): boolean {
 			return executeCommand(`${pluginId}:${commandId}`)

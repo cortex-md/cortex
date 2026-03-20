@@ -7,9 +7,7 @@
 		".": "./src/index.ts"
 	},
 	"dependencies": {
-		"@cortex/plugin-api": "workspace:*",
-		"@codemirror/view": "^6.36.8",
-		"@codemirror/state": "^6.5.2"
+		"cortex-plugin-api": "workspace:*"
 	},
 	"devDependencies": {
 		"typescript": "~5.8.3"

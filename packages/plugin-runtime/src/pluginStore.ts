@@ -7,7 +7,7 @@ import type {
 	SidebarItemRegistration,
 	StatusBarItemRegistration,
 	ViewRegistration,
-} from "@cortex/plugin-api"
+} from "cortex-plugin-api"
 import { create } from "zustand"
 import { devtools } from "zustand/middleware"
 import { immer } from "zustand/middleware/immer"

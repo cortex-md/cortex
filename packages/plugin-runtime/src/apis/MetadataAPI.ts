@@ -1,4 +1,4 @@
-import type { PluginAPI, TagEntry } from "@cortex/plugin-api"
+import type { PluginAPI, TagEntry } from "cortex-plugin-api"
 
 type ParseFrontmatterFn = (content: string) => { frontmatter: Record<string, unknown> | null }
 type ExtractAllTagsFn = (content: string) => string[]

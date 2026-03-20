@@ -17,6 +17,8 @@ export type PluginCapability =
 	| "hotkeys"
 	| "settings"
 	| "themes"
+	| "bookmarks:read"
+	| "bookmarks:write"
 
 export interface PluginManifest {
 	id: string
@@ -36,6 +38,7 @@ export interface PluginCommand {
 	category?: string
 	icon?: string
 	shortcut?: string
+	defaultHotkey?: string
 	execute: () => void | Promise<void>
 }
 
@@ -71,6 +74,7 @@ export interface PluginSettingDefinition {
 	max?: number
 	step?: number
 	placeholder?: string
+	onChange?: (newValue: unknown, oldValue: unknown) => void
 }
 
 export interface SettingsTabRegistration {
@@ -158,6 +162,30 @@ export interface RibbonActionRegistration {
 	onClick: () => void
 }
 
+export interface LivePreviewWidgetDescriptor {
+	tag: string
+	textContent?: string
+	className?: string
+	attributes?: Record<string, string>
+}
+
+export type LivePreviewReplacement =
+	| { type: "text"; content: string | ((match: RegExpExecArray) => string) }
+	| { type: "widget"; render: (match: RegExpExecArray) => LivePreviewWidgetDescriptor }
+	| { type: "mark"; className: string }
+
+export interface LivePreviewInlineRule {
+	pattern: string
+	flags?: string
+	replacement: LivePreviewReplacement
+}
+
+export interface LivePreviewDeclaration {
+	id: string
+	inlineRules?: LivePreviewInlineRule[]
+	cursorAware?: boolean
+}
+
 export type CodeBlockHandler = (content: string, container: ViewDescriptor) => ViewDescriptor
 
 export interface RendererPlugin {
@@ -205,6 +233,7 @@ export interface PluginAPI {
 
 	editor: {
 		registerExtension(extension: unknown): Disposable
+		registerLivePreview(declaration: LivePreviewDeclaration): Disposable
 		getActiveFilePath(): string | null
 		getActiveFileContent(): string | null
 		insertAtCursor(text: string): void
@@ -253,5 +282,13 @@ export interface PluginAPI {
 		openFile(path: string): void
 		getOpenFiles(): string[]
 		onActiveFileChange(callback: (path: string | null) => void): Disposable
+	}
+
+	bookmarks: {
+		getAll(): string[]
+		add(filePath: string): Promise<void>
+		remove(filePath: string): Promise<void>
+		isBookmarked(filePath: string): boolean
+		onChange(callback: (bookmarks: string[]) => void): Disposable
 	}
 }

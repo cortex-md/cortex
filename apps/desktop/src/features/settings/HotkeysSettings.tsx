@@ -1,8 +1,8 @@
 import { useVaultStore } from "@cortex/core"
 import { formatHotkeyDisplay, useHotkeysStore } from "@cortex/hotkeys"
-import { Button, Kbd } from "@cortex/ui"
-import { RotateCcwIcon } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { Button, Input, Kbd } from "@cortex/ui"
+import { RotateCcwIcon, SearchIcon } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 function HotkeyRecorder({
 	currentKeys,
@@ -74,6 +74,7 @@ export function HotkeysSection() {
 	const { bindings, updateBinding, resetBinding, resetAll, saveOverrides } = useHotkeysStore()
 	const vault = useVaultStore((s) => s.vault)
 	const pendingSave = useRef(false)
+	const [searchQuery, setSearchQuery] = useState("")
 
 	const handleRecord = useCallback(
 		(id: string, keys: string) => {
@@ -103,13 +104,25 @@ export function HotkeysSection() {
 		saveOverrides(vault.path)
 	}, [bindings, vault, saveOverrides])
 
-	const categories = Array.from(new Set(bindings.map((b) => b.category)))
-	const grouped = categories
-		.filter((c) => c !== "QuickFinder")
-		.map((category) => ({
-			category,
-			items: bindings.filter((b) => b.category === category),
-		}))
+	const filtered = useMemo(() => {
+		const query = searchQuery.toLowerCase().trim()
+		if (!query) return bindings.filter((b) => b.category !== "QuickFinder")
+		return bindings
+			.filter((b) => b.category !== "QuickFinder")
+			.filter((binding) => {
+				const labelMatch = binding.label.toLowerCase().includes(query)
+				const categoryMatch = binding.category.toLowerCase().includes(query)
+				const keysMatch = binding.keys.toLowerCase().includes(query)
+				const displayMatch = formatHotkeyDisplay(binding.keys).toLowerCase().includes(query)
+				return labelMatch || categoryMatch || keysMatch || displayMatch
+			})
+	}, [bindings, searchQuery])
+
+	const categories = Array.from(new Set(filtered.map((b) => b.category)))
+	const grouped = categories.map((category) => ({
+		category,
+		items: filtered.filter((b) => b.category === category),
+	}))
 
 	return (
 		<section>
@@ -122,6 +135,22 @@ export function HotkeysSection() {
 					Reset All
 				</Button>
 			</div>
+
+			<div className="relative mb-4">
+				<SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+				<Input
+					placeholder="Search shortcuts..."
+					value={searchQuery}
+					onChange={(e) => setSearchQuery(e.target.value)}
+					className="pl-8 h-8 text-sm"
+				/>
+			</div>
+
+			{grouped.length === 0 && searchQuery && (
+				<p className="text-sm text-muted-foreground text-center py-6">
+					No shortcuts matching "{searchQuery}"
+				</p>
+			)}
 
 			{grouped.map(({ category, items }) => (
 				<div key={category} className="mb-5">

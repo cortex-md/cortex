@@ -4,7 +4,7 @@ import type {
 	ViewNode,
 	ViewRegistration,
 	ViewState,
-} from "@cortex/plugin-api"
+} from "cortex-plugin-api"
 import { useCallback, useReducer } from "react"
 
 interface Props {
