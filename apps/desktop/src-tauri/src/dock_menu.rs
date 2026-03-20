@@ -44,4 +44,3 @@ pub fn setup_dock_menu(_app: &AppHandle) {
 pub fn refresh_dock_menu(app: &AppHandle) {
     setup_dock_menu(app);
 }
-

@@ -5,9 +5,7 @@ use serde::Serialize;
 use crate::sync::crypto;
 use crate::sync::db::{SyncDb, SyncState};
 use crate::sync::http::SyncHttpClient;
-use crate::sync::merge::{
-    self, is_binary, is_json_config, is_markdown, BinaryWinner, MergeResult,
-};
+use crate::sync::merge::{self, is_binary, is_json_config, is_markdown, BinaryWinner, MergeResult};
 use crate::sync::state::ConflictResolution;
 
 #[derive(Debug, Clone, Serialize)]
@@ -115,9 +113,7 @@ impl<'a> ConflictResolver<'a> {
         if is_markdown(file_path) {
             let result = merge::merge_markdown(&ancestor_text, local_text, remote_text);
             match result {
-                MergeResult::Clean(merged) => {
-                    Ok(AutoMergeResult::Merged(merged.into_bytes()))
-                }
+                MergeResult::Clean(merged) => Ok(AutoMergeResult::Merged(merged.into_bytes())),
                 MergeResult::WithConflicts(conflict_text) => {
                     Ok(AutoMergeResult::NeedsManualResolution {
                         local_text: local_text.to_string(),
@@ -128,9 +124,7 @@ impl<'a> ConflictResolver<'a> {
             }
         } else if is_json_config(file_path) {
             match merge::merge_json(&ancestor_text, local_text, remote_text) {
-                Ok(MergeResult::Clean(merged)) => {
-                    Ok(AutoMergeResult::Merged(merged.into_bytes()))
-                }
+                Ok(MergeResult::Clean(merged)) => Ok(AutoMergeResult::Merged(merged.into_bytes())),
                 Ok(MergeResult::WithConflicts(_)) | Err(_) => {
                     Ok(AutoMergeResult::NeedsManualResolution {
                         local_text: local_text.to_string(),
@@ -250,17 +244,17 @@ impl<'a> ConflictResolver<'a> {
             ),
         ];
 
-        let response = self.client.post_bytes(&api_path, encrypted, headers).await?;
+        let response = self
+            .client
+            .post_bytes(&api_path, encrypted, headers)
+            .await?;
         if !response.status().is_success() {
             let body = response.text().await.unwrap_or_default();
             return Err(format!("Upload resolved failed: {}", body));
         }
 
-        let response_body: serde_json::Value =
-            response.json().await.map_err(|e| e.to_string())?;
-        let snapshot_id = response_body["snapshot_id"]
-            .as_str()
-            .map(|s| s.to_string());
+        let response_body: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
+        let snapshot_id = response_body["snapshot_id"].as_str().map(|s| s.to_string());
         let version = response_body["version"].as_u64();
 
         self.update_sync_state_resolved_with_server(file_path, hash, snapshot_id, version)?;

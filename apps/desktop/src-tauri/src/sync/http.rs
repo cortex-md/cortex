@@ -53,8 +53,7 @@ impl SyncHttpClient {
 
         if let Some(token) = access_token {
             if should_refresh(&token) {
-                if let Err(_) = self.refresh_tokens_internal().await {
-                }
+                if let Err(_) = self.refresh_tokens_internal().await {}
                 if let Ok(Some(new_token)) = keychain::get(ACCESS_TOKEN_KEY) {
                     return Ok(builder.header("Authorization", format!("Bearer {}", new_token)));
                 }
@@ -193,8 +192,8 @@ impl SyncHttpClient {
     async fn refresh_tokens_internal(&self) -> Result<(), String> {
         let _guard = self.refresh_lock.lock().await;
 
-        let refresh_token = keychain::get(REFRESH_TOKEN_KEY)?
-            .ok_or_else(|| "No refresh token".to_string())?;
+        let refresh_token =
+            keychain::get(REFRESH_TOKEN_KEY)?.ok_or_else(|| "No refresh token".to_string())?;
 
         let url = format!("{}/auth/v1/token/refresh", self.get_server_url());
 
@@ -215,7 +214,10 @@ impl SyncHttpClient {
         }
 
         if !status.is_success() {
-            return Err(format!("Token refresh failed with HTTP {}", status.as_u16()));
+            return Err(format!(
+                "Token refresh failed with HTTP {}",
+                status.as_u16()
+            ));
         }
 
         let body: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
@@ -271,13 +273,11 @@ fn should_refresh(token: &str) -> bool {
     if parts.len() != 3 {
         return false;
     }
-    let payload = match base64::Engine::decode(
-        &base64::engine::general_purpose::URL_SAFE_NO_PAD,
-        parts[1],
-    ) {
-        Ok(p) => p,
-        Err(_) => return false,
-    };
+    let payload =
+        match base64::Engine::decode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, parts[1]) {
+            Ok(p) => p,
+            Err(_) => return false,
+        };
     let json: serde_json::Value = match serde_json::from_slice(&payload) {
         Ok(j) => j,
         Err(_) => return false,

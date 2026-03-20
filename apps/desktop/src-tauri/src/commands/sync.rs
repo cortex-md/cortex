@@ -65,9 +65,7 @@ pub async fn sync_get_conflicts(
     vault_id: String,
     vault_path: String,
 ) -> Result<Vec<ConflictInfo>, String> {
-    let client = app
-        .try_state::<SyncHttpClient>()
-        .ok_or("No HTTP client")?;
+    let client = app.try_state::<SyncHttpClient>().ok_or("No HTTP client")?;
     let db = SyncDb::open(&vault_path)?;
     let vek = crate::sync::crypto::load_vek(&vault_id)?
         .ok_or("Vault encryption key not available. Unlock the vault first.")?;
@@ -83,9 +81,7 @@ pub async fn sync_get_version_history(
     vault_path: String,
     file_path: String,
 ) -> Result<Vec<VersionInfo>, String> {
-    let client = app
-        .try_state::<SyncHttpClient>()
-        .ok_or("No HTTP client")?;
+    let client = app.try_state::<SyncHttpClient>().ok_or("No HTTP client")?;
     let db = SyncDb::open(&vault_path)?;
     let vek = crate::sync::crypto::load_vek(&vault_id)?
         .ok_or("Vault encryption key not available. Unlock the vault first.")?;
@@ -102,9 +98,7 @@ pub async fn sync_restore_version(
     file_path: String,
     version: String,
 ) -> Result<(), String> {
-    let client = app
-        .try_state::<SyncHttpClient>()
-        .ok_or("No HTTP client")?;
+    let client = app.try_state::<SyncHttpClient>().ok_or("No HTTP client")?;
     let db = SyncDb::open(&vault_path)?;
     let vek = crate::sync::crypto::load_vek(&vault_id)?
         .ok_or("Vault encryption key not available. Unlock the vault first.")?;
@@ -147,9 +141,7 @@ pub async fn sync_download_version(
     file_path: String,
     version: String,
 ) -> Result<String, String> {
-    let client = app
-        .try_state::<SyncHttpClient>()
-        .ok_or("No HTTP client")?;
+    let client = app.try_state::<SyncHttpClient>().ok_or("No HTTP client")?;
     let db = SyncDb::open(&vault_path)?;
     let vek = crate::sync::crypto::load_vek(&vault_id)?
         .ok_or("Vault encryption key not available. Unlock the vault first.")?;
@@ -193,9 +185,7 @@ pub async fn sync_check_vault_encryption(
     app: AppHandle,
     vault_id: String,
 ) -> Result<VaultEncryptionStatus, String> {
-    let client = app
-        .try_state::<SyncHttpClient>()
-        .ok_or("No HTTP client")?;
+    let client = app.try_state::<SyncHttpClient>().ok_or("No HTTP client")?;
 
     let api_path = format!("/sync/v1/vaults/{}/encryption", vault_id);
     let response = client.get(&api_path).await?;
@@ -216,17 +206,14 @@ pub async fn sync_create_vault_key(
     vault_id: String,
     password: String,
 ) -> Result<(), String> {
-    let client = app
-        .try_state::<SyncHttpClient>()
-        .ok_or("No HTTP client")?;
+    let client = app.try_state::<SyncHttpClient>().ok_or("No HTTP client")?;
 
     let vek = crypto::generate_vek();
     let salt = crypto::generate_salt();
     let derived_key = crypto::derive_key_from_password(&password, &salt)?;
     let encrypted_vek = crypto::encrypt_vek(&vek, &derived_key)?;
 
-    let salt_b64 =
-        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &salt);
+    let salt_b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &salt);
     let evek_b64 =
         base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &encrypted_vek);
 
@@ -253,9 +240,7 @@ pub async fn sync_unlock_vault_key(
     vault_id: String,
     password: String,
 ) -> Result<(), String> {
-    let client = app
-        .try_state::<SyncHttpClient>()
-        .ok_or("No HTTP client")?;
+    let client = app.try_state::<SyncHttpClient>().ok_or("No HTTP client")?;
 
     let api_path = format!("/sync/v1/vaults/{}/encryption", vault_id);
     let response = client.get(&api_path).await?;
@@ -267,9 +252,7 @@ pub async fn sync_unlock_vault_key(
 
     let body: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
 
-    let salt_b64 = body["salt"]
-        .as_str()
-        .ok_or("No salt in encryption data")?;
+    let salt_b64 = body["salt"].as_str().ok_or("No salt in encryption data")?;
     let evek_b64 = body["encrypted_vek"]
         .as_str()
         .ok_or("No encrypted_vek in encryption data")?;

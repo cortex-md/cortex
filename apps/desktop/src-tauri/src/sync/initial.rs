@@ -39,8 +39,12 @@ enum InitialSyncAction {
         #[allow(dead_code)]
         version: u64,
     },
-    Upload { path: String },
-    Conflict { path: String },
+    Upload {
+        path: String,
+    },
+    Conflict {
+        path: String,
+    },
 }
 
 pub struct InitialSync<'a> {
@@ -103,7 +107,10 @@ impl<'a> InitialSync<'a> {
                                     self.emit_file_event(path, "synced");
                                 }
                                 Err(e) => {
-                                    self.emit_log("error", &format!("Pull failed: {} — {}", path, e));
+                                    self.emit_log(
+                                        "error",
+                                        &format!("Pull failed: {} — {}", path, e),
+                                    );
                                     self.emit_file_event(path, &format!("error: {}", e));
                                 }
                             }
@@ -116,7 +123,10 @@ impl<'a> InitialSync<'a> {
                                     self.emit_file_event(path, "synced");
                                 }
                                 Err(e) => {
-                                    self.emit_log("error", &format!("Push failed: {} — {}", path, e));
+                                    self.emit_log(
+                                        "error",
+                                        &format!("Push failed: {} — {}", path, e),
+                                    );
                                     self.emit_file_event(path, &format!("error: {}", e));
                                 }
                             }
@@ -209,11 +219,15 @@ impl<'a> InitialSync<'a> {
     ) -> Vec<InitialSyncAction> {
         let mut actions = Vec::new();
 
-        let state_map: HashMap<&str, &SyncState> =
-            local_states.iter().map(|s| (s.file_path.as_str(), s)).collect();
+        let state_map: HashMap<&str, &SyncState> = local_states
+            .iter()
+            .map(|s| (s.file_path.as_str(), s))
+            .collect();
 
-        let remote_map: HashMap<&str, &RemoteFileInfo> =
-            remote_files.iter().map(|f| (f.file_path.as_str(), f)).collect();
+        let remote_map: HashMap<&str, &RemoteFileInfo> = remote_files
+            .iter()
+            .map(|f| (f.file_path.as_str(), f))
+            .collect();
 
         for remote in remote_files {
             if remote.deleted.unwrap_or(false) {
@@ -264,10 +278,10 @@ impl<'a> InitialSync<'a> {
         }
 
         for (path, _local_info) in local_disk {
-            if !remote_map.contains_key(path.as_str()) && !should_ignore(path, self.sync_preferences) {
-                actions.push(InitialSyncAction::Upload {
-                    path: path.clone(),
-                });
+            if !remote_map.contains_key(path.as_str())
+                && !should_ignore(path, self.sync_preferences)
+            {
+                actions.push(InitialSyncAction::Upload { path: path.clone() });
             }
         }
 
@@ -360,17 +374,17 @@ impl<'a> InitialSync<'a> {
             ),
         ];
 
-        let response = self.client.post_bytes(&api_path, encrypted, headers).await?;
+        let response = self
+            .client
+            .post_bytes(&api_path, encrypted, headers)
+            .await?;
         if !response.status().is_success() {
             let body = response.text().await.unwrap_or_default();
             return Err(format!("Upload failed: {}", body));
         }
 
-        let response_body: serde_json::Value =
-            response.json().await.map_err(|e| e.to_string())?;
-        let snapshot_id = response_body["snapshot_id"]
-            .as_str()
-            .map(|s| s.to_string());
+        let response_body: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
+        let snapshot_id = response_body["snapshot_id"].as_str().map(|s| s.to_string());
 
         let mtime = std::fs::metadata(&full_path)
             .ok()
@@ -404,10 +418,9 @@ impl<'a> InitialSync<'a> {
             self.db.upsert_sync_state(&state)?;
         }
 
-        let _ = self.app.emit(
-            "sync-conflict",
-            serde_json::json!({ "path": file_path }),
-        );
+        let _ = self
+            .app
+            .emit("sync-conflict", serde_json::json!({ "path": file_path }));
 
         Ok(())
     }

@@ -54,9 +54,7 @@ struct UpdateSyncCursorRequest {
 }
 
 #[tauri::command]
-pub async fn devices_list(
-    client: State<'_, SyncHttpClient>,
-) -> Result<Vec<DeviceEntry>, String> {
+pub async fn devices_list(client: State<'_, SyncHttpClient>) -> Result<Vec<DeviceEntry>, String> {
     let response = client.get("/devices/v1/").await?;
     let raw: Vec<DeviceResponse> = parse_response(response).await?;
     Ok(raw.into_iter().map(DeviceEntry::from).collect())
@@ -67,9 +65,7 @@ pub async fn device_get(
     client: State<'_, SyncHttpClient>,
     device_id: String,
 ) -> Result<DeviceEntry, String> {
-    let response = client
-        .get(&format!("/devices/v1/{}", device_id))
-        .await?;
+    let response = client.get(&format!("/devices/v1/{}", device_id)).await?;
     let raw: DeviceResponse = parse_response(response).await?;
     Ok(DeviceEntry::from(raw))
 }
@@ -93,9 +89,7 @@ pub async fn device_revoke(
     client: State<'_, SyncHttpClient>,
     device_id: String,
 ) -> Result<(), String> {
-    let response = client
-        .delete(&format!("/devices/v1/{}", device_id))
-        .await?;
+    let response = client.delete(&format!("/devices/v1/{}", device_id)).await?;
     if !response.status().is_success() {
         let status = response.status().as_u16();
         let body = response.text().await.unwrap_or_default();
@@ -110,9 +104,7 @@ pub async fn device_update_sync_cursor(
     device_id: String,
     last_sync_event_id: i64,
 ) -> Result<(), String> {
-    let body = UpdateSyncCursorRequest {
-        last_sync_event_id,
-    };
+    let body = UpdateSyncCursorRequest { last_sync_event_id };
     let response = client
         .put_json(&format!("/devices/v1/{}/sync-cursor", device_id), &body)
         .await?;

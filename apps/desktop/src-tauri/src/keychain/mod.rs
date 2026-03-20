@@ -142,9 +142,7 @@ fn migrate_legacy_store(new_key: &[u8; 32]) {
     let _ = fs::write(&migrated_marker, "migrated");
 }
 
-fn decrypt_legacy_store(
-    path: &std::path::Path,
-) -> Result<HashMap<String, String>, String> {
+fn decrypt_legacy_store(path: &std::path::Path) -> Result<HashMap<String, String>, String> {
     let raw = fs::read_to_string(path).map_err(|e| e.to_string())?;
     let payload: EncryptedPayload = serde_json::from_str(&raw).map_err(|e| e.to_string())?;
     let nonce_bytes = encoding::decode(&payload.nonce)?;

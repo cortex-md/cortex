@@ -260,9 +260,7 @@ pub async fn vault_invite_accept(
     invite_id: String,
 ) -> Result<AcceptInviteResult, String> {
     let body = AcceptInviteRequest { invite_id };
-    let response = client
-        .post_json("/vaults/v1/invites/accept", &body)
-        .await?;
+    let response = client.post_json("/vaults/v1/invites/accept", &body).await?;
     let item: AcceptInviteResponseBody = parse_response(response).await?;
     Ok(AcceptInviteResult::from(item))
 }

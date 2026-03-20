@@ -105,8 +105,7 @@ impl<'a> Downloader<'a> {
                                 return Ok(DownloadResult::Synced);
                             }
                             AutoMergeResult::Merged(merged) => {
-                                let merged_hash =
-                                    blake3::hash(&merged).to_hex().to_string();
+                                let merged_hash = blake3::hash(&merged).to_hex().to_string();
                                 self.write_and_update(
                                     file_path,
                                     &merged,
@@ -181,10 +180,7 @@ impl<'a> Downloader<'a> {
         crypto::decrypt(&encrypted, self.vek)
     }
 
-    pub async fn get_version_history(
-        &self,
-        file_path: &str,
-    ) -> Result<Vec<VersionInfo>, String> {
+    pub async fn get_version_history(&self, file_path: &str) -> Result<Vec<VersionInfo>, String> {
         let api_path = format!(
             "/sync/v1/vaults/{}/files/history?path={}",
             self.vault_id,
@@ -249,11 +245,7 @@ impl<'a> Downloader<'a> {
         Ok(())
     }
 
-    pub async fn rename_local_file(
-        &self,
-        old_path: &str,
-        new_path: &str,
-    ) -> Result<(), String> {
+    pub async fn rename_local_file(&self, old_path: &str, new_path: &str) -> Result<(), String> {
         let old_full = Path::new(self.vault_path).join(old_path);
         let new_full = Path::new(self.vault_path).join(new_path);
         if let Some(parent) = new_full.parent() {

@@ -86,7 +86,10 @@ impl SyncEngine {
         if self.state != new_state {
             self.state = new_state.clone();
             if let Ok(state_str) = serde_json::to_value(&new_state) {
-                self.emit_log("info", &format!("Sync state: {}", state_str.as_str().unwrap_or("unknown")));
+                self.emit_log(
+                    "info",
+                    &format!("Sync state: {}", state_str.as_str().unwrap_or("unknown")),
+                );
             }
             let _ = self
                 .app
@@ -239,8 +242,7 @@ impl SyncEngine {
 
                 if let Some(old_path) = matched_old_path {
                     self.pending_deletes.remove(&old_path);
-                    let (op, priority) =
-                        SyncQueue::rename_remote(old_path, relative);
+                    let (op, priority) = SyncQueue::rename_remote(old_path, relative);
                     self.queue.push(op, priority);
                     return;
                 }
@@ -279,12 +281,7 @@ impl SyncEngine {
         }
     }
 
-    async fn handle_start(
-        &mut self,
-        vault_id: String,
-        vault_path: String,
-        server_url: String,
-    ) {
+    async fn handle_start(&mut self, vault_id: String, vault_path: String, server_url: String) {
         self.set_state(SyncEngineState::Connecting);
 
         match SyncDb::open(&vault_path) {
@@ -395,16 +392,12 @@ impl SyncEngine {
         }
 
         let newly_enabled: Vec<&str> = vec![
-            (!old.sync_settings && sync_settings)
-                .then_some(".cortex/app.json"),
-            (!old.sync_hotkeys && sync_hotkeys)
-                .then_some(".cortex/hotkeys.json"),
-            (!old.sync_workspace && sync_workspace)
-                .then_some(".cortex/workspace.json"),
+            (!old.sync_settings && sync_settings).then_some(".cortex/app.json"),
+            (!old.sync_hotkeys && sync_hotkeys).then_some(".cortex/hotkeys.json"),
+            (!old.sync_workspace && sync_workspace).then_some(".cortex/workspace.json"),
             (!old.sync_plugin_metadata && sync_plugin_metadata)
                 .then_some(".cortex/sync-plugins.json"),
-            (!old.sync_theme_metadata && sync_theme_metadata)
-                .then_some(".cortex/sync-themes.json"),
+            (!old.sync_theme_metadata && sync_theme_metadata).then_some(".cortex/sync-themes.json"),
         ]
         .into_iter()
         .flatten()
@@ -452,7 +445,15 @@ impl SyncEngine {
         };
         let client = &*client_state;
 
-        let reconciler = Reconciler::new(&self.app, client, db, vault_id, vault_path, vek, &self.sync_preferences);
+        let reconciler = Reconciler::new(
+            &self.app,
+            client,
+            db,
+            vault_id,
+            vault_path,
+            vek,
+            &self.sync_preferences,
+        );
         match reconciler.run(self.last_event_id.as_deref()).await {
             Ok(Some(new_event_id)) => {
                 self.last_event_id = Some(new_event_id.clone());
@@ -536,8 +537,12 @@ impl SyncEngine {
                     self.queue.push(op, priority);
                 }
                 "file_deleted" => {
-                    self.queue
-                        .push(SyncOp::Delete { path: event.file_path.clone() }, 80);
+                    self.queue.push(
+                        SyncOp::Delete {
+                            path: event.file_path.clone(),
+                        },
+                        80,
+                    );
                 }
                 "file_renamed" => {
                     let old_path = event
@@ -652,9 +657,7 @@ impl SyncEngine {
 
         tokio::spawn(async move {
             let mut sse = SseClient::new(tx, device_id_clone.clone(), saved_last_event_id);
-            let _ = sse
-                .connect(&url, "", &device_id_clone, cancel)
-                .await;
+            let _ = sse.connect(&url, "", &device_id_clone, cancel).await;
         });
 
         true
@@ -673,8 +676,19 @@ impl SyncEngine {
         };
         let client = &*client_state;
 
-        self.emit_log("info", &format!("Initial sync starting for vault {}", vault_id));
-        let initial = InitialSync::new(&self.app, client, db, vault_id, vault_path, vek, &self.sync_preferences);
+        self.emit_log(
+            "info",
+            &format!("Initial sync starting for vault {}", vault_id),
+        );
+        let initial = InitialSync::new(
+            &self.app,
+            client,
+            db,
+            vault_id,
+            vault_path,
+            vek,
+            &self.sync_preferences,
+        );
         match initial.run().await {
             Ok(()) => {
                 self.emit_log("info", "Initial sync completed successfully");
@@ -738,10 +752,9 @@ impl SyncEngine {
                         Ok(DownloadResult::Conflict { .. }) => {
                             self.emit_file_event(path, "conflict");
                             self.emit_log("warn", &format!("Conflict detected: {}", path));
-                            let _ = self.app.emit(
-                                "sync-conflict",
-                                serde_json::json!({ "path": path }),
-                            );
+                            let _ = self
+                                .app
+                                .emit("sync-conflict", serde_json::json!({ "path": path }));
                             Ok(())
                         }
                         Err(e) => {
@@ -820,8 +833,7 @@ impl SyncEngine {
                 } => {
                     if let Some(ref res) = resolution {
                         self.emit_file_event(path, "resolving");
-                        let resolver =
-                            ConflictResolver::new(client, db, vault_id, vault_path, vek);
+                        let resolver = ConflictResolver::new(client, db, vault_id, vault_path, vek);
                         match resolver.apply_resolution(path, res).await {
                             Ok(()) => {
                                 self.emit_file_event(path, "synced");

@@ -64,8 +64,7 @@ pub async fn remote_vault_create(
     description: Option<String>,
 ) -> Result<RemoteVault, String> {
     let vek = crate::sync::crypto::generate_vek();
-    let encoded_key =
-        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, vek);
+    let encoded_key = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, vek);
     let body = CreateVaultRequest {
         name,
         description,
@@ -117,9 +116,7 @@ pub async fn remote_vault_delete(
     client: State<'_, SyncHttpClient>,
     vault_id: String,
 ) -> Result<(), String> {
-    let response = client
-        .delete(&format!("/vaults/v1/{}/", vault_id))
-        .await?;
+    let response = client.delete(&format!("/vaults/v1/{}/", vault_id)).await?;
     if !response.status().is_success() {
         let status = response.status().as_u16();
         let body = response.text().await.unwrap_or_default();
@@ -159,10 +156,7 @@ pub struct SyncConfig {
 }
 
 #[tauri::command]
-pub fn remote_vault_link(
-    vault_path: String,
-    remote_vault_id: String,
-) -> Result<(), String> {
+pub fn remote_vault_link(vault_path: String, remote_vault_id: String) -> Result<(), String> {
     let mut config = read_sync_config(&vault_path);
     config["remoteVaultId"] = serde_json::json!(remote_vault_id);
     write_sync_config(&vault_path, &config)

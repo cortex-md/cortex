@@ -52,7 +52,10 @@ impl<'a> Uploader<'a> {
             ),
         ];
 
-        let response = self.client.post_bytes(&api_path, encrypted, headers).await?;
+        let response = self
+            .client
+            .post_bytes(&api_path, encrypted, headers)
+            .await?;
         let status = response.status();
 
         if !status.is_success() {
@@ -60,11 +63,8 @@ impl<'a> Uploader<'a> {
             return Err(format!("Upload failed: HTTP {}: {}", status.as_u16(), body));
         }
 
-        let response_body: serde_json::Value =
-            response.json().await.map_err(|e| e.to_string())?;
-        let snapshot_id = response_body["snapshot_id"]
-            .as_str()
-            .map(|s| s.to_string());
+        let response_body: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
+        let snapshot_id = response_body["snapshot_id"].as_str().map(|s| s.to_string());
 
         let mtime = std::fs::metadata(&full_path)
             .ok()
@@ -104,22 +104,14 @@ impl<'a> Uploader<'a> {
 
         if !status.is_success() && status.as_u16() != 404 {
             let body = response.text().await.unwrap_or_default();
-            return Err(format!(
-                "Delete failed: HTTP {}: {}",
-                status.as_u16(),
-                body
-            ));
+            return Err(format!("Delete failed: HTTP {}: {}", status.as_u16(), body));
         }
 
         self.db.delete_sync_state(file_path)?;
         Ok(())
     }
 
-    pub async fn rename_remote_file(
-        &self,
-        old_path: &str,
-        new_path: &str,
-    ) -> Result<(), String> {
+    pub async fn rename_remote_file(&self, old_path: &str, new_path: &str) -> Result<(), String> {
         let api_path = format!("/sync/v1/vaults/{}/files/rename", self.vault_id);
 
         let body = serde_json::json!({
@@ -132,11 +124,7 @@ impl<'a> Uploader<'a> {
 
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
-            return Err(format!(
-                "Rename failed: HTTP {}: {}",
-                status.as_u16(),
-                body
-            ));
+            return Err(format!("Rename failed: HTTP {}: {}", status.as_u16(), body));
         }
 
         if let Some(mut state) = self.db.get_sync_state(old_path)? {

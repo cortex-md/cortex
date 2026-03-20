@@ -65,7 +65,10 @@ impl SseClient {
                 }
             };
 
-            match self.stream_events(url, &access_token, device_id, &cancel).await {
+            match self
+                .stream_events(url, &access_token, device_id, &cancel)
+                .await
+            {
                 Ok(()) => {
                     if cancel.is_cancelled() {
                         return Ok(());
@@ -86,9 +89,7 @@ impl SseClient {
                     if e.contains("HTTP 403") {
                         let _ = self
                             .command_tx
-                            .send(SyncCommand::VaultAccessDenied {
-                                reason: e,
-                            })
+                            .send(SyncCommand::VaultAccessDenied { reason: e })
                             .await;
                         return Ok(());
                     }

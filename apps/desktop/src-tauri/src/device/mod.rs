@@ -24,9 +24,7 @@ pub fn get_device_id() -> Result<String, String> {
 
 pub fn get_device_info() -> Result<DeviceInfo, String> {
     let device_id = get_device_id()?;
-    let device_name = gethostname::gethostname()
-        .to_string_lossy()
-        .to_string();
+    let device_name = gethostname::gethostname().to_string_lossy().to_string();
     Ok(DeviceInfo {
         device_id,
         device_name,

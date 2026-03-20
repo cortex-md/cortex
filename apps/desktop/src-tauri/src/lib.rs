@@ -96,8 +96,7 @@ pub fn run() {
                 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
                 let _ = apply_vibrancy(&window, NSVisualEffectMaterial::Sidebar, None, None);
 
-                let menu = commands::menu::build_menu(app.handle())
-                    .expect("Failed to build menu");
+                let menu = commands::menu::build_menu(app.handle()).expect("Failed to build menu");
                 app.set_menu(menu).expect("Failed to set menu");
                 commands::menu::setup_menu_event_handler(app.handle());
                 dock_menu::setup_dock_menu(app.handle());
