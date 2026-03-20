@@ -344,9 +344,11 @@ impl<'a> Reconciler<'a> {
                     );
                     match downloader.download_file(path).await {
                         Ok(DownloadResult::Synced) => {
+                            self.emit_log("info", &format!("Pulled: {}", path));
                             self.emit_file_event(path, "synced")
                         }
                         Ok(DownloadResult::Merged) => {
+                            self.emit_log("info", &format!("Merged: {}", path));
                             self.emit_file_event(path, "merged")
                         }
                         Ok(DownloadResult::Conflict { .. }) => {
@@ -371,7 +373,10 @@ impl<'a> Reconciler<'a> {
                         self.vek,
                     );
                     match uploader.upload_file(path).await {
-                        Ok(()) => self.emit_file_event(path, "synced"),
+                        Ok(()) => {
+                            self.emit_log("info", &format!("Pushed: {}", path));
+                            self.emit_file_event(path, "synced")
+                        }
                         Err(e) => {
                             self.emit_file_event(path, &format!("error: {}", e))
                         }
@@ -385,6 +390,7 @@ impl<'a> Reconciler<'a> {
                         let _ = std::fs::remove_file(&full_path);
                     }
                     let _ = self.db.delete_sync_state(path);
+                    self.emit_log("info", &format!("Deleted locally: {}", path));
                     self.emit_file_event(path, "deleted");
                 }
                 ReconcileAction::Rename {
@@ -499,6 +505,13 @@ impl<'a> Reconciler<'a> {
                 "path": path,
                 "status": status,
             }),
+        );
+    }
+
+    fn emit_log(&self, level: &str, message: &str) {
+        let _ = self.app.emit(
+            "sync-log",
+            serde_json::json!({ "level": level, "message": message }),
         );
     }
 }

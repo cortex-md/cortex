@@ -1,13 +1,13 @@
 {
 	"name": "cortex-plugin-api",
-	"version": "0.1.0",
+	"version": "0.1.3",
 	"type": "module",
-	"main": "./src/index.ts",
-	"types": "./src/index.ts",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
-			"types": "./src/index.ts",
-			"default": "./src/index.ts"
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
 		}
 	},
 	"files": [
@@ -15,19 +15,11 @@
 		"README.md"
 	],
 	"scripts": {
-		"build": "tsc",
+		"build": "tsc -b --force && cp src/globals.d.ts dist/globals.d.ts && printf '/// <reference path=\"./globals.d.ts\" />\\n' | cat - dist/index.d.ts > dist/index.d.ts.tmp && mv dist/index.d.ts.tmp dist/index.d.ts",
 		"prepublishOnly": "bun run build"
 	},
 	"publishConfig": {
-		"access": "public",
-		"main": "./dist/index.js",
-		"types": "./dist/index.d.ts",
-		"exports": {
-			".": {
-				"types": "./dist/index.d.ts",
-				"import": "./dist/index.js"
-			}
-		}
+		"access": "public"
 	},
 	"repository": {
 		"type": "git",

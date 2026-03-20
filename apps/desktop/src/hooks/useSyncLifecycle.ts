@@ -11,6 +11,7 @@ export function useSyncLifecycle() {
 	const vault = useVaultStore((s) => s.vault)
 	const authenticated = useAuthStore((s) => s.authenticated)
 	const selfHosted = useAuthStore((s) => s.selfHosted)
+	const syncEnabled = useAuthStore((s) => s.syncEnabled)
 	const serverUrl = useAuthStore((s) => s.serverUrl)
 	const { linkedVaultId, loadLink } = useRemoteVaultStore()
 	const { startSync, stopSync } = useSyncStore()
@@ -27,7 +28,8 @@ export function useSyncLifecycle() {
 
 	useEffect(() => {
 		const hasAuth = authenticated || selfHosted
-		const canSync = hasAuth && vault !== null && linkedVaultId !== null && serverUrl !== ""
+		const canSync =
+			hasAuth && syncEnabled && vault !== null && linkedVaultId !== null && serverUrl !== ""
 
 		if (canSync) {
 			if (!syncActiveRef.current) {
@@ -45,7 +47,7 @@ export function useSyncLifecycle() {
 				stopSync()
 			}
 		}
-	}, [authenticated, selfHosted, vault, linkedVaultId, serverUrl, startSync, stopSync])
+	}, [authenticated, selfHosted, syncEnabled, vault, linkedVaultId, serverUrl, startSync, stopSync])
 
 	useEffect(() => {
 		return () => {

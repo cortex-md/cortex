@@ -1,4 +1,10 @@
-import { useAuthStore, useRemoteVaultStore, useSyncStore, useVaultStore } from "@cortex/core"
+import {
+	useAuthStore,
+	useRemoteVaultStore,
+	useSyncStore,
+	useUIStore,
+	useVaultStore,
+} from "@cortex/core"
 import {
 	AlertTriangleIcon,
 	CheckCircleIcon,
@@ -27,9 +33,9 @@ export function SyncIndicator() {
 	const selfHosted = useAuthStore((s) => s.selfHosted)
 	const vault = useVaultStore((s) => s.vault)
 	const linkedVaultId = useRemoteVaultStore((s) => s.linkedVaultId)
+	const openSettings = useUIStore((s) => s.openSettings)
 	const activeSyncCount = Object.values(syncingFiles).filter((s) => !s.startsWith("error:")).length
 	const [unlockModalOpen, setUnlockModalOpen] = useState(false)
-	const [linkModalOpen, setLinkModalOpen] = useState(false)
 	const [logsOpen, setLogsOpen] = useState(false)
 
 	const hasAuth = authenticated || selfHosted
@@ -84,17 +90,14 @@ export function SyncIndicator() {
 
 	if (engineState === "idle" && hasAuth && vault && !linkedVaultId) {
 		return (
-			<>
-				<button
-					type="button"
-					className="statusbar-item flex items-center gap-1.5 cursor-pointer text-text-muted hover:text-text-primary"
-					onClick={() => setLinkModalOpen(true)}
-				>
-					<LinkIcon className="w-3 h-3" />
-					<span>Set up sync</span>
-				</button>
-				<VaultLinkModal open={linkModalOpen} onOpenChange={setLinkModalOpen} />
-			</>
+			<button
+				type="button"
+				className="statusbar-item flex items-center gap-1.5 cursor-pointer text-text-muted hover:text-text-primary"
+				onClick={() => openSettings("sync")}
+			>
+				<LinkIcon className="w-3 h-3" />
+				<span>Set up sync</span>
+			</button>
 		)
 	}
 

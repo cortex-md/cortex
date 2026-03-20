@@ -1,6 +1,7 @@
 import {
 	noteCache,
 	useAppStore,
+	useAuthStore,
 	useBookmarksStore,
 	useEditorStore,
 	useTagsStore,
@@ -151,7 +152,6 @@ registerBundledPlugin(
 )
 
 export default function App() {
-	const [settingsOpen, setSettingsOpen] = useState(false)
 	const {
 		vault,
 		files,
@@ -189,6 +189,9 @@ export default function App() {
 		toggleQuickFinder,
 		toggleCommandPalette,
 		toggleTagPicker,
+		settingsOpen,
+		openSettings,
+		closeSettings,
 	} = useUIStore()
 	const { settings, loadSettings } = useSettingsStore()
 	const loadOverrides = useHotkeysStore((s) => s.loadOverrides)
@@ -309,7 +312,7 @@ export default function App() {
 
 	useHotkey(
 		"app.settings",
-		useCallback(() => setSettingsOpen(true), []),
+		useCallback(() => openSettings(), [openSettings]),
 	)
 
 	useHotkey(
@@ -381,7 +384,7 @@ export default function App() {
 				label: "Open Settings",
 				category: "App",
 				icon: SettingsIcon,
-				execute: () => setSettingsOpen(true),
+				execute: () => openSettings(),
 			}),
 			registerCommand({
 				id: "navigate.command-palette",
@@ -424,6 +427,7 @@ export default function App() {
 		leftSidebarCollapsed,
 		setLeftSidebarView,
 		settings.appearance.theme,
+		openSettings,
 	])
 
 	useEffect(() => {
@@ -450,6 +454,18 @@ export default function App() {
 		loadAppInfo()
 		loadRecentVaults()
 	}, [loadAppInfo, loadRecentVaults])
+
+	useEffect(() => {
+		const { loadPreferences, checkAuth } = useAuthStore.getState()
+		loadPreferences().then(() => checkAuth())
+
+		const unlisten = listen("auth-session-expired", () => {
+			useAuthStore.getState().logout()
+		})
+		return () => {
+			unlisten.then((fn) => fn())
+		}
+	}, [])
 
 	useEffect(() => {
 		if (autoOpenAttempted.current || vault) return
@@ -603,7 +619,7 @@ export default function App() {
 
 	const handleSidebarNavSelect = (id: string) => {
 		if (id === "settings") {
-			setSettingsOpen(true)
+			openSettings("general")
 			return
 		}
 		if (id === leftSidebarView && !leftSidebarCollapsed) {
@@ -695,7 +711,7 @@ export default function App() {
 
 			<StatusBar />
 
-			<SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
+			<SettingsModal open={settingsOpen} onOpenChange={(open) => !open && closeSettings()} />
 			<QuickFinder />
 			<CommandPalette />
 			<TagPicker />

@@ -1,7 +1,7 @@
-import { useAuthStore, useVaultStore, type VaultRegistryEntry } from "@cortex/core"
+import { useVaultStore, type VaultRegistryEntry } from "@cortex/core"
 import type { GeneralSettings } from "@cortex/settings"
 import { Button, isValidLucideIconName, Label, LucideIcon, Switch } from "@cortex/ui"
-import { LogIn, LogOut, Trash2, User, Vault } from "lucide-react"
+import { Trash2, Vault } from "lucide-react"
 import type { UpdateSettingFn } from "."
 
 interface GeneralSectionProps {
@@ -77,75 +77,11 @@ function VaultRow({ entry }: { entry: VaultRegistryEntry }) {
 	)
 }
 
-function AccountSection() {
-	const { user, offline, logout, setOffline } = useAuthStore()
-
-	if (user) {
-		return (
-			<div className="mb-6">
-				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-					Account
-				</h3>
-				<div className="flex items-center gap-3 py-2">
-					<div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center shrink-0">
-						<User size={14} className="text-accent" />
-					</div>
-					<div className="flex flex-col min-w-0 flex-1">
-						<span className="text-xs font-medium truncate">{user.email}</span>
-						<span className="text-[10px] text-text-muted">Signed in</span>
-					</div>
-					<Button
-						variant="ghost"
-						size="sm"
-						onClick={() => logout()}
-						className="text-xs h-6 px-2 text-text-muted gap-1.5"
-					>
-						<LogOut size={12} />
-						Sign out
-					</Button>
-				</div>
-			</div>
-		)
-	}
-
-	if (offline) {
-		return (
-			<div className="mb-6">
-				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-					Account
-				</h3>
-				<div className="flex items-center gap-3 py-2">
-					<div className="w-7 h-7 rounded-full bg-bg-tertiary flex items-center justify-center shrink-0">
-						<User size={14} className="text-text-muted" />
-					</div>
-					<div className="flex flex-col min-w-0 flex-1">
-						<span className="text-xs font-medium text-text-muted">Not signed in</span>
-						<span className="text-[10px] text-text-muted">Syncing is disabled</span>
-					</div>
-					<Button
-						variant="ghost"
-						size="sm"
-						onClick={() => setOffline(false)}
-						className="text-xs h-6 px-2 text-text-muted gap-1.5"
-					>
-						<LogIn size={12} />
-						Sign in
-					</Button>
-				</div>
-			</div>
-		)
-	}
-
-	return null
-}
-
 export function GeneralSection({ settings, onUpdate }: GeneralSectionProps) {
 	const { recentVaults } = useVaultStore()
 
 	return (
 		<section>
-			<AccountSection />
-
 			<div className="mb-6">
 				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
 					Startup

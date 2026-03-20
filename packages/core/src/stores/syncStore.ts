@@ -297,7 +297,7 @@ export const useSyncStore = create<SyncState>()(
 					})
 				})
 
-				const unlistenFile = await platform.sync.onFileEvent((event) => {
+				const unlistenFile = await platform.sync.onFileEvent(async (event) => {
 					set((state) => {
 						if (
 							event.status === "synced" ||
@@ -312,6 +312,17 @@ export const useSyncStore = create<SyncState>()(
 							state.syncingFiles[event.path] = event.status
 						}
 					})
+
+					if (event.path && (event.status === "synced" || event.status === "merged")) {
+						const { useVaultStore } = await import("./vaultStore")
+						const vault = useVaultStore.getState().vault
+						if (vault?.path) {
+							const { noteCache } = await import("../noteCache")
+							const absolutePath = `${vault.path}/${event.path}`
+							const hash = await platform.fs.hashFile(absolutePath)
+							await noteCache.handleExternalChange(absolutePath, hash)
+						}
+					}
 				})
 
 				const unlistenProgress = await platform.sync.onInitialSyncProgress((event) => {

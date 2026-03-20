@@ -94,7 +94,7 @@ export class ThemeManager {
 			cssVariables: {},
 		})
 
-		this.listeners.forEach((listener) => listener(this.activeTheme))
+		for (const listener of this.listeners) listener(this.activeTheme)
 	}
 
 	unregisterTheme(familyName: string): void {

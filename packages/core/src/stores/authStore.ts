@@ -5,13 +5,13 @@ import { devtools } from "zustand/middleware"
 import { immer } from "zustand/middleware/immer"
 
 const SERVER_URL_KEYCHAIN_KEY = "server_url"
-const OFFLINE_MODE_KEY = "offline_mode"
+const SYNC_ENABLED_KEY = "sync_enabled"
 const SELF_HOSTED_KEY = "self_hosted"
 const DEFAULT_SERVER_URL = "http://localhost:8080"
 
 export interface AuthState {
 	authenticated: boolean
-	offline: boolean
+	syncEnabled: boolean
 	selfHosted: boolean
 	user: CurrentUser | null
 	loading: boolean
@@ -26,7 +26,7 @@ export interface AuthState {
 	login: (email: string, password: string) => Promise<void>
 	register: (email: string, password: string, displayName: string) => Promise<void>
 	logout: (allDevices?: boolean) => Promise<void>
-	setOffline: (offline: boolean) => Promise<void>
+	setSyncEnabled: (enabled: boolean) => Promise<void>
 	clearError: () => void
 }
 
@@ -34,7 +34,7 @@ export const useAuthStore = create<AuthState>()(
 	devtools(
 		immer((set, get) => ({
 			authenticated: false,
-			offline: false,
+			syncEnabled: true,
 			selfHosted: false,
 			user: null,
 			loading: false,
@@ -70,14 +70,14 @@ export const useAuthStore = create<AuthState>()(
 			loadPreferences: async () => {
 				try {
 					const platform = getPlatform()
-					const [storedUrl, storedOffline, storedSelfHosted] = await Promise.all([
+					const [storedUrl, storedSyncEnabled, storedSelfHosted] = await Promise.all([
 						platform.keychain.get(SERVER_URL_KEYCHAIN_KEY),
-						platform.keychain.get(OFFLINE_MODE_KEY),
+						platform.keychain.get(SYNC_ENABLED_KEY),
 						platform.keychain.get(SELF_HOSTED_KEY),
 					])
 					set((state) => {
 						if (storedUrl) state.serverUrl = storedUrl
-						state.offline = storedOffline === "true"
+						state.syncEnabled = storedSyncEnabled !== "false"
 						state.selfHosted = storedSelfHosted === "true"
 					})
 				} catch {}
@@ -164,7 +164,7 @@ export const useAuthStore = create<AuthState>()(
 					await useSyncStore.getState().stopSync()
 					const platform = getPlatform()
 					await platform.auth.logout(allDevices)
-					await platform.keychain.set(OFFLINE_MODE_KEY, "false")
+					await platform.keychain.set(SYNC_ENABLED_KEY, "true")
 					const { useRemoteVaultStore } = await import("./remoteVaultStore")
 					const { useVaultStore } = await import("./vaultStore")
 					const { vault } = useVaultStore.getState()
@@ -176,20 +176,20 @@ export const useAuthStore = create<AuthState>()(
 				} finally {
 					set((state) => {
 						state.authenticated = false
-						state.offline = false
+						state.syncEnabled = true
 						state.user = null
 						state.error = null
 					})
 				}
 			},
 
-			setOffline: async (offline: boolean) => {
+			setSyncEnabled: async (enabled: boolean) => {
 				try {
 					const platform = getPlatform()
-					await platform.keychain.set(OFFLINE_MODE_KEY, String(offline))
+					await platform.keychain.set(SYNC_ENABLED_KEY, String(enabled))
 				} catch {}
 				set((state) => {
-					state.offline = offline
+					state.syncEnabled = enabled
 				})
 			},
 

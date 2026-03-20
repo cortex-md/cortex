@@ -27,7 +27,7 @@ export interface RemoteVaultState {
 
 export const useRemoteVaultStore = create<RemoteVaultState>()(
 	devtools(
-		immer((set, get) => ({
+		immer((set, _get) => ({
 			remoteVaults: [],
 			linkedVaultId: null,
 			loading: false,

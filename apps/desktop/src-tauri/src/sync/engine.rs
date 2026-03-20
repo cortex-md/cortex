@@ -708,6 +708,7 @@ impl SyncEngine {
                     let uploader = Uploader::new(client, db, vault_id, vault_path, vek);
                     match uploader.upload_file(path).await {
                         Ok(()) => {
+                            self.emit_log("info", &format!("Pushed: {}", path));
                             self.emit_file_event(path, "synced");
                             Ok(())
                         }
@@ -725,10 +726,12 @@ impl SyncEngine {
                     let downloader = Downloader::new(client, db, vault_id, vault_path, vek);
                     match downloader.download_file(path).await {
                         Ok(DownloadResult::Synced) => {
+                            self.emit_log("info", &format!("Pulled: {}", path));
                             self.emit_file_event(path, "synced");
                             Ok(())
                         }
                         Ok(DownloadResult::Merged) => {
+                            self.emit_log("info", &format!("Merged: {}", path));
                             self.emit_file_event(path, "merged");
                             Ok(())
                         }
@@ -752,6 +755,7 @@ impl SyncEngine {
                     let downloader = Downloader::new(client, db, vault_id, vault_path, vek);
                     match downloader.delete_local_file(path).await {
                         Ok(()) => {
+                            self.emit_log("info", &format!("Deleted locally: {}", path));
                             self.emit_file_event(path, "deleted");
                             Ok(())
                         }
@@ -766,6 +770,7 @@ impl SyncEngine {
                     let uploader = Uploader::new(client, db, vault_id, vault_path, vek);
                     match uploader.delete_remote_file(path).await {
                         Ok(()) => {
+                            self.emit_log("info", &format!("Deleted remote: {}", path));
                             self.emit_file_event(path, "deleted");
                             Ok(())
                         }

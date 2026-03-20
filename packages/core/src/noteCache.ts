@@ -258,13 +258,14 @@ class NoteCache {
 			entry.hash = newHash
 			entry.mtime = Date.now()
 
+			this.notifyContentChange(filePath, content)
 			this.notifyExternalChange({
 				filePath,
 				kind: "overwrite",
 				snapshot: { timestamp: Date.now(), content, trigger: "auto" },
 			})
 		} else {
-			const snapshot = this.takeSnapshot(filePath, "pre-save")!
+			const snapshot = this.takeSnapshot(filePath, "pre-sync")!
 			this.notifyExternalChange({ filePath, kind: "conflict", snapshot })
 		}
 	}

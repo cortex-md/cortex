@@ -7,13 +7,12 @@ import {
 	DialogContent,
 	DialogDescription,
 	DialogTitle,
-	Input,
 	InputGroup,
 	InputGroupAddon,
 	InputGroupInput,
 	Kbd,
 } from "@cortex/ui"
-import { Search, XIcon } from "lucide-react"
+import { Search } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 function titleFromPath(filePath: string): string {

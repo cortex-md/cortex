@@ -98,15 +98,27 @@ impl<'a> InitialSync<'a> {
                         InitialSyncAction::Download { path, version: _ } => {
                             self.emit_file_event(path, "downloading");
                             match self.download_file(path).await {
-                                Ok(()) => self.emit_file_event(path, "synced"),
-                                Err(e) => self.emit_file_event(path, &format!("error: {}", e)),
+                                Ok(()) => {
+                                    self.emit_log("info", &format!("Pulled: {}", path));
+                                    self.emit_file_event(path, "synced");
+                                }
+                                Err(e) => {
+                                    self.emit_log("error", &format!("Pull failed: {} — {}", path, e));
+                                    self.emit_file_event(path, &format!("error: {}", e));
+                                }
                             }
                         }
                         InitialSyncAction::Upload { path } => {
                             self.emit_file_event(path, "uploading");
                             match self.upload_file(path).await {
-                                Ok(()) => self.emit_file_event(path, "synced"),
-                                Err(e) => self.emit_file_event(path, &format!("error: {}", e)),
+                                Ok(()) => {
+                                    self.emit_log("info", &format!("Pushed: {}", path));
+                                    self.emit_file_event(path, "synced");
+                                }
+                                Err(e) => {
+                                    self.emit_log("error", &format!("Push failed: {} — {}", path, e));
+                                    self.emit_file_event(path, &format!("error: {}", e));
+                                }
                             }
                         }
                         InitialSyncAction::Conflict { path } => {
@@ -404,6 +416,13 @@ impl<'a> InitialSync<'a> {
         let _ = self.app.emit(
             "sync-file-event",
             serde_json::json!({ "path": path, "status": status }),
+        );
+    }
+
+    fn emit_log(&self, level: &str, message: &str) {
+        let _ = self.app.emit(
+            "sync-log",
+            serde_json::json!({ "level": level, "message": message }),
         );
     }
 

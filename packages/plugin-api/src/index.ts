@@ -1,3 +1,4 @@
+/// <reference path="./globals.d.ts" />
 export { CortexPlugin } from "./Plugin"
 
 export type {

@@ -40,6 +40,9 @@ jobs:
   rust:
     name: Rust — fmt, cargo check
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/desktop/src-tauri
     steps:
       - uses: actions/checkout@v4
 
@@ -50,6 +53,8 @@ jobs:
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
 
       - name: Cache APT packages
         uses: awalsh128/cache-apt-pkgs-action@latest

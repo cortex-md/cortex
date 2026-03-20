@@ -1,3 +1,4 @@
+import { useUIStore } from "@cortex/core"
 import { getPluginInstance, PluginSettingsRenderer, usePluginStore } from "@cortex/plugin-runtime"
 import { useSettingsStore } from "@cortex/settings"
 import {
@@ -45,12 +46,19 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
+	const settingsInitialSection = useUIStore((s) => s.settingsInitialSection)
 	const [activeSectionId, setActiveSectionId] = useState<string>("general")
 	const { settings, updateSetting } = useSettingsStore()
 	const pluginSettingsTabs = usePluginStore((s) => s.settingsTabs)
 	const pluginSettingsSchemas = usePluginStore((s) => s.settingsSchemas)
 
 	const [pluginSettingsValues, setPluginSettingsValues] = useState<Record<string, unknown>>({})
+
+	useEffect(() => {
+		if (open && settingsInitialSection) {
+			setActiveSectionId(settingsInitialSection)
+		}
+	}, [open, settingsInitialSection])
 
 	const coreSection = coreSections.find((s) => s.id === activeSectionId)
 	const pluginTab = pluginSettingsTabs.find((t) => t.id === activeSectionId)

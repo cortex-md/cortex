@@ -23,6 +23,11 @@ export interface UIState {
 
 	tagPickerOpen: boolean
 	toggleTagPicker: () => void
+
+	settingsOpen: boolean
+	settingsInitialSection: string | null
+	openSettings: (section?: string) => void
+	closeSettings: () => void
 }
 
 const MIN_SIDEBAR_WIDTH = 180
@@ -73,6 +78,21 @@ export const useUIStore = create<UIState>()(
 			toggleTagPicker: () =>
 				set((s) => {
 					s.tagPickerOpen = !s.tagPickerOpen
+				}),
+
+			settingsOpen: false,
+			settingsInitialSection: null,
+
+			openSettings: (section) =>
+				set((s) => {
+					s.settingsOpen = true
+					s.settingsInitialSection = section ?? null
+				}),
+
+			closeSettings: () =>
+				set((s) => {
+					s.settingsOpen = false
+					s.settingsInitialSection = null
 				}),
 		})),
 		{ name: "uiStore" },

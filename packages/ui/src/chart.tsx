@@ -75,9 +75,6 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
 	}
 
 	return (
-		// biome-ignore lint/security/noDangerouslySetInnerHtml: style content
-		// is generated from static config (colors) and does not include
-		// user-provided input. It's safe and necessary to inject CSS vars here.
 		<style
 			dangerouslySetInnerHTML={{
 				__html: Object.entries(THEMES)

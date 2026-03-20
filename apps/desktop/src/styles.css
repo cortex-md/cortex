@@ -499,8 +499,8 @@ body {
 	height: 3px;
 }
 
-/* shadcn TabsTrigger active state with accent border */
 .tab-bar [data-state="active"] {
+	/* biome-ignore lint/complexity/noImportantStyles: override shadcn inline styles */
 	border-bottom: 2px solid var(--tab-accent) !important;
 }
 

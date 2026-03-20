@@ -1,12 +1,250 @@
 import { useAuthStore, useRemoteVaultStore, useSyncStore, useVaultStore } from "@cortex/core"
-import { Badge, Button, Field, FieldLabel, Input, Separator, Switch } from "@cortex/ui"
-import { Cloud, CloudOff, Link, Loader2 } from "lucide-react"
-import { useEffect, useState } from "react"
+import {
+	Badge,
+	Button,
+	Field,
+	FieldDescription,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
+	Input,
+	Separator,
+	Switch,
+} from "@cortex/ui"
+import { Cloud, CloudOff, Link, Loader2, LogOut, User } from "lucide-react"
+import { type FormEvent, useEffect, useState } from "react"
 import { DeviceManager } from "../sync/DeviceManager"
 import { InvitesPanel } from "../sync/InvitesPanel"
 import { MembersPanel } from "../sync/MembersPanel"
 import { VaultLinkModal } from "../sync/VaultLinkModal"
 import { ExcludedPathsSettings } from "./ExcludedPathsSettings"
+
+type AuthFormView = "login" | "register"
+
+function AccountSection() {
+	const { user, authenticated, login, register, logout, loading, error, clearError } =
+		useAuthStore()
+	const [authFormView, setAuthFormView] = useState<AuthFormView>("login")
+	const [email, setEmail] = useState("")
+	const [password, setPassword] = useState("")
+	const [displayName, setDisplayName] = useState("")
+	const [confirmPassword, setConfirmPassword] = useState("")
+	const [validationError, setValidationError] = useState<string | null>(null)
+
+	const resetForm = () => {
+		setEmail("")
+		setPassword("")
+		setDisplayName("")
+		setConfirmPassword("")
+		setValidationError(null)
+		clearError()
+	}
+
+	const handleLogin = async (e: FormEvent) => {
+		e.preventDefault()
+		clearError()
+		await login(email, password).catch(() => {})
+	}
+
+	const handleRegister = async (e: FormEvent) => {
+		e.preventDefault()
+		clearError()
+		setValidationError(null)
+
+		if (password !== confirmPassword) {
+			setValidationError("Passwords do not match")
+			return
+		}
+		if (password.length < 8) {
+			setValidationError("Password must be at least 8 characters")
+			return
+		}
+
+		await register(email, password, displayName).catch(() => {})
+	}
+
+	if (authenticated && user) {
+		return (
+			<div className="mb-6">
+				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
+					Account
+				</h3>
+				<div className="flex items-center gap-3 py-2">
+					<div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center shrink-0">
+						<User size={14} className="text-accent" />
+					</div>
+					<div className="flex flex-col min-w-0 flex-1">
+						<span className="text-xs font-medium truncate">{user.email}</span>
+						<span className="text-[10px] text-text-muted">Signed in</span>
+					</div>
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => logout()}
+						className="text-xs h-6 px-2 text-text-muted gap-1.5"
+					>
+						<LogOut size={12} />
+						Sign out
+					</Button>
+				</div>
+			</div>
+		)
+	}
+
+	const displayError = validationError || error
+
+	if (authFormView === "register") {
+		return (
+			<div className="mb-6">
+				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
+					Create Account
+				</h3>
+				<form onSubmit={handleRegister}>
+					<FieldGroup>
+						<Field>
+							<FieldLabel htmlFor="register-name">Display Name</FieldLabel>
+							<Input
+								id="register-name"
+								type="text"
+								placeholder="John Doe"
+								value={displayName}
+								onChange={(e) => setDisplayName(e.target.value)}
+								required
+								disabled={loading}
+							/>
+						</Field>
+						<Field>
+							<FieldLabel htmlFor="register-email">Email</FieldLabel>
+							<Input
+								id="register-email"
+								type="email"
+								placeholder="you@example.com"
+								value={email}
+								onChange={(e) => setEmail(e.target.value)}
+								required
+								disabled={loading}
+							/>
+						</Field>
+						<Field>
+							<FieldLabel htmlFor="register-password">Password</FieldLabel>
+							<Input
+								id="register-password"
+								type="password"
+								value={password}
+								onChange={(e) => setPassword(e.target.value)}
+								required
+								disabled={loading}
+							/>
+						</Field>
+						<Field>
+							<FieldLabel htmlFor="register-confirm">Confirm Password</FieldLabel>
+							<Input
+								id="register-confirm"
+								type="password"
+								value={confirmPassword}
+								onChange={(e) => setConfirmPassword(e.target.value)}
+								required
+								disabled={loading}
+							/>
+							<FieldDescription>Must be at least 8 characters long.</FieldDescription>
+						</Field>
+						{displayError && <FieldError className="text-center">{displayError}</FieldError>}
+						<Field>
+							<Button type="submit" className="w-full" disabled={loading}>
+								{loading ? "Creating account..." : "Create Account"}
+							</Button>
+							<FieldDescription className="text-center">
+								Already have an account?{" "}
+								<button
+									type="button"
+									className="underline hover:text-accent-hover"
+									onClick={() => {
+										resetForm()
+										setAuthFormView("login")
+									}}
+								>
+									Sign in
+								</button>
+							</FieldDescription>
+						</Field>
+					</FieldGroup>
+				</form>
+			</div>
+		)
+	}
+
+	return (
+		<div className="mb-6">
+			<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
+				Account
+			</h3>
+			<form onSubmit={handleLogin}>
+				<FieldGroup>
+					<Field>
+						<FieldLabel htmlFor="login-email">Email</FieldLabel>
+						<Input
+							id="login-email"
+							type="email"
+							placeholder="you@example.com"
+							value={email}
+							onChange={(e) => setEmail(e.target.value)}
+							required
+							disabled={loading}
+						/>
+					</Field>
+					<Field>
+						<FieldLabel htmlFor="login-password">Password</FieldLabel>
+						<Input
+							id="login-password"
+							type="password"
+							value={password}
+							onChange={(e) => setPassword(e.target.value)}
+							required
+							disabled={loading}
+						/>
+					</Field>
+					{error && <FieldError className="text-center">{error}</FieldError>}
+					<Field>
+						<Button type="submit" className="w-full" disabled={loading}>
+							{loading ? "Signing in..." : "Sign In"}
+						</Button>
+						<FieldDescription className="text-center">
+							Don&apos;t have an account?{" "}
+							<button
+								type="button"
+								className="underline hover:text-accent-hover"
+								onClick={() => {
+									resetForm()
+									setAuthFormView("register")
+								}}
+							>
+								Create one
+							</button>
+						</FieldDescription>
+					</Field>
+				</FieldGroup>
+			</form>
+		</div>
+	)
+}
+
+function SyncToggleSection() {
+	const { syncEnabled, setSyncEnabled, authenticated, selfHosted } = useAuthStore()
+
+	if (!authenticated && !selfHosted) return null
+
+	return (
+		<div className="mb-6">
+			<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
+				Sync
+			</h3>
+			<Field>
+				<FieldLabel>Enable sync</FieldLabel>
+				<Switch checked={syncEnabled} onCheckedChange={setSyncEnabled} />
+			</Field>
+		</div>
+	)
+}
 
 function ServerSection() {
 	const { serverUrl, saveServerUrl, selfHosted, setSelfHosted } = useAuthStore()
@@ -132,7 +370,13 @@ export function SyncSection() {
 
 	return (
 		<section>
+			<AccountSection />
+
+			<Separator className="my-4" />
+
 			<ServerSection />
+
+			<SyncToggleSection />
 
 			{!showContent && (
 				<>
