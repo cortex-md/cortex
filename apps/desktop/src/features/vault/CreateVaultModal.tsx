@@ -59,7 +59,7 @@ export function CreateVaultModal({ open, folderPath, onOpenChange }: CreateVault
 							<Input
 								id="vault-name"
 								value={name}
-								onChange={(e) => setName(e.target.value)}
+								onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
 								placeholder="Second brain"
 							/>
 						</Field>
@@ -70,7 +70,7 @@ export function CreateVaultModal({ open, folderPath, onOpenChange }: CreateVault
 									id="vault-color"
 									type="color"
 									value={color}
-									onChange={(e) => setColor(e.target.value)}
+									onChange={(e: React.ChangeEvent<HTMLInputElement>) => setColor(e.target.value)}
 								/>
 							</Field>
 							<Field>

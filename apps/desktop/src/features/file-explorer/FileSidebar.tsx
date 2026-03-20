@@ -214,7 +214,7 @@ function TreeNodeRow({
 				if (node.isDir) onToggle(node.path)
 				else onOpenFile(node.path)
 			}}
-			onKeyDown={(e) => {
+			onKeyDown={(e: React.KeyboardEvent<HTMLButtonElement>) => {
 				if (e.key === "Enter") {
 					if (node.isDir) onToggle(node.path)
 					else onOpenFile(node.path)

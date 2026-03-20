@@ -155,7 +155,9 @@ export function TagPicker() {
 						<Input
 							type="color"
 							value={getTagColor(editingColorFor) ?? "#e8a83c"}
-							onChange={(e) => handleColorChange(editingColorFor, e.target.value)}
+							onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+								handleColorChange(editingColorFor, e.target.value)
+							}
 							className="w-8 h-6 p-0 border-none cursor-pointer rounded-sm"
 						/>
 						<button

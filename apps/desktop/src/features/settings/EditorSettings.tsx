@@ -22,7 +22,9 @@ export function EditorSection({ settings, onUpdate }: EditorSectionProps) {
 						min={1}
 						max={8}
 						value={settings.tabSize}
-						onChange={(e) => onUpdate("editor", "tabSize", Number.parseInt(e.target.value, 10))}
+						onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+							onUpdate("editor", "tabSize", Number.parseInt(e.target.value, 10))
+						}
 					/>
 				</div>
 

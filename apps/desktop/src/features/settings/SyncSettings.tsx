@@ -108,7 +108,9 @@ function AccountSection() {
 								type="text"
 								placeholder="John Doe"
 								value={displayName}
-								onChange={(e) => setDisplayName(e.target.value)}
+								onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+									setDisplayName(e.target.value)
+								}
 								required
 								disabled={loading}
 							/>
@@ -120,7 +122,7 @@ function AccountSection() {
 								type="email"
 								placeholder="you@example.com"
 								value={email}
-								onChange={(e) => setEmail(e.target.value)}
+								onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
 								required
 								disabled={loading}
 							/>
@@ -131,7 +133,7 @@ function AccountSection() {
 								id="register-password"
 								type="password"
 								value={password}
-								onChange={(e) => setPassword(e.target.value)}
+								onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
 								required
 								disabled={loading}
 							/>
@@ -142,7 +144,9 @@ function AccountSection() {
 								id="register-confirm"
 								type="password"
 								value={confirmPassword}
-								onChange={(e) => setConfirmPassword(e.target.value)}
+								onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+									setConfirmPassword(e.target.value)
+								}
 								required
 								disabled={loading}
 							/>
@@ -187,7 +191,7 @@ function AccountSection() {
 							type="email"
 							placeholder="you@example.com"
 							value={email}
-							onChange={(e) => setEmail(e.target.value)}
+							onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
 							required
 							disabled={loading}
 						/>
@@ -198,7 +202,7 @@ function AccountSection() {
 							id="login-password"
 							type="password"
 							value={password}
-							onChange={(e) => setPassword(e.target.value)}
+							onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
 							required
 							disabled={loading}
 						/>
@@ -297,7 +301,7 @@ function ServerSection() {
 							id="server-url"
 							type="url"
 							value={inputValue}
-							onChange={(e) => setInputValue(e.target.value)}
+							onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputValue(e.target.value)}
 							onKeyDown={handleKeyDown}
 							placeholder="http://localhost:8080"
 							disabled={saving}

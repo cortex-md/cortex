@@ -72,8 +72,8 @@ export function DeviceManager() {
 								<Input
 									className="bg-transparent border border-border rounded px-1 py-0.5 outline-none focus:border-accent w-full"
 									value={editName}
-									onChange={(e) => setEditName(e.target.value)}
-									onKeyDown={(e) => {
+									onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditName(e.target.value)}
+									onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
 										if (e.key === "Enter") handleConfirmRename(device.id)
 										if (e.key === "Escape") handleCancelRename()
 									}}

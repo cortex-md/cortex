@@ -131,15 +131,15 @@ export function MembersPanel({ vaultId, currentUserRole }: MembersPanelProps) {
 							className="h-7 flex-1"
 							placeholder="email@example.com"
 							value={inviteEmail}
-							onChange={(e) => setInviteEmail(e.target.value)}
-							onKeyDown={(e) => {
+							onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInviteEmail(e.target.value)}
+							onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
 								if (e.key === "Enter") handleInvite()
 							}}
 						/>
 						<NativeSelect
 							className="bg-transparent border border-border rounded px-1 py-1 outline-none h-7"
 							value={inviteRole}
-							onChange={(e) => setInviteRole(e.target.value)}
+							onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setInviteRole(e.target.value)}
 						>
 							<NativeSelectOption value="admin">Admin</NativeSelectOption>
 							<NativeSelectOption value="editor">Editor</NativeSelectOption>

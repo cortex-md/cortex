@@ -285,7 +285,7 @@ const IconPicker = React.forwardRef<React.ComponentRef<typeof PopoverTrigger>, I
 					variant={"outline"}
 					size="sm"
 					className="text-xs"
-					onClick={(e) => {
+					onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
 						e.stopPropagation()
 						scrollToCategory(category.name)
 					}}

@@ -173,8 +173,10 @@ export function VaultLinkModal({ open, onOpenChange, unlockMode }: VaultLinkModa
 								type="password"
 								className="h-8 text-xs mt-1"
 								value={password}
-								onChange={(e) => setPassword(e.target.value)}
-								onKeyDown={(e) => e.key === "Enter" && handleUnlockSubmit()}
+								onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+								onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
+									e.key === "Enter" && handleUnlockSubmit()
+								}
 								autoFocus
 							/>
 						</div>
@@ -224,7 +226,7 @@ export function VaultLinkModal({ open, onOpenChange, unlockMode }: VaultLinkModa
 								type="password"
 								className="h-8 text-xs mt-1"
 								value={password}
-								onChange={(e) => setPassword(e.target.value)}
+								onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
 								autoFocus
 							/>
 						</div>
@@ -237,8 +239,12 @@ export function VaultLinkModal({ open, onOpenChange, unlockMode }: VaultLinkModa
 								type="password"
 								className="h-8 text-xs mt-1"
 								value={confirmPassword}
-								onChange={(e) => setConfirmPassword(e.target.value)}
-								onKeyDown={(e) => e.key === "Enter" && handleCreateSubmit()}
+								onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+									setConfirmPassword(e.target.value)
+								}
+								onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
+									e.key === "Enter" && handleCreateSubmit()
+								}
 							/>
 						</div>
 						{encryptionError && <p className="text-xs text-red-500">{encryptionError}</p>}
@@ -317,7 +323,9 @@ export function VaultLinkModal({ open, onOpenChange, unlockMode }: VaultLinkModa
 								className="h-8 text-xs mt-1"
 								placeholder="My Vault"
 								value={newVaultName}
-								onChange={(e) => setNewVaultName(e.target.value)}
+								onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+									setNewVaultName(e.target.value)
+								}
 							/>
 						</div>
 						<div>
@@ -329,7 +337,9 @@ export function VaultLinkModal({ open, onOpenChange, unlockMode }: VaultLinkModa
 								className="h-8 text-xs mt-1"
 								placeholder="A brief description"
 								value={newVaultDescription}
-								onChange={(e) => setNewVaultDescription(e.target.value)}
+								onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+									setNewVaultDescription(e.target.value)
+								}
 							/>
 						</div>
 						<div className="flex items-center gap-2 justify-end">

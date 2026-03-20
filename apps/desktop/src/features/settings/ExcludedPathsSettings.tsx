@@ -81,7 +81,7 @@ export function ExcludedPathsSettings() {
 				<Input
 					ref={inputRef}
 					value={search}
-					onChange={(e) => {
+					onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
 						setSearch(e.target.value)
 						setDropdownOpen(true)
 					}}

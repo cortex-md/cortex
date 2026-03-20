@@ -118,7 +118,7 @@ export function TagsSidebar() {
 					<Input
 						type="text"
 						value={filterQuery}
-						onChange={(e) => setFilterQuery(e.target.value)}
+						onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilterQuery(e.target.value)}
 						placeholder="Filter tags..."
 						className="w-full h-8 pl-8 pr-3 text-sm rounded-md border border-border focus:border-ring focus:outline-none placeholder:text-muted-foreground"
 					/>

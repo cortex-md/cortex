@@ -40,7 +40,7 @@ function DesktopTextInput({
 		<Input
 			value={local}
 			placeholder={placeholder}
-			onChange={(e) => setLocal(e.target.value)}
+			onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocal(e.target.value)}
 			onBlur={() => onChange(local)}
 		/>
 	)
@@ -67,7 +67,7 @@ function DesktopNumberInput({
 			min={min}
 			max={max}
 			step={step}
-			onChange={(e) => onChange(Number(e.target.value))}
+			onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(Number(e.target.value))}
 		/>
 	)
 }
