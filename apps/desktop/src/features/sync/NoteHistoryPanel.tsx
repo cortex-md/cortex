@@ -1,5 +1,6 @@
 import { useRemoteVaultStore, useSyncStore, useVaultStore } from "@cortex/core"
 import type { VersionInfo } from "@cortex/platform"
+import { getThemeManager } from "@cortex/theme"
 import {
 	Badge,
 	Button,
@@ -11,52 +12,18 @@ import {
 	Separator,
 	Spinner,
 } from "@cortex/ui"
+import type { FileDiffMetadata } from "@pierre/diffs"
+import { parseDiffFromFile } from "@pierre/diffs"
+import { FileDiff } from "@pierre/diffs/react"
 import { Clock, RotateCcw, User } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
-interface DiffLine {
-	type: "added" | "removed" | "unchanged"
-	content: string
-	key: string
-}
-
-function computeLineDiff(previousContent: string, currentContent: string): DiffLine[] {
-	const previousLines = previousContent.split("\n")
-	const currentLines = currentContent.split("\n")
-
-	const rows = previousLines.length + 1
-	const cols = currentLines.length + 1
-	const table = Array.from({ length: rows }, () => new Array(cols).fill(0))
-
-	for (let i = 1; i < rows; i++) {
-		for (let j = 1; j < cols; j++) {
-			if (previousLines[i - 1] === currentLines[j - 1]) {
-				table[i][j] = table[i - 1][j - 1] + 1
-			} else {
-				table[i][j] = Math.max(table[i - 1][j], table[i][j - 1])
-			}
-		}
-	}
-
-	const reversed: Array<{ type: "added" | "removed" | "unchanged"; content: string }> = []
-	let i = previousLines.length
-	let j = currentLines.length
-
-	while (i > 0 || j > 0) {
-		if (i > 0 && j > 0 && previousLines[i - 1] === currentLines[j - 1]) {
-			reversed.push({ type: "unchanged", content: previousLines[i - 1] })
-			i--
-			j--
-		} else if (j > 0 && (i === 0 || table[i][j - 1] >= table[i - 1][j])) {
-			reversed.push({ type: "added", content: currentLines[j - 1] })
-			j--
-		} else {
-			reversed.push({ type: "removed", content: previousLines[i - 1] })
-			i--
-		}
-	}
-
-	return reversed.reverse().map((line, position) => ({ ...line, key: `${line.type}-${position}` }))
+function useIsDarkTheme(): boolean {
+	const [isDark, setIsDark] = useState(() => getThemeManager().getActiveTheme().isDark)
+	useEffect(() => {
+		return getThemeManager().subscribe((theme) => setIsDark(theme.isDark))
+	}, [])
+	return isDark
 }
 
 function formatVersionDate(dateString: string | null): string {
@@ -69,43 +36,6 @@ function formatVersionDate(dateString: string | null): string {
 		hour: "2-digit",
 		minute: "2-digit",
 	})
-}
-
-interface DiffViewProps {
-	diffLines: DiffLine[]
-}
-
-function DiffView({ diffLines }: DiffViewProps) {
-	const hasChanges = diffLines.some((line) => line.type !== "unchanged")
-
-	if (!hasChanges) {
-		return (
-			<div className="flex items-center justify-center py-8 text-text-muted text-sm">
-				No changes compared to previous version
-			</div>
-		)
-	}
-
-	return (
-		<div className="font-mono w-full text-xs leading-5 overflow-x-auto">
-			{diffLines.map((line) => {
-				const prefix = line.type === "added" ? "+" : line.type === "removed" ? "-" : " "
-				const bgClass =
-					line.type === "added"
-						? "bg-green-500/10 text-green-700 dark:text-green-400"
-						: line.type === "removed"
-							? "bg-red-500/10 text-red-700 dark:text-red-400"
-							: "text-text-secondary"
-
-				return (
-					<div key={line.key} className={`flex gap-2 px-3 py-0.5 whitespace-pre-wrap ${bgClass}`}>
-						<span className="select-none w-4 shrink-0 text-text-muted">{prefix}</span>
-						<span className="break-all">{line.content}</span>
-					</div>
-				)
-			})}
-		</div>
-	)
 }
 
 interface VersionRowProps {
@@ -152,16 +82,36 @@ export function NoteHistoryPanel({ filePath, open, onOpenChange }: NoteHistoryPa
 	const { vault } = useVaultStore()
 	const { linkedVaultId } = useRemoteVaultStore()
 	const { getVersionHistory, downloadVersion, restoreVersion } = useSyncStore()
+	const isDark = useIsDarkTheme()
 
 	const [versions, setVersions] = useState<VersionInfo[]>([])
 	const [selectedVersion, setSelectedVersion] = useState<VersionInfo | null>(null)
-	const [diffLines, setDiffLines] = useState<DiffLine[] | null>(null)
+	const [previousContent, setPreviousContent] = useState<string | null>(null)
+	const [currentContent, setCurrentContent] = useState<string | null>(null)
 	const [loadingVersions, setLoadingVersions] = useState(false)
 	const [loadingDiff, setLoadingDiff] = useState(false)
 	const [restoring, setRestoring] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 
 	const relativeFilePath = vault?.path ? filePath.replace(`${vault.path}/`, "") : filePath
+	const fileName = filePath.split("/").pop() ?? filePath
+
+	const fileDiff = useMemo<FileDiffMetadata | null>(() => {
+		if (currentContent === null) return null
+		return parseDiffFromFile(
+			{ name: fileName, contents: previousContent ?? "" },
+			{ name: fileName, contents: currentContent },
+		)
+	}, [previousContent, currentContent, fileName])
+
+	const addedLines = useMemo(
+		() => fileDiff?.hunks.reduce((sum, h) => sum + h.additionLines, 0) ?? 0,
+		[fileDiff],
+	)
+	const removedLines = useMemo(
+		() => fileDiff?.hunks.reduce((sum, h) => sum + h.deletionLines, 0) ?? 0,
+		[fileDiff],
+	)
 
 	const loadVersions = useCallback(async () => {
 		if (!vault?.path || !linkedVaultId) {
@@ -186,7 +136,8 @@ export function NoteHistoryPanel({ filePath, open, onOpenChange }: NoteHistoryPa
 		} else {
 			setVersions([])
 			setSelectedVersion(null)
-			setDiffLines(null)
+			setPreviousContent(null)
+			setCurrentContent(null)
 			setError(null)
 		}
 	}, [open, loadVersions])
@@ -197,10 +148,11 @@ export function NoteHistoryPanel({ filePath, open, onOpenChange }: NoteHistoryPa
 
 			setSelectedVersion(version)
 			setLoadingDiff(true)
-			setDiffLines(null)
+			setPreviousContent(null)
+			setCurrentContent(null)
 
 			try {
-				const currentContent = await downloadVersion(
+				const current = await downloadVersion(
 					linkedVaultId,
 					vault.path,
 					relativeFilePath,
@@ -211,15 +163,17 @@ export function NoteHistoryPanel({ filePath, open, onOpenChange }: NoteHistoryPa
 				const previousVersion = versions[versionIndex + 1]
 
 				if (!previousVersion) {
-					setDiffLines(computeLineDiff("", currentContent))
+					setPreviousContent("")
+					setCurrentContent(current)
 				} else {
-					const previousContent = await downloadVersion(
+					const previous = await downloadVersion(
 						linkedVaultId,
 						vault.path,
 						relativeFilePath,
 						String(previousVersion.version),
 					)
-					setDiffLines(computeLineDiff(previousContent, currentContent))
+					setPreviousContent(previous)
+					setCurrentContent(current)
 				}
 			} catch (e) {
 				setError(String(e))
@@ -248,8 +202,6 @@ export function NoteHistoryPanel({ filePath, open, onOpenChange }: NoteHistoryPa
 			setRestoring(false)
 		}
 	}, [selectedVersion, vault?.path, linkedVaultId, relativeFilePath, restoreVersion, onOpenChange])
-
-	const fileName = filePath.split("/").pop() ?? filePath
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -303,14 +255,14 @@ export function NoteHistoryPanel({ filePath, open, onOpenChange }: NoteHistoryPa
 											{formatVersionDate(selectedVersion.createdAt)}
 										</p>
 									</div>
-									{!loadingDiff && diffLines && (
+									{!loadingDiff && fileDiff && (
 										<div className="px-4 py-2 flex gap-4 text-xs text-text-muted">
 											<span className="text-green-600 dark:text-green-400">
-												+{diffLines.filter((l) => l.type === "added").length} added
+												+{addedLines} added
 											</span>
 											<Separator orientation="vertical" className="h-4" />
 											<span className="text-red-600 dark:text-red-400">
-												-{diffLines.filter((l) => l.type === "removed").length} removed
+												-{removedLines} removed
 											</span>
 										</div>
 									)}
@@ -328,7 +280,6 @@ export function NoteHistoryPanel({ filePath, open, onOpenChange }: NoteHistoryPa
 							) : (
 								<p className="text-sm text-text-muted">Select a version to view changes</p>
 							)}
-							{!loadingDiff && diffLines && <DiffView diffLines={diffLines} />}
 						</div>
 
 						<ScrollArea className="flex-1">
@@ -342,10 +293,23 @@ export function NoteHistoryPanel({ filePath, open, onOpenChange }: NoteHistoryPa
 									<Spinner className="size-5 text-text-muted" />
 								</div>
 							)}
-							{!loadingDiff && !diffLines && !error && (
+							{!loadingDiff && !fileDiff && !error && (
 								<div className="flex items-center justify-center py-12 text-text-muted text-sm">
 									Select a version from the left to view changes
 								</div>
+							)}
+							{!loadingDiff && fileDiff && (
+								<FileDiff
+									fileDiff={fileDiff}
+									options={{
+										theme: { dark: "pierre-dark", light: "pierre-light" },
+										themeType: isDark ? "dark" : "light",
+										diffStyle: "unified",
+										lineDiffType: "word",
+										disableFileHeader: true,
+										overflow: "wrap",
+									}}
+								/>
 							)}
 						</ScrollArea>
 					</div>

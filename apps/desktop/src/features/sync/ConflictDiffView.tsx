@@ -1,12 +1,17 @@
 import type { ConflictInfo, ConflictResolution } from "@cortex/platform"
-import {
-	Button,
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogTitle,
-	ScrollArea,
-} from "@cortex/ui"
+import { getThemeManager } from "@cortex/theme"
+import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from "@cortex/ui"
+import { parseDiffFromFile } from "@pierre/diffs"
+import { FileDiff } from "@pierre/diffs/react"
+import { useEffect, useMemo, useState } from "react"
+
+function useIsDarkTheme(): boolean {
+	const [isDark, setIsDark] = useState(() => getThemeManager().getActiveTheme().isDark)
+	useEffect(() => {
+		return getThemeManager().subscribe((theme) => setIsDark(theme.isDark))
+	}, [])
+	return isDark
+}
 
 interface Props {
 	conflict: ConflictInfo
@@ -15,9 +20,17 @@ interface Props {
 }
 
 export function ConflictDiffView({ conflict, onResolve, onClose }: Props) {
-	const localContent = conflict.localContent ?? "(binary or unavailable)"
-	const remoteContent = conflict.remoteContent ?? "(binary or unavailable)"
+	const isDark = useIsDarkTheme()
 	const hasContent = conflict.localContent !== null && conflict.remoteContent !== null
+	const conflictFileName = conflict.filePath.split("/").pop() ?? conflict.filePath
+
+	const fileDiff = useMemo(() => {
+		if (!hasContent) return null
+		return parseDiffFromFile(
+			{ name: conflictFileName, contents: conflict.localContent ?? "" },
+			{ name: conflictFileName, contents: conflict.remoteContent ?? "" },
+		)
+	}, [hasContent, conflictFileName, conflict.localContent, conflict.remoteContent])
 
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -26,30 +39,25 @@ export function ConflictDiffView({ conflict, onResolve, onClose }: Props) {
 					Conflict: {conflict.filePath}
 				</DialogTitle>
 				<DialogDescription className="sr-only">
-					Side-by-side comparison of local and remote versions
+					Diff between local and remote versions
 				</DialogDescription>
 
-				<div className="flex flex-1 overflow-hidden min-h-0">
-					<div className="flex-1 flex flex-col border-r border-border min-w-0">
-						<div className="px-3 py-1.5 text-xs font-medium text-text-muted border-b border-border bg-bg-secondary">
-							Local
-						</div>
-						<ScrollArea className="flex-1">
-							<pre className="p-3 text-xs font-mono whitespace-pre-wrap break-words text-text-primary">
-								{localContent}
-							</pre>
-						</ScrollArea>
-					</div>
-					<div className="flex-1 flex flex-col min-w-0">
-						<div className="px-3 py-1.5 text-xs font-medium text-text-muted border-b border-border bg-bg-secondary">
-							Remote
-						</div>
-						<ScrollArea className="flex-1">
-							<pre className="p-3 text-xs font-mono whitespace-pre-wrap break-words text-text-primary">
-								{remoteContent}
-							</pre>
-						</ScrollArea>
-					</div>
+				<div className="flex-1 overflow-auto min-h-0">
+					{hasContent && fileDiff ? (
+						<FileDiff
+							fileDiff={fileDiff}
+							options={{
+								theme: { dark: "pierre-dark", light: "pierre-light" },
+								themeType: isDark ? "dark" : "light",
+								diffStyle: "split",
+								lineDiffType: "word",
+								disableFileHeader: true,
+								overflow: "wrap",
+							}}
+						/>
+					) : (
+						<p className="p-4 text-sm text-text-muted">(binary or unavailable)</p>
+					)}
 				</div>
 
 				<div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border">
@@ -66,7 +74,7 @@ export function ConflictDiffView({ conflict, onResolve, onClose }: Props) {
 						<Button
 							variant="default"
 							size="sm"
-							onClick={() => onResolve({ type: "merged", content: localContent })}
+							onClick={() => onResolve({ type: "merged", content: conflict.localContent ?? "" })}
 						>
 							Keep Local as Merged
 						</Button>

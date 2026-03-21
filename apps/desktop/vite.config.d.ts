@@ -1,2 +1,2 @@
-declare const _default: any;
+declare const _default: import("vite").UserConfigFnPromise;
 export default _default;
