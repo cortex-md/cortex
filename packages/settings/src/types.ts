@@ -18,6 +18,8 @@ export const EditorSettingsSchema = z.object({
 	showLineNumbers: z.boolean().default(true),
 	autoSave: z.boolean().default(true),
 	autoSaveInterval: z.number().min(1000).default(2000),
+	imageStorageLocation: z.enum(["root", "same", "custom"]).default("same"),
+	imageStorageCustomPath: z.string().default(""),
 })
 
 export const FilesSettingsSchema = z.object({

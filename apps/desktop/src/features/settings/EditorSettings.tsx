@@ -1,13 +1,25 @@
 import type { EditorSettings } from "@cortex/settings"
-import { Input, Label, Switch } from "@cortex/ui"
+import {
+	FolderPicker,
+	type FolderPickerOption,
+	Input,
+	Label,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Switch,
+} from "@cortex/ui"
 import type { UpdateSettingFn } from "."
 
 interface EditorSectionProps {
 	settings: EditorSettings
 	onUpdate: UpdateSettingFn
+	vaultFolders?: FolderPickerOption[]
 }
 
-export function EditorSection({ settings, onUpdate }: EditorSectionProps) {
+export function EditorSection({ settings, onUpdate, vaultFolders = [] }: EditorSectionProps) {
 	return (
 		<section>
 			<div className="mb-6">
@@ -76,6 +88,41 @@ export function EditorSection({ settings, onUpdate }: EditorSectionProps) {
 						onCheckedChange={(checked) => onUpdate("editor", "autoSave", checked)}
 					/>
 				</div>
+			</div>
+
+			<div className="mb-6">
+				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
+					Images
+				</h3>
+				<div className="flex items-center justify-between px-0 py-2 gap-4">
+					<Label htmlFor="image-storage" className="flex-1">
+						Image storage location
+					</Label>
+					<Select
+						value={settings.imageStorageLocation}
+						onValueChange={(value) => onUpdate("editor", "imageStorageLocation", value)}
+					>
+						<SelectTrigger id="image-storage">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="same">Same folder as note</SelectItem>
+							<SelectItem value="root">Vault root</SelectItem>
+							<SelectItem value="custom">Custom folder</SelectItem>
+						</SelectContent>
+					</Select>
+				</div>
+
+				{settings.imageStorageLocation === "custom" && (
+					<div className="px-0 py-2">
+						<FolderPicker
+							options={vaultFolders}
+							value={settings.imageStorageCustomPath}
+							onChange={(value) => onUpdate("editor", "imageStorageCustomPath", value)}
+							placeholder="Select a folder..."
+						/>
+					</div>
+				)}
 			</div>
 		</section>
 	)

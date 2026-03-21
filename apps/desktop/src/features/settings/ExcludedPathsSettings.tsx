@@ -1,8 +1,8 @@
 import { useSyncStore, useVaultStore } from "@cortex/core"
 import type { FileEntry } from "@cortex/platform"
-import { Badge, Input } from "@cortex/ui"
+import { Badge, FolderPicker } from "@cortex/ui"
 import { FileIcon, FolderIcon, XIcon } from "lucide-react"
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useMemo } from "react"
 
 function fileEntryToRelativePath(entry: FileEntry, vaultPath: string): string {
 	const relative = entry.path.replace(`${vaultPath}/`, "")
@@ -14,9 +14,6 @@ export function ExcludedPathsSettings() {
 	const vault = useVaultStore((s) => s.vault)
 	const excludedPaths = useSyncStore((s) => s.syncPreferences.excludedPaths)
 	const toggleExcludedPath = useSyncStore((s) => s.toggleExcludedPath)
-	const [search, setSearch] = useState("")
-	const [dropdownOpen, setDropdownOpen] = useState(false)
-	const inputRef = useRef<HTMLInputElement>(null)
 
 	const availableOptions = useMemo(() => {
 		if (!vault?.path) return []
@@ -24,23 +21,12 @@ export function ExcludedPathsSettings() {
 			.map((f) => fileEntryToRelativePath(f, vault.path))
 			.filter((p) => !p.startsWith(".cortex/") && !p.startsWith(".cortex"))
 			.filter((p) => !excludedPaths.includes(p))
+			.map((p) => ({
+				value: p,
+				label: p,
+				isDir: p.endsWith("/"),
+			}))
 	}, [files, vault?.path, excludedPaths])
-
-	const filteredOptions = useMemo(() => {
-		if (!search.trim()) return availableOptions
-		const lower = search.toLowerCase()
-		return availableOptions.filter((p) => p.toLowerCase().includes(lower))
-	}, [availableOptions, search])
-
-	const handleSelect = useCallback(
-		(path: string) => {
-			toggleExcludedPath(path, true)
-			setSearch("")
-			setDropdownOpen(false)
-			inputRef.current?.blur()
-		},
-		[toggleExcludedPath],
-	)
 
 	return (
 		<div>
@@ -77,48 +63,12 @@ export function ExcludedPathsSettings() {
 				</div>
 			)}
 
-			<div className="relative">
-				<Input
-					ref={inputRef}
-					value={search}
-					onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-						setSearch(e.target.value)
-						setDropdownOpen(true)
-					}}
-					onFocus={() => setDropdownOpen(true)}
-					onBlur={() => {
-						setTimeout(() => setDropdownOpen(false), 150)
-					}}
-					placeholder="Search files and folders to exclude..."
-				/>
-				{dropdownOpen && filteredOptions.length > 0 && (
-					<div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-						{filteredOptions.map((path) => (
-							<button
-								key={path}
-								type="button"
-								onMouseDown={(e) => e.preventDefault()}
-								onClick={() => handleSelect(path)}
-								className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-left hover:bg-accent cursor-pointer"
-							>
-								{path.endsWith("/") ? (
-									<FolderIcon className="size-3.5 shrink-0 text-text-muted" />
-								) : (
-									<FileIcon className="size-3.5 shrink-0 text-text-muted" />
-								)}
-								<span className="truncate">{path}</span>
-							</button>
-						))}
-					</div>
-				)}
-				{dropdownOpen && search.trim() && filteredOptions.length === 0 && (
-					<div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-md">
-						<p className="px-3 py-2 text-sm text-text-muted text-center">
-							No matching files or folders
-						</p>
-					</div>
-				)}
-			</div>
+			<FolderPicker
+				options={availableOptions}
+				value=""
+				onChange={(path) => toggleExcludedPath(path, true)}
+				placeholder="Search files and folders to exclude..."
+			/>
 		</div>
 	)
 }

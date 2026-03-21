@@ -5,10 +5,11 @@ import {
 	useEditorStore,
 	useRemoteVaultStore,
 	useTagsStore,
+	useVaultStore,
 	useWorkspaceStore,
 } from "@cortex/core"
 import type { CursorInfo, EditorConfig } from "@cortex/editor"
-import { EditorView, ReadingView, SideBySideView } from "@cortex/editor"
+import { clipboardImageExtension, EditorView, ReadingView, SideBySideView } from "@cortex/editor"
 import { getPlatform } from "@cortex/platform"
 import {
 	getRegisteredRendererPlugins,
@@ -45,6 +46,30 @@ import { NoteHistoryPanel } from "../sync/NoteHistoryPanel"
 import { TabBar } from "../tabs/TabBar"
 import { getCoreViewComponent } from "./coreViewRegistry"
 import { DropZoneOverlay } from "./DropZoneOverlay"
+
+function computeRelativePath(fromDir: string, toFile: string): string {
+	const fromParts = fromDir.split("/").filter(Boolean)
+	const toParts = toFile.split("/").filter(Boolean)
+	let common = 0
+	while (
+		common < fromParts.length &&
+		common < toParts.length &&
+		fromParts[common] === toParts[common]
+	) {
+		common++
+	}
+	const ups = fromParts.length - common
+	const remaining = toParts.slice(common)
+	const relative = [...Array(ups).fill(".."), ...remaining].join("/")
+	return relative.startsWith(".") ? relative : `./${relative}`
+}
+
+function extensionFromMimeType(mimeType: string): string {
+	if (mimeType === "image/jpeg") return ".jpg"
+	if (mimeType === "image/webp") return ".webp"
+	if (mimeType === "image/gif") return ".gif"
+	return ".png"
+}
 
 const hasNativeMenu = () => getPlatform().capabilities.includes("menu")
 const nativeMenu = new NativeMenuActions()
@@ -89,6 +114,44 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 	const { markTabDirty } = useWorkspaceStore()
 	const mode = useEditorStore((s) => s.mode)
 	const viewRef = useRef<CMView | null>(null)
+
+	const handleImagePaste = useCallback(
+		async (imageBlob: Blob): Promise<string | null> => {
+			const vaultPath = useVaultStore.getState().vault?.path
+			if (!vaultPath) return null
+
+			const editorSettings = useSettingsStore.getState().settings.editor
+			const fileDir = tab.filePath.substring(0, tab.filePath.lastIndexOf("/"))
+
+			let targetDir: string
+			if (editorSettings.imageStorageLocation === "root") {
+				targetDir = vaultPath
+			} else if (editorSettings.imageStorageLocation === "custom") {
+				const customPath = editorSettings.imageStorageCustomPath
+				targetDir = customPath ? `${vaultPath}/${customPath}` : vaultPath
+			} else {
+				targetDir = fileDir
+			}
+
+			const extension = extensionFromMimeType(imageBlob.type)
+			const fileName = `paste-${Date.now()}${extension}`
+			const targetPath = `${targetDir}/${fileName}`
+
+			const arrayBuffer = await imageBlob.arrayBuffer()
+			const data = Array.from(new Uint8Array(arrayBuffer))
+
+			await getPlatform().fs.writeBinaryFile(targetPath, data)
+
+			const relativePath = computeRelativePath(fileDir, targetPath)
+			return `![${fileName}](${relativePath})`
+		},
+		[tab.filePath],
+	)
+
+	const clipboardExtensions = useMemo(
+		() => [clipboardImageExtension(handleImagePaste)],
+		[handleImagePaste],
+	)
 
 	useEffect(() => {
 		noteCache.read(tab.filePath).then(setContent)
@@ -165,6 +228,7 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 					filePath={tab.filePath}
 					editorConfig={editorConfig}
 					livePreview={mode === "live-preview"}
+					extraExtensions={clipboardExtensions}
 					onChange={handleChange}
 					onCursorChange={isActive ? onCursorChange : undefined}
 					onViewReady={handleViewReady}

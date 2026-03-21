@@ -215,6 +215,7 @@ Before creating or modifying a component, ensure:
 | **SplitPane** | Resizable two-pane splitter (horizontal or vertical) | `direction`, `sizes`, `onResize`, children |
 | **TabBar** | Horizontal tab list with active indicator | `tabs`, `activeId`, `onSelect` |
 | **StatusBar** | Bottom status bar with left/center/right sections | `left`, `center`, `right` (ReactNode) |
+| **FolderPicker** | Searchable dropdown for selecting a vault folder/file path | `options`, `value`, `onChange`, `placeholder` |
 
 ## Adding a New Component
 

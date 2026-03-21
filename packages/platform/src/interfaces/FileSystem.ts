@@ -14,6 +14,7 @@ export interface WatchEvent {
 export interface FileSystem {
 	readFile(path: string): Promise<string>
 	writeFile(path: string, content: string): Promise<void>
+	writeBinaryFile(path: string, data: number[]): Promise<void>
 	deleteFile(path: string): Promise<void>
 	renameFile(oldPath: string, newPath: string): Promise<void>
 	createDir(path: string): Promise<void>

@@ -14,6 +14,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::fs::read_file,
             commands::fs::write_file,
+            commands::fs::write_binary_file,
             commands::fs::delete_file,
             commands::fs::rename_file,
             commands::fs::create_dir,
