@@ -1,21 +1,34 @@
 import {
 	useAuthStore,
+	useEditorStore,
 	useRemoteVaultStore,
 	useSyncStore,
 	useUIStore,
 	useVaultStore,
 } from "@cortex/core"
 import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@cortex/ui"
+import {
 	AlertTriangleIcon,
 	CheckCircleIcon,
 	CloudIcon,
 	CloudOffIcon,
+	HistoryIcon,
 	LinkIcon,
 	LoaderIcon,
 	LockIcon,
 	RefreshCwIcon,
+	ScrollTextIcon,
+	Trash2Icon,
 } from "lucide-react"
 import { useState } from "react"
+import { DeletedNotesPanel } from "./DeletedNotesPanel"
+import { NoteHistoryPanel } from "./NoteHistoryPanel"
 import { SyncLogsModal } from "./SyncLogsModal"
 import { VaultLinkModal } from "./VaultLinkModal"
 
@@ -34,11 +47,15 @@ export function SyncIndicator() {
 	const vault = useVaultStore((s) => s.vault)
 	const linkedVaultId = useRemoteVaultStore((s) => s.linkedVaultId)
 	const openSettings = useUIStore((s) => s.openSettings)
+	const activeFilePath = useEditorStore((s) => s.activeFilePath)
 	const activeSyncCount = Object.values(syncingFiles).filter((s) => !s.startsWith("error:")).length
 	const [unlockModalOpen, setUnlockModalOpen] = useState(false)
 	const [logsOpen, setLogsOpen] = useState(false)
+	const [deletedNotesOpen, setDeletedNotesOpen] = useState(false)
+	const [historyFilePath, setHistoryFilePath] = useState<string | null>(null)
 
 	const hasAuth = authenticated || selfHosted
+	const isSyncActive = engineState !== "idle" && linkedVaultId
 
 	if (vekRequired) {
 		return (
@@ -52,38 +69,6 @@ export function SyncIndicator() {
 					<span>Unlock Required</span>
 				</button>
 				<VaultLinkModal open={unlockModalOpen} onOpenChange={setUnlockModalOpen} unlockMode />
-			</>
-		)
-	}
-
-	if (engineState === "denied") {
-		return (
-			<>
-				<button
-					type="button"
-					className="statusbar-item flex items-center gap-1.5 cursor-pointer text-destructive hover:opacity-80"
-					onClick={() => setLogsOpen(true)}
-				>
-					<AlertTriangleIcon className="w-3 h-3" />
-					<span>Access Denied</span>
-				</button>
-				<SyncLogsModal open={logsOpen} onOpenChange={setLogsOpen} />
-			</>
-		)
-	}
-
-	if (error && engineState !== "live" && engineState !== "idle") {
-		return (
-			<>
-				<button
-					type="button"
-					className="statusbar-item flex items-center gap-1.5 cursor-pointer text-destructive hover:opacity-80"
-					onClick={() => setLogsOpen(true)}
-				>
-					<AlertTriangleIcon className="w-3 h-3" />
-					<span>Sync Error</span>
-				</button>
-				<SyncLogsModal open={logsOpen} onOpenChange={setLogsOpen} />
 			</>
 		)
 	}
@@ -103,68 +88,166 @@ export function SyncIndicator() {
 
 	if (engineState === "idle") return null
 
-	const renderSyncButton = (children: React.ReactNode) => (
+	const statusContent = buildStatusContent({
+		engineState,
+		error,
+		initialSyncProgress,
+		initialSyncComplete,
+		activeSyncCount,
+		lastSyncedAt,
+	})
+
+	if (!statusContent) return null
+
+	return (
 		<>
-			<button
-				type="button"
-				className="statusbar-item flex items-center gap-1.5 cursor-pointer hover:opacity-80"
-				onClick={() => setLogsOpen(true)}
-			>
-				{children}
-			</button>
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<button
+						type="button"
+						className={`statusbar-item flex items-center gap-1.5 cursor-pointer hover:opacity-80 ${statusContent.className ?? ""}`}
+					>
+						{statusContent.content}
+					</button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end" side="top" className="min-w-[180px]">
+					<DropdownMenuItem onSelect={() => setLogsOpen(true)} className="gap-2 text-xs">
+						<ScrollTextIcon className="w-3.5 h-3.5" />
+						Sync Logs
+					</DropdownMenuItem>
+					{isSyncActive && (
+						<>
+							<DropdownMenuSeparator />
+							{activeFilePath && (
+								<DropdownMenuItem
+									onSelect={() => setHistoryFilePath(activeFilePath)}
+									className="gap-2 text-xs"
+								>
+									<HistoryIcon className="w-3.5 h-3.5" />
+									Version History
+								</DropdownMenuItem>
+							)}
+							<DropdownMenuItem
+								onSelect={() => setDeletedNotesOpen(true)}
+								className="gap-2 text-xs"
+							>
+								<Trash2Icon className="w-3.5 h-3.5" />
+								Deleted Notes
+							</DropdownMenuItem>
+						</>
+					)}
+				</DropdownMenuContent>
+			</DropdownMenu>
+
 			<SyncLogsModal open={logsOpen} onOpenChange={setLogsOpen} />
+			<DeletedNotesPanel open={deletedNotesOpen} onOpenChange={setDeletedNotesOpen} />
+			<NoteHistoryPanel
+				filePath={historyFilePath ?? ""}
+				open={historyFilePath !== null}
+				onOpenChange={(open) => {
+					if (!open) setHistoryFilePath(null)
+				}}
+			/>
 		</>
 	)
+}
+
+interface StatusContentResult {
+	content: React.ReactNode
+	className?: string
+}
+
+function buildStatusContent(params: {
+	engineState: string
+	error: string | null
+	initialSyncProgress: { total: number; completed: number } | null
+	initialSyncComplete: boolean
+	activeSyncCount: number
+	lastSyncedAt: number | null
+}): StatusContentResult | null {
+	const {
+		engineState,
+		error,
+		initialSyncProgress,
+		initialSyncComplete,
+		activeSyncCount,
+		lastSyncedAt,
+	} = params
+
+	if (engineState === "denied") {
+		return {
+			className: "text-destructive",
+			content: (
+				<>
+					<AlertTriangleIcon className="w-3 h-3" />
+					<span>Access Denied</span>
+				</>
+			),
+		}
+	}
+
+	if (error && engineState !== "live" && engineState !== "idle") {
+		return {
+			className: "text-destructive",
+			content: (
+				<>
+					<AlertTriangleIcon className="w-3 h-3" />
+					<span>Sync Error</span>
+				</>
+			),
+		}
+	}
 
 	if (initialSyncProgress && !initialSyncComplete) {
 		const { total, completed } = initialSyncProgress
 		const label = total > 0 ? `Syncing ${completed}/${total} files...` : "Syncing..."
-		return renderSyncButton(
-			<>
-				<CloudIcon className="w-3.5 h-3.5" />
-				<LoaderIcon className="w-3 h-3 animate-spin" />
-				<span>{label}</span>
-			</>,
-		)
+		return {
+			content: (
+				<>
+					<CloudIcon className="w-3.5 h-3.5" />
+					<LoaderIcon className="w-3 h-3 animate-spin" />
+					<span>{label}</span>
+				</>
+			),
+		}
 	}
 
 	if (activeSyncCount > 0) {
-		return renderSyncButton(
-			<>
-				<LoaderIcon className="w-3 h-3 animate-spin" />
-				<span>Syncing {activeSyncCount} file(s)...</span>
-			</>,
-		)
+		return {
+			content: (
+				<>
+					<LoaderIcon className="w-3 h-3 animate-spin" />
+					<span>Syncing {activeSyncCount} file(s)...</span>
+				</>
+			),
+		}
 	}
 
 	const isPollingActive = engineState === "offline" && lastSyncedAt !== null
 
 	const stateConfig = {
-		connecting: { icon: RefreshCwIcon, label: "Connecting...", className: "animate-spin" },
-		authenticating: {
-			icon: RefreshCwIcon,
-			label: "Authenticating...",
-			className: "animate-spin",
-		},
-		syncing: { icon: LoaderIcon, label: "Syncing...", className: "animate-spin" },
-		live: { icon: CheckCircleIcon, label: "Synced", className: "" },
+		connecting: { icon: RefreshCwIcon, label: "Connecting...", iconClass: "animate-spin" },
+		authenticating: { icon: RefreshCwIcon, label: "Authenticating...", iconClass: "animate-spin" },
+		syncing: { icon: LoaderIcon, label: "Syncing...", iconClass: "animate-spin" },
+		live: { icon: CheckCircleIcon, label: "Synced", iconClass: "" },
 		offline: {
 			icon: isPollingActive ? CheckCircleIcon : CloudOffIcon,
 			label: isPollingActive ? "Synced" : "Offline",
-			className: "",
+			iconClass: "",
 		},
-		recovering: { icon: RefreshCwIcon, label: "Recovering...", className: "animate-spin" },
+		recovering: { icon: RefreshCwIcon, label: "Recovering...", iconClass: "animate-spin" },
 	} as const
 
 	const config = stateConfig[engineState as keyof typeof stateConfig]
 	if (!config) return null
 
 	const Icon = config.icon
-
-	return renderSyncButton(
-		<>
-			<Icon className={`w-3 h-3 ${config.className}`} />
-			<span>{config.label}</span>
-		</>,
-	)
+	return {
+		content: (
+			<>
+				<Icon className={`w-3 h-3 ${config.iconClass}`} />
+				<span>{config.label}</span>
+			</>
+		),
+	}
 }

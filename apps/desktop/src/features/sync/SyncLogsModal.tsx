@@ -71,7 +71,7 @@ function SyncLogsContent() {
 	}
 
 	return (
-		<DialogContent className="sm:max-w-2xl flex flex-col gap-0 p-0 overflow-hidden">
+		<DialogContent className="sm:max-w-3xl flex flex-col gap-0 p-0 overflow-hidden">
 			<DialogHeader className="px-4 pt-4 pb-3">
 				<DialogTitle className="text-sm font-medium">Sync Logs</DialogTitle>
 				<DialogDescription className="sr-only">

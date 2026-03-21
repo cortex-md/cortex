@@ -5,7 +5,7 @@ use tokio::sync::mpsc;
 use crate::sync::conflict::{ConflictInfo, ConflictResolver};
 use crate::sync::crypto;
 use crate::sync::db::SyncDb;
-use crate::sync::downloader::{Downloader, VersionInfo};
+use crate::sync::downloader::{DeletedFileInfo, Downloader, VersionInfo};
 use crate::sync::http::SyncHttpClient;
 use crate::sync::state::{ConflictResolution, SyncCommand};
 
@@ -149,6 +149,37 @@ pub async fn sync_download_version(
     let downloader = Downloader::new(&client, &db, &vault_id, &vault_path, &vek);
     let bytes = downloader.download_version(&file_path, &version).await?;
     String::from_utf8(bytes).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_list_deleted_files(
+    app: AppHandle,
+    vault_id: String,
+    vault_path: String,
+) -> Result<Vec<DeletedFileInfo>, String> {
+    let client = app.try_state::<SyncHttpClient>().ok_or("No HTTP client")?;
+    let db = SyncDb::open(&vault_path)?;
+    let vek = crate::sync::crypto::load_vek(&vault_id)?
+        .ok_or("Vault encryption key not available. Unlock the vault first.")?;
+
+    let downloader = Downloader::new(&client, &db, &vault_id, &vault_path, &vek);
+    downloader.list_deleted_files().await
+}
+
+#[tauri::command]
+pub async fn sync_restore_deleted_file(
+    app: AppHandle,
+    vault_id: String,
+    vault_path: String,
+    file_path: String,
+) -> Result<(), String> {
+    let client = app.try_state::<SyncHttpClient>().ok_or("No HTTP client")?;
+    let db = SyncDb::open(&vault_path)?;
+    let vek = crate::sync::crypto::load_vek(&vault_id)?
+        .ok_or("Vault encryption key not available. Unlock the vault first.")?;
+
+    let downloader = Downloader::new(&client, &db, &vault_id, &vault_path, &vek);
+    downloader.restore_deleted_file(&file_path).await
 }
 
 #[tauri::command]

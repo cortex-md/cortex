@@ -469,17 +469,22 @@ export default function App() {
 
 	useEffect(() => {
 		if (autoOpenAttempted.current || vault) return
-		autoOpenAttempted.current = true
 
 		const params = new URLSearchParams(window.location.search)
 		const vaultFromUrl = params.get("vault")
 		if (vaultFromUrl) {
+			autoOpenAttempted.current = true
 			openVault(decodeURIComponent(vaultFromUrl))
 			return
 		}
 
 		if (recentVaults.length === 0) return
-		if (!settings.general.autoOpenLastVault) return
+		if (!settings.general.autoOpenLastVault) {
+			autoOpenAttempted.current = true
+			return
+		}
+
+		autoOpenAttempted.current = true
 		const lastVault = recentVaults[0]
 		openVault(lastVault.path, { name: lastVault.name })
 	}, [recentVaults, vault, settings.general.autoOpenLastVault, openVault])

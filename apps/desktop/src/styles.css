@@ -551,6 +551,17 @@ body {
 	border-bottom: 2px solid var(--tab-accent) !important;
 }
 
+.tab-trigger {
+	/* biome-ignore lint/complexity/noImportantStyles: override shadcn flex-1 default */
+	flex: 0 1 auto !important;
+	max-width: 200px;
+	min-width: 80px;
+}
+
+.tab-close-btn[data-active] {
+	opacity: 1;
+}
+
 /* ─── Split Pane ────────────────────────────────────────────────────────── */
 
 .split-leaf {

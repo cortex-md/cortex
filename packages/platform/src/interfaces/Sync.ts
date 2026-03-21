@@ -53,6 +53,17 @@ export interface VersionInfo {
 	createdAt: string | null
 }
 
+export interface DeletedFileInfo {
+	filePath: string
+	version: number
+	sizeBytes: number | null
+	checksum: string | null
+	contentType: string | null
+	deletedAt: string | null
+	lastModifiedBy: string | null
+	lastDeviceId: string | null
+}
+
 export interface VaultEncryptionStatus {
 	hasKey: boolean
 }
@@ -89,6 +100,8 @@ export interface Sync {
 		filePath: string,
 		version: string,
 	): Promise<void>
+	listDeletedFiles(vaultId: string, vaultPath: string): Promise<DeletedFileInfo[]>
+	restoreDeletedFile(vaultId: string, vaultPath: string, filePath: string): Promise<void>
 	onStateChanged(callback: (event: SyncStateEvent) => void): Promise<() => void>
 	onFileEvent(callback: (event: SyncFileEvent) => void): Promise<() => void>
 	onInitialSyncProgress(callback: (event: InitialSyncProgressEvent) => void): Promise<() => void>

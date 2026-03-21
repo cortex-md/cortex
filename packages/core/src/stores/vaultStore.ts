@@ -47,7 +47,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 			await platform.vault.updateVaultRegistry(
 				metadata.uuid,
 				metadata.path,
-				options?.name ?? metadata.path,
+				options?.name ?? metadata.name,
 				options?.icon,
 				options?.color,
 			)

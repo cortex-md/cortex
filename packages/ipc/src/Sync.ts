@@ -1,6 +1,7 @@
 import type {
 	ConflictInfo,
 	ConflictResolution,
+	DeletedFileInfo,
 	InitialSyncProgressEvent,
 	Sync as ISync,
 	SyncConflictEvent,
@@ -111,6 +112,21 @@ export class Sync implements ISync {
 			vaultPath,
 			filePath,
 			version,
+		})
+	}
+
+	async listDeletedFiles(vaultId: string, vaultPath: string): Promise<DeletedFileInfo[]> {
+		return await invoke<DeletedFileInfo[]>("sync_list_deleted_files", {
+			vaultId,
+			vaultPath,
+		})
+	}
+
+	async restoreDeletedFile(vaultId: string, vaultPath: string, filePath: string): Promise<void> {
+		await invoke<void>("sync_restore_deleted_file", {
+			vaultId,
+			vaultPath,
+			filePath,
 		})
 	}
 

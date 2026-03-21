@@ -30,6 +30,7 @@ export type { Storage } from "./interfaces/Storage"
 export type {
 	ConflictInfo,
 	ConflictResolution,
+	DeletedFileInfo,
 	InitialSyncProgressEvent,
 	Sync,
 	SyncConflictEvent,

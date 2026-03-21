@@ -1,5 +1,11 @@
 import type { Pane, Tab } from "@cortex/core"
-import { noteCache, useEditorStore, useTagsStore, useWorkspaceStore } from "@cortex/core"
+import {
+	noteCache,
+	useEditorStore,
+	useRemoteVaultStore,
+	useTagsStore,
+	useWorkspaceStore,
+} from "@cortex/core"
 import type { CursorInfo, EditorConfig } from "@cortex/editor"
 import { EditorView, ReadingView, SideBySideView } from "@cortex/editor"
 import { getPlatform } from "@cortex/platform"
@@ -14,12 +20,21 @@ import {
 	DropdownMenuShortcut,
 	Kbd,
 } from "@cortex/ui"
-import { ClipboardCopyIcon, FolderIcon, PinIcon, PinOffIcon, TagIcon, XIcon } from "lucide-react"
+import {
+	ClipboardCopyIcon,
+	FolderIcon,
+	HistoryIcon,
+	PinIcon,
+	PinOffIcon,
+	TagIcon,
+	XIcon,
+} from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { MenuItem } from "@/utils/context-menu"
 import { NativeMenuActions } from "@/utils/context-menu"
 
 import { ConflictBanner } from "../sync/ConflictBanner"
+import { NoteHistoryPanel } from "../sync/NoteHistoryPanel"
 import { TabBar } from "../tabs/TabBar"
 
 const hasNativeMenu = () => getPlatform().capabilities.includes("menu")
@@ -198,11 +213,13 @@ export function PaneView({ paneId }: Props) {
 	const paneActiveTabId = rawPane?.activeTabId ?? null
 	const pane: Pane | null = rawPane ? { ...rawPane, activeTabId: paneActiveTabId } : null
 
+	const linkedVaultId = useRemoteVaultStore((s) => s.linkedVaultId)
 	const [fallbackMenu, setFallbackMenu] = useState<{
 		tabId: string
 		x: number
 		y: number
 	} | null>(null)
+	const [historyFilePath, setHistoryFilePath] = useState<string | null>(null)
 
 	useEffect(() => {
 		if (paneId !== activePaneId || !pane?.activeTabId) return
@@ -250,6 +267,14 @@ export function PaneView({ paneId }: Props) {
 		[pane],
 	)
 
+	const handleViewHistory = useCallback(
+		(tabId: string) => {
+			const tab = pane?.tabs.find((t) => t.id === tabId)
+			if (tab) setHistoryFilePath(tab.filePath)
+		},
+		[pane],
+	)
+
 	const handleTabContextMenu = useCallback(
 		(tabId: string, event: React.MouseEvent) => {
 			event.preventDefault()
@@ -292,6 +317,16 @@ export function PaneView({ paneId }: Props) {
 						text: "Reveal in Finder",
 						action: () => handleReveal(tabId),
 					},
+					...(linkedVaultId
+						? [
+								{ type: "separator" } as MenuItem,
+								{
+									id: "version-history",
+									text: "Version History",
+									action: () => handleViewHistory(tabId),
+								} as MenuItem,
+							]
+						: []),
 				]
 
 				nativeMenu.showContextMenu({
@@ -307,10 +342,12 @@ export function PaneView({ paneId }: Props) {
 			closeTab,
 			paneId,
 			pinTab,
+			linkedVaultId,
 			handleCloseOthers,
 			handleCloseToRight,
 			handleCopyPath,
 			handleReveal,
+			handleViewHistory,
 		],
 	)
 
@@ -393,6 +430,15 @@ export function PaneView({ paneId }: Props) {
 							<FolderIcon />
 							Reveal in Finder
 						</DropdownMenuItem>
+						{linkedVaultId && (
+							<>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem onSelect={() => handleViewHistory(fallbackTab.id)}>
+									<HistoryIcon />
+									Version History
+								</DropdownMenuItem>
+							</>
+						)}
 					</DropdownMenuContent>
 				</DropdownMenu>
 			)}
@@ -427,6 +473,14 @@ export function PaneView({ paneId }: Props) {
 					))
 				)}
 			</div>
+
+			<NoteHistoryPanel
+				filePath={historyFilePath ?? ""}
+				open={historyFilePath !== null}
+				onOpenChange={(open) => {
+					if (!open) setHistoryFilePath(null)
+				}}
+			/>
 		</div>
 	)
 }

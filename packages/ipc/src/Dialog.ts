@@ -1,6 +1,6 @@
 import type { Dialog as IDialog } from "@cortex/platform"
 import { confirm, message, open } from "@tauri-apps/plugin-dialog"
-import { openPath } from "@tauri-apps/plugin-opener"
+import { revealItemInDir } from "@tauri-apps/plugin-opener"
 
 export class Dialog implements IDialog {
 	async pickFolder(_title?: string): Promise<string | null> {
@@ -18,6 +18,6 @@ export class Dialog implements IDialog {
 	}
 
 	async revealFolder(path: string): Promise<void> {
-		await openPath(path)
+		await revealItemInDir(path)
 	}
 }

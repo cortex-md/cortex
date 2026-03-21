@@ -245,6 +245,81 @@ impl<'a> Downloader<'a> {
         Ok(())
     }
 
+    pub async fn list_deleted_files(&self) -> Result<Vec<DeletedFileInfo>, String> {
+        let api_path = format!(
+            "/sync/v1/vaults/{}/files/list?include_deleted=true",
+            self.vault_id
+        );
+
+        let response = self.client.get(&api_path).await?;
+        if !response.status().is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(format!("List files failed: {}", body));
+        }
+
+        let entries: Vec<RemoteFileListEntry> =
+            response.json().await.map_err(|e| e.to_string())?;
+
+        let deleted = entries
+            .into_iter()
+            .filter(|e| e.deleted.unwrap_or(false))
+            .map(|e| DeletedFileInfo {
+                file_path: e.file_path,
+                version: e.version.unwrap_or(0),
+                size_bytes: e.size_bytes,
+                checksum: e.checksum,
+                content_type: e.content_type,
+                deleted_at: e.updated_at,
+                last_modified_by: e.last_modified_by,
+                last_device_id: e.last_device_id,
+            })
+            .collect();
+
+        Ok(deleted)
+    }
+
+    pub async fn restore_deleted_file(&self, file_path: &str) -> Result<(), String> {
+        let api_path = format!(
+            "/sync/v1/vaults/{}/files/restore?path={}",
+            self.vault_id,
+            urlencoded(file_path)
+        );
+
+        let empty: serde_json::Value = serde_json::json!({});
+        let response = self.client.post_json(&api_path, &empty).await?;
+        if !response.status().is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(format!("Restore file failed: {}", body));
+        }
+
+        let content = self.download_version(file_path, "0").await?;
+        let full_path = Path::new(self.vault_path).join(file_path);
+        if let Some(parent) = full_path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        std::fs::write(&full_path, &content).map_err(|e| e.to_string())?;
+
+        let hash = blake3::hash(&content).to_hex().to_string();
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+
+        self.db.upsert_sync_state(&SyncState {
+            file_path: file_path.to_string(),
+            local_hash: Some(hash.clone()),
+            remote_hash: Some(hash.clone()),
+            ancestor_hash: Some(hash),
+            local_mtime: Some(now),
+            remote_mtime: Some(now),
+            sync_status: "synced".to_string(),
+            last_synced_at: Some(now),
+            server_version_id: None,
+        })?;
+
+        Ok(())
+    }
+
     pub async fn rename_local_file(&self, old_path: &str, new_path: &str) -> Result<(), String> {
         let old_full = Path::new(self.vault_path).join(old_path);
         let new_full = Path::new(self.vault_path).join(new_path);
@@ -263,6 +338,33 @@ impl<'a> Downloader<'a> {
 
         Ok(())
     }
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+struct RemoteFileListEntry {
+    file_path: String,
+    version: Option<u64>,
+    size_bytes: Option<u64>,
+    checksum: Option<String>,
+    content_type: Option<String>,
+    deleted: Option<bool>,
+    updated_at: Option<String>,
+    last_modified_by: Option<String>,
+    last_device_id: Option<String>,
+}
+
+#[derive(Debug, serde::Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DeletedFileInfo {
+    pub file_path: String,
+    pub version: u64,
+    pub size_bytes: Option<u64>,
+    pub checksum: Option<String>,
+    pub content_type: Option<String>,
+    pub deleted_at: Option<String>,
+    pub last_modified_by: Option<String>,
+    pub last_device_id: Option<String>,
 }
 
 pub enum DownloadResult {

@@ -11,7 +11,7 @@ import {
 	Separator,
 	Spinner,
 } from "@cortex/ui"
-import { Clock, Monitor, RotateCcw, Tag, User } from "lucide-react"
+import { Clock, RotateCcw, User } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 
 interface DiffLine {
@@ -117,22 +117,15 @@ interface VersionRowProps {
 
 function VersionRow({ version, isSelected, isLatest, onSelect }: VersionRowProps) {
 	return (
-		<button
-			type="button"
+		<Button
+			variant={"ghost"}
 			onClick={onSelect}
-			className={`w-full text-left px-3 py-2.5 rounded-md transition-colors flex flex-col gap-0.5 ${
-				isSelected ? "bg-accent/10 border border-accent/30" : "hover:bg-bg-secondary"
-			}`}
+			className={`flex flex-col items-start w-full h-16 ${isSelected ? "bg-accent! border-none" : ""}`}
 		>
 			<div className="flex items-center gap-2">
 				<User size={12} className="text-text-muted shrink-0" />
 				<span className="text-xs font-medium text-text-primary flex-1 truncate">
 					{version.authorName ?? "Unknown"}
-				</span>
-			</div>
-			<div className="flex items-center gap-2 pl-5">
-				<span className="flex items-center gap-1 text-[11px] text-text-muted">
-					<Tag size={10} />v{version.version}
 				</span>
 				{isLatest && (
 					<Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4">
@@ -140,19 +133,12 @@ function VersionRow({ version, isSelected, isLatest, onSelect }: VersionRowProps
 					</Badge>
 				)}
 			</div>
-			<div className="flex items-center gap-3 pl-5">
-				<span className="flex items-center gap-1 text-[11px] text-text-muted">
-					<Clock size={10} />
-					{formatVersionDate(version.createdAt)}
-				</span>
-				{(version.deviceName ?? version.deviceId) && (
-					<span className="flex items-center gap-1 text-[11px] text-text-muted">
-						<Monitor size={10} />
-						{version.deviceName ?? version.deviceId?.slice(0, 8)}
-					</span>
-				)}
-			</div>
-		</button>
+			<div className="flex items-center gap-2 pl-5"></div>
+			<span className="flex items-center gap-1 text-[11px] text-text-muted">
+				<Clock size={10} />
+				{formatVersionDate(version.createdAt)}
+			</span>
+		</Button>
 	)
 }
 

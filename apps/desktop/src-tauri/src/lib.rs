@@ -47,6 +47,8 @@ pub fn run() {
             commands::sync::sync_get_version_history,
             commands::sync::sync_restore_version,
             commands::sync::sync_download_version,
+            commands::sync::sync_list_deleted_files,
+            commands::sync::sync_restore_deleted_file,
             commands::sync::sync_update_preferences,
             commands::sync::sync_check_vault_encryption,
             commands::sync::sync_create_vault_key,

@@ -1,6 +1,7 @@
 import type {
 	ConflictInfo,
 	ConflictResolution,
+	DeletedFileInfo,
 	InitialSyncProgressEvent,
 	SyncEngineState,
 	SyncPreferences,
@@ -54,6 +55,8 @@ export interface SyncState {
 		filePath: string,
 		version: string,
 	) => Promise<void>
+	listDeletedFiles: (vaultId: string, vaultPath: string) => Promise<DeletedFileInfo[]>
+	restoreDeletedFile: (vaultId: string, vaultPath: string, filePath: string) => Promise<void>
 	checkVaultEncryption: (vaultId: string) => Promise<VaultEncryptionStatus>
 	createVaultKey: (vaultId: string, password: string) => Promise<void>
 	unlockVaultKey: (vaultId: string, password: string) => Promise<void>
@@ -264,6 +267,18 @@ export const useSyncStore = create<SyncState>()(
 						state.error = String(e)
 					})
 				}
+			},
+
+			listDeletedFiles: async (vaultId, vaultPath) => {
+				const platform = getPlatform()
+				return platform.sync.listDeletedFiles(vaultId, vaultPath)
+			},
+
+			restoreDeletedFile: async (vaultId, vaultPath, filePath) => {
+				const platform = getPlatform()
+				await platform.sync.restoreDeletedFile(vaultId, vaultPath, filePath)
+				const { useVaultStore } = await import("./vaultStore")
+				useVaultStore.getState().refreshFiles()
 			},
 
 			checkVaultEncryption: async (vaultId) => {
