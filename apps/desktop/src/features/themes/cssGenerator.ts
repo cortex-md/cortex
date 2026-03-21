@@ -1,4 +1,4 @@
-import type { Theme } from "./types"
+import type { Theme } from "@cortex/theme"
 
 export function generateCSSVariables(theme: Theme): Record<string, string> {
 	const vars: Record<string, string> = {}
@@ -145,6 +145,29 @@ export function generateCSSVariables(theme: Theme): Record<string, string> {
 	vars["--sidebar-accent"] = t.semantic.accent.subtle
 	vars["--sidebar-accent-foreground"] = t.semantic.accent.text
 	vars["--sidebar-ring"] = t.semantic.accent.default
+
+	vars["--tag-bg"] = t.tag.bg
+	vars["--tag-active-bg"] = t.tag.activeBg
+	vars["--tag-text"] = t.tag.text
+	vars["--tag-active-text"] = t.tag.activeText
+	vars["--tag-font-size"] = t.tag.fontSize
+	vars["--tag-font-weight"] = t.tag.fontWeight
+	vars["--tag-border-radius"] = t.tag.borderRadius
+	vars["--tag-padding"] = t.tag.padding
+
+	vars["--heading-font-weight"] = t.heading.fontWeight
+	vars["--h1-font-size"] = t.heading.h1FontSize
+	vars["--h2-font-size"] = t.heading.h2FontSize
+	vars["--h3-font-size"] = t.heading.h3FontSize
+	vars["--h4-font-size"] = t.heading.h4FontSize
+	vars["--h5-font-size"] = t.heading.h5FontSize
+	vars["--h6-font-size"] = t.heading.h6FontSize
+
+	vars["--radius"] = t.sizing.radius
+	vars["--ui-font-size"] = t.sizing.uiFontSize
+	vars["--editor-font-size"] = t.sizing.editorFontSize
+	vars["--editor-line-height"] = t.sizing.editorLineHeight
+	vars["--editor-paragraph-spacing"] = t.sizing.editorParagraphSpacing
 
 	return vars
 }

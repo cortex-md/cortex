@@ -1,8 +1,7 @@
 import type { ThemeAdapter } from "./adapter"
-import { generateCSSString, generateCSSVariables } from "./cssGenerator"
 import { inkTheme } from "./themes/ink"
 import { paperTheme } from "./themes/paper"
-import type { Theme, ThemeFamily, ThemeName, ThemeTokens } from "./types"
+import type { CSSGenerator, Theme, ThemeFamily, ThemeName, ThemeTokens } from "./types"
 
 const DEFAULT_FAMILY: ThemeFamily = {
 	name: "default",
@@ -17,9 +16,15 @@ export class ThemeManager {
 	private activeTheme: Theme
 	private listeners: Set<(theme: Theme) => void> = new Set()
 	private adapter: ThemeAdapter | null
+	private cssGenerator: CSSGenerator | null
 
-	constructor(initialTheme: ThemeName = "ink", adapter: ThemeAdapter | null = null) {
+	constructor(
+		initialTheme: ThemeName = "ink",
+		adapter: ThemeAdapter | null = null,
+		cssGenerator: CSSGenerator | null = null,
+	) {
 		this.adapter = adapter
+		this.cssGenerator = cssGenerator
 		this.themes.set("paper", paperTheme)
 		this.themes.set("ink", inkTheme)
 		this.families.set("default", DEFAULT_FAMILY)
@@ -60,13 +65,15 @@ export class ThemeManager {
 	}
 
 	getCSSVariables(themeName?: ThemeName): Record<string, string> {
+		if (!this.cssGenerator) return {}
 		const theme = themeName ? this.themes.get(themeName) : this.activeTheme
-		return theme ? generateCSSVariables(theme) : {}
+		return theme ? this.cssGenerator.generateCSSVariables(theme) : {}
 	}
 
 	injectAllThemes(): void {
+		if (!this.cssGenerator) return
 		for (const theme of this.themes.values()) {
-			const cssString = generateCSSString(theme)
+			const cssString = this.cssGenerator.generateCSSString(theme)
 			this.adapter?.injectCSS(cssString, theme.name)
 		}
 	}
@@ -83,7 +90,6 @@ export class ThemeManager {
 			displayName: `${family.displayName} Dark`,
 			isDark: true,
 			tokens: {} as ThemeTokens,
-			cssVariables: {},
 		})
 
 		this.themes.set(family.lightTheme, {
@@ -91,7 +97,6 @@ export class ThemeManager {
 			displayName: `${family.displayName} Light`,
 			isDark: false,
 			tokens: {} as ThemeTokens,
-			cssVariables: {},
 		})
 
 		for (const listener of this.listeners) listener(this.activeTheme)
@@ -143,9 +148,10 @@ export function getThemeManager(): ThemeManager {
 export function initThemeManager(
 	initialTheme: ThemeName = "ink",
 	adapter: ThemeAdapter | null = null,
+	cssGenerator: CSSGenerator | null = null,
 ): ThemeManager {
 	if (!instance) {
-		instance = new ThemeManager(initialTheme, adapter)
+		instance = new ThemeManager(initialTheme, adapter, cssGenerator)
 		instance.injectAllThemes()
 		adapter?.applyTheme(initialTheme)
 	}

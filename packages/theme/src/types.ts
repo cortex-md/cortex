@@ -24,6 +24,11 @@ export interface ThemeFamily {
 	lightTheme: string
 }
 
+export interface CSSGenerator {
+	generateCSSString(theme: Theme): string
+	generateCSSVariables(theme: Theme): Record<string, string>
+}
+
 export interface ThemeTokens {
 	primitive: {
 		stone: Record<string, string>
@@ -128,6 +133,32 @@ export interface ThemeTokens {
 		shadowFloating: string
 		shadowOverlay: string
 	}
+	tag: {
+		bg: string
+		activeBg: string
+		text: string
+		activeText: string
+		fontSize: string
+		fontWeight: string
+		borderRadius: string
+		padding: string
+	}
+	heading: {
+		fontWeight: string
+		h1FontSize: string
+		h2FontSize: string
+		h3FontSize: string
+		h4FontSize: string
+		h5FontSize: string
+		h6FontSize: string
+	}
+	sizing: {
+		radius: string
+		uiFontSize: string
+		editorFontSize: string
+		editorLineHeight: string
+		editorParagraphSpacing: string
+	}
 	colorScheme: "light" | "dark"
 }
 
@@ -136,7 +167,6 @@ export interface Theme {
 	displayName: string
 	isDark: boolean
 	tokens: ThemeTokens
-	cssVariables: Record<string, string>
 }
 
 export interface ThemeTokenMap {

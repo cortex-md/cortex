@@ -1,4 +1,4 @@
-import type { ThemeAdapter } from "./adapter"
+import type { ThemeAdapter } from "@cortex/theme"
 
 const THEME_CLASS_REGEX = /theme-\w+/g
 const OVERRIDE_STYLE_ID = "cortex-theme-overrides"
