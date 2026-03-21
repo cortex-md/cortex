@@ -1,4 +1,4 @@
-import { EditorState } from "@codemirror/state"
+import { EditorState, type Extension } from "@codemirror/state"
 import { EditorView as CMEditorView } from "@codemirror/view"
 import { useEffect, useRef } from "react"
 import {
@@ -20,6 +20,7 @@ interface Props {
 	filePath: string
 	editorConfig?: EditorConfig
 	livePreview?: boolean
+	extraExtensions?: Extension[]
 	onChange: (content: string) => void
 	onCursorChange?: (cursor: CursorInfo) => void
 	onViewReady?: (view: CMEditorView) => void
@@ -30,6 +31,7 @@ export function EditorView({
 	filePath,
 	editorConfig = DEFAULT_EDITOR_CONFIG,
 	livePreview = true,
+	extraExtensions,
 	onChange,
 	onCursorChange,
 	onViewReady,
@@ -56,6 +58,7 @@ export function EditorView({
 				doc: content,
 				extensions: [
 					...baseExtensions(syntaxTokens, editorConfigRef.current, { livePreview }),
+					...(extraExtensions ?? []),
 					CMEditorView.updateListener.of((update) => {
 						if (update.docChanged) {
 							onChangeRef.current(update.state.doc.toString())

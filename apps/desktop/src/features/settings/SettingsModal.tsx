@@ -1,6 +1,7 @@
-import { useUIStore } from "@cortex/core"
+import { useUIStore, useVaultStore } from "@cortex/core"
 import { getPluginInstance, PluginSettingsRenderer, usePluginStore } from "@cortex/plugin-runtime"
 import { useSettingsStore } from "@cortex/settings"
+import type { FolderPickerOption } from "@cortex/ui"
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -23,7 +24,7 @@ import {
 	SidebarProvider,
 } from "@cortex/ui"
 import { Blocks, Keyboard, Palette, RefreshCw, Settings, Type } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { AppearanceSection } from "./AppearanceSettings"
 import { EditorSection } from "./EditorSettings"
 import { GeneralSection } from "./GeneralSettings"
@@ -53,6 +54,19 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 	const pluginSettingsSchemas = usePluginStore((s) => s.settingsSchemas)
 
 	const [pluginSettingsValues, setPluginSettingsValues] = useState<Record<string, unknown>>({})
+
+	const files = useVaultStore((s) => s.files)
+	const vault = useVaultStore((s) => s.vault)
+
+	const vaultFolders: FolderPickerOption[] = useMemo(() => {
+		if (!vault?.path) return []
+		return files
+			.filter((f) => f.isDir && !f.name.startsWith("."))
+			.map((f) => {
+				const relative = f.path.replace(`${vault.path}/`, "")
+				return { value: relative, label: `${relative}/`, isDir: true }
+			})
+	}, [files, vault?.path])
 
 	useEffect(() => {
 		if (open && settingsInitialSection) {
@@ -147,7 +161,11 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 								<AppearanceSection settings={settings.appearance} onUpdate={updateSetting} />
 							)}
 							{activeSectionId === "editor" && (
-								<EditorSection settings={settings.editor} onUpdate={updateSetting} />
+								<EditorSection
+									settings={settings.editor}
+									onUpdate={updateSetting}
+									vaultFolders={vaultFolders}
+								/>
 							)}
 							{activeSectionId === "hotkeys" && <HotkeysSection />}
 							{activeSectionId === "sync" && <SyncSection />}

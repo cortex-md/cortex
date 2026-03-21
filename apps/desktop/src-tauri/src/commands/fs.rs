@@ -26,6 +26,14 @@ pub fn write_file(path: String, content: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn write_binary_file(path: String, data: Vec<u8>) -> Result<(), String> {
+    if let Some(parent) = Path::new(&path).parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    fs::write(&path, data).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn delete_file(path: String) -> Result<(), String> {
     let p = Path::new(&path);
     if p.is_dir() {

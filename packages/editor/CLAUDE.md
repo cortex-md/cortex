@@ -15,6 +15,7 @@ packages/editor/
     languages.ts                # Language support (markdown, JS, Python, etc.)
     ReadingView.tsx             # Read-only rendered markdown view
     SideBySideView.tsx          # Side-by-side editor + preview
+    clipboardImage.ts           # Clipboard image paste CM6 extension
     livePreview/
       index.ts                  # Composes all live preview plugins
       utils.ts                  # isCursorInRange, isCursorOnLine helpers
@@ -33,7 +34,8 @@ packages/editor/
 
 ## Key Exports
 
-- `EditorView` — React component (props: content, filePath, editorConfig, livePreview, onChange, onCursorChange, onViewReady)
+- `EditorView` — React component (props: content, filePath, editorConfig, livePreview, extraExtensions, onChange, onCursorChange, onViewReady)
+- `clipboardImageExtension(onImagePaste)` — CM6 extension that intercepts paste events with clipboard images, calls the callback with the Blob and inserts the returned markdown string at cursor
 - `baseExtensions(options)` — Creates CM6 extensions array
 - `reconfigureEditor(view, config)` — Reconfigures editor settings via Compartments
 - `reconfigurePluginExtensions(view, extensions)` — Reconfigures plugin-provided CM6 extensions

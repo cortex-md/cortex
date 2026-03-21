@@ -11,6 +11,10 @@ export class FileSystem implements IFileSystem {
 		await invoke<void>("write_file", { path, content })
 	}
 
+	async writeBinaryFile(path: string, data: number[]): Promise<void> {
+		await invoke<void>("write_binary_file", { path, data })
+	}
+
 	async deleteFile(path: string): Promise<void> {
 		await invoke<void>("delete_file", { path })
 	}

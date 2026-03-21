@@ -1,3 +1,4 @@
+export { type ClipboardImageHandler, clipboardImageExtension } from "./clipboardImage"
 export { type CursorInfo, EditorView } from "./EditorView"
 export {
 	type BaseExtensionsOptions,
