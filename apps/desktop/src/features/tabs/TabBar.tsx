@@ -1,5 +1,7 @@
+import { useDragStore } from "@cortex/core"
 import { Tabs, TabsList, TabsTrigger } from "@cortex/ui"
 import { XIcon } from "lucide-react"
+import { useState } from "react"
 
 export interface TabItem {
 	id: string
@@ -11,13 +13,16 @@ export interface TabItem {
 interface Props {
 	tabs: TabItem[]
 	activeTabId: string | null
+	paneId: string
 	onActivate: (tabId: string) => void
 	onClose: (tabId: string) => void
 	onPin?: (tabId: string) => void
 	onContextMenu?: (tabId: string, event: React.MouseEvent) => void
 }
 
-export function TabBar({ tabs, activeTabId, onActivate, onClose, onContextMenu }: Props) {
+export function TabBar({ tabs, activeTabId, paneId, onActivate, onClose, onContextMenu }: Props) {
+	const [draggingTabId, setDraggingTabId] = useState<string | null>(null)
+
 	if (tabs.length === 0) return null
 
 	const activeTab = tabs.find((t) => t.id === activeTabId)
@@ -33,6 +38,7 @@ export function TabBar({ tabs, activeTabId, onActivate, onClose, onContextMenu }
 			<TabsList className="tab-bar">
 				{tabs.map((tab) => {
 					const isActive = tab.id === activeTabId
+					const isDragged = draggingTabId === tab.id
 					return (
 						<TabsTrigger
 							value={tab.title}
@@ -40,7 +46,22 @@ export function TabBar({ tabs, activeTabId, onActivate, onClose, onContextMenu }
 							role="tab"
 							tabIndex={isActive ? 0 : -1}
 							aria-selected={isActive}
-							className={`tab-trigger group/tab ${tab.isPinned ? "tab-pinned" : ""}`}
+							className={`tab-trigger group/tab ${tab.isPinned ? "tab-pinned" : ""} ${isDragged ? "opacity-50" : ""}`}
+							draggable
+							onDragStart={(e) => {
+								setDraggingTabId(tab.id)
+								e.dataTransfer.effectAllowed = "move"
+								e.dataTransfer.setData("text/plain", tab.id)
+								useDragStore.getState().startDrag({
+									type: "tab",
+									tabId: tab.id,
+									sourcePaneId: paneId,
+								})
+							}}
+							onDragEnd={() => {
+								setDraggingTabId(null)
+								useDragStore.getState().cancelDrag()
+							}}
 							onClick={() => onActivate(tab.id)}
 							onKeyDown={(e) => e.key === "Enter" && onActivate(tab.id)}
 							onContextMenu={(e) => onContextMenu?.(tab.id, e)}

@@ -1,3 +1,4 @@
+import { useDragStore } from "@cortex/core"
 import { Button, LucideIcon } from "@cortex/ui"
 import type { LucideIcon as LucideIconType } from "lucide-react"
 
@@ -5,6 +6,7 @@ export interface NavItem {
 	id: string
 	icon: LucideIconType | string
 	label: string
+	draggable?: boolean
 }
 
 interface Props {
@@ -16,6 +18,7 @@ interface Props {
 
 export function SidebarNav({ items, bottomItems, activeId, onSelect }: Props) {
 	const renderItem = (item: NavItem) => {
+		const canDrag = item.draggable !== false
 		return (
 			<Button
 				key={item.id}
@@ -23,6 +26,21 @@ export function SidebarNav({ items, bottomItems, activeId, onSelect }: Props) {
 				type="button"
 				className={`flex text-xs justify-start w-full ${activeId === item.id && "bg-accent"}`}
 				onClick={() => onSelect(item.id)}
+				draggable={canDrag}
+				onDragStart={
+					canDrag
+						? (e) => {
+								e.dataTransfer.effectAllowed = "move"
+								e.dataTransfer.setData("text/plain", item.id)
+								useDragStore.getState().startDrag({
+									type: "sidebar-view",
+									viewId: item.id,
+									viewTitle: item.label,
+								})
+							}
+						: undefined
+				}
+				onDragEnd={canDrag ? () => useDragStore.getState().cancelDrag() : undefined}
 				aria-label={item.label}
 				aria-pressed={activeId === item.id}
 			>

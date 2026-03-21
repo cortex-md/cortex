@@ -1,6 +1,7 @@
 import type { Pane, Tab } from "@cortex/core"
 import {
 	noteCache,
+	useDragStore,
 	useEditorStore,
 	useRemoteVaultStore,
 	useTagsStore,
@@ -9,7 +10,12 @@ import {
 import type { CursorInfo, EditorConfig } from "@cortex/editor"
 import { EditorView, ReadingView, SideBySideView } from "@cortex/editor"
 import { getPlatform } from "@cortex/platform"
-import { getRegisteredRendererPlugins, setEditorViewRef } from "@cortex/plugin-runtime"
+import {
+	getRegisteredRendererPlugins,
+	PluginViewRenderer,
+	setEditorViewRef,
+	usePluginStore,
+} from "@cortex/plugin-runtime"
 import { useSettingsStore } from "@cortex/settings"
 import {
 	Button,
@@ -22,6 +28,7 @@ import {
 } from "@cortex/ui"
 import {
 	ClipboardCopyIcon,
+	Columns2Icon,
 	FolderIcon,
 	HistoryIcon,
 	PinIcon,
@@ -36,6 +43,8 @@ import { NativeMenuActions } from "@/utils/context-menu"
 import { ConflictBanner } from "../sync/ConflictBanner"
 import { NoteHistoryPanel } from "../sync/NoteHistoryPanel"
 import { TabBar } from "../tabs/TabBar"
+import { getCoreViewComponent } from "./coreViewRegistry"
+import { DropZoneOverlay } from "./DropZoneOverlay"
 
 const hasNativeMenu = () => getPlatform().capabilities.includes("menu")
 const nativeMenu = new NativeMenuActions()
@@ -165,6 +174,45 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 	)
 }
 
+interface ViewTabContentProps {
+	tab: Tab
+	paneId: string
+	isActive: boolean
+}
+
+function ViewTabContent({ tab, paneId, isActive }: ViewTabContentProps) {
+	const views = usePluginStore((s) => s.views)
+	const CoreComponent = tab.viewId ? getCoreViewComponent(tab.viewId) : null
+	const pluginRegistration = views.find((v) => v.id === tab.viewId)
+
+	return (
+		<div
+			className="absolute inset-0 flex flex-col overflow-auto"
+			style={{ display: isActive ? "flex" : "none" }}
+			aria-hidden={!isActive}
+		>
+			{CoreComponent ? (
+				<CoreComponent />
+			) : pluginRegistration ? (
+				<div className="p-4">
+					<PluginViewRenderer registration={pluginRegistration} />
+				</div>
+			) : (
+				<div className="flex flex-col items-center justify-center h-full gap-2 text-sm text-text-muted">
+					View not available
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => useWorkspaceStore.getState().closeTab(tab.id, paneId)}
+					>
+						Close tab
+					</Button>
+				</div>
+			)}
+		</div>
+	)
+}
+
 interface FileTagsStripProps {
 	filePath: string
 }
@@ -207,6 +255,7 @@ interface Props {
 export function PaneView({ paneId }: Props) {
 	const { panes, activePaneId, activateTab, closeTab, pinTab } = useWorkspaceStore()
 	const { updateCursor, setActiveFile } = useEditorStore()
+	const dragSource = useDragStore((s) => s.dragSource)
 	const editorConfig = useEditorConfig()
 
 	const rawPane = panes[paneId]
@@ -224,7 +273,7 @@ export function PaneView({ paneId }: Props) {
 	useEffect(() => {
 		if (paneId !== activePaneId || !pane?.activeTabId) return
 		const activeTab = pane.tabs.find((t) => t.id === pane.activeTabId)
-		if (activeTab) setActiveFile(activeTab.filePath)
+		if (activeTab?.tabType === "file") setActiveFile(activeTab.filePath)
 	}, [paneId, activePaneId, pane?.activeTabId, pane?.tabs, setActiveFile])
 
 	const handleCloseOthers = useCallback(
@@ -267,6 +316,16 @@ export function PaneView({ paneId }: Props) {
 		[pane],
 	)
 
+	const handleOpenInRight = useCallback(
+		(tabId: string) => {
+			const tab = pane?.tabs.find((t) => t.id === tabId)
+			if (tab?.filePath) {
+				useWorkspaceStore.getState().openInSplit(tab.filePath, paneId, "horizontal")
+			}
+		},
+		[pane, paneId],
+	)
+
 	const handleViewHistory = useCallback(
 		(tabId: string) => {
 			const tab = pane?.tabs.find((t) => t.id === tabId)
@@ -306,25 +365,35 @@ export function PaneView({ paneId }: Props) {
 						text: tab.isPinned ? "Unpin" : "Pin",
 						action: () => pinTab(tabId, paneId),
 					},
-					{ type: "separator" },
-					{
-						id: "copy-path",
-						text: "Copy Path",
-						action: () => handleCopyPath(tabId),
-					},
-					{
-						id: "reveal",
-						text: "Reveal in Finder",
-						action: () => handleReveal(tabId),
-					},
-					...(linkedVaultId
+					...(tab.tabType === "file"
 						? [
 								{ type: "separator" } as MenuItem,
 								{
-									id: "version-history",
-									text: "Version History",
-									action: () => handleViewHistory(tabId),
+									id: "open-right-split",
+									text: "Open in Right Split",
+									action: () => handleOpenInRight(tabId),
 								} as MenuItem,
+								{ type: "separator" } as MenuItem,
+								{
+									id: "copy-path",
+									text: "Copy Path",
+									action: () => handleCopyPath(tabId),
+								} as MenuItem,
+								{
+									id: "reveal",
+									text: "Reveal in Finder",
+									action: () => handleReveal(tabId),
+								} as MenuItem,
+								...(linkedVaultId
+									? [
+											{ type: "separator" } as MenuItem,
+											{
+												id: "version-history",
+												text: "Version History",
+												action: () => handleViewHistory(tabId),
+											} as MenuItem,
+										]
+									: []),
 							]
 						: []),
 				]
@@ -345,6 +414,7 @@ export function PaneView({ paneId }: Props) {
 			linkedVaultId,
 			handleCloseOthers,
 			handleCloseToRight,
+			handleOpenInRight,
 			handleCopyPath,
 			handleReveal,
 			handleViewHistory,
@@ -372,6 +442,7 @@ export function PaneView({ paneId }: Props) {
 			<TabBar
 				tabs={pane.tabs}
 				activeTabId={pane.activeTabId}
+				paneId={paneId}
 				onActivate={handleActivate}
 				onClose={handleClose}
 				onPin={handlePin}
@@ -381,13 +452,17 @@ export function PaneView({ paneId }: Props) {
 			{pane.activeTabId &&
 				(() => {
 					const activeTab = pane.tabs.find((t) => t.id === pane.activeTabId)
-					return activeTab ? <FileTagsStrip filePath={activeTab.filePath} /> : null
+					return activeTab?.tabType === "file" ? (
+						<FileTagsStrip filePath={activeTab.filePath} />
+					) : null
 				})()}
 
 			{pane.activeTabId &&
 				(() => {
 					const activeTab = pane.tabs.find((t) => t.id === pane.activeTabId)
-					return activeTab ? <ConflictBanner filePath={activeTab.filePath} /> : null
+					return activeTab?.tabType === "file" ? (
+						<ConflictBanner filePath={activeTab.filePath} />
+					) : null
 				})()}
 
 			{!hasNativeMenu() && fallbackTab && fallbackMenu && (
@@ -421,22 +496,31 @@ export function PaneView({ paneId }: Props) {
 							{fallbackTab.isPinned ? <PinOffIcon /> : <PinIcon />}
 							{fallbackTab.isPinned ? "Unpin" : "Pin"}
 						</DropdownMenuItem>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem onSelect={() => handleCopyPath(fallbackTab.id)}>
-							<ClipboardCopyIcon />
-							Copy Path
-						</DropdownMenuItem>
-						<DropdownMenuItem onSelect={() => handleReveal(fallbackTab.id)}>
-							<FolderIcon />
-							Reveal in Finder
-						</DropdownMenuItem>
-						{linkedVaultId && (
+						{fallbackTab.tabType === "file" && (
 							<>
 								<DropdownMenuSeparator />
-								<DropdownMenuItem onSelect={() => handleViewHistory(fallbackTab.id)}>
-									<HistoryIcon />
-									Version History
+								<DropdownMenuItem onSelect={() => handleOpenInRight(fallbackTab.id)}>
+									<Columns2Icon />
+									Open in Right Split
 								</DropdownMenuItem>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem onSelect={() => handleCopyPath(fallbackTab.id)}>
+									<ClipboardCopyIcon />
+									Copy Path
+								</DropdownMenuItem>
+								<DropdownMenuItem onSelect={() => handleReveal(fallbackTab.id)}>
+									<FolderIcon />
+									Reveal in Finder
+								</DropdownMenuItem>
+								{linkedVaultId && (
+									<>
+										<DropdownMenuSeparator />
+										<DropdownMenuItem onSelect={() => handleViewHistory(fallbackTab.id)}>
+											<HistoryIcon />
+											Version History
+										</DropdownMenuItem>
+									</>
+								)}
 							</>
 						)}
 					</DropdownMenuContent>
@@ -444,6 +528,7 @@ export function PaneView({ paneId }: Props) {
 			)}
 
 			<div className="flex-1 overflow-hidden relative">
+				{dragSource && <DropZoneOverlay paneId={paneId} />}
 				{pane.tabs.length === 0 ? (
 					<div className="flex flex-col items-center justify-center gap-5 h-full text-sm text-text-muted">
 						<p>No open files</p>
@@ -459,18 +544,27 @@ export function PaneView({ paneId }: Props) {
 						</p>
 					</div>
 				) : (
-					pane.tabs.map((tab) => (
-						<TabEditor
-							key={tab.id}
-							tab={tab}
-							paneId={paneId}
-							isActive={tab.id === pane.activeTabId}
-							editorConfig={editorConfig}
-							onCursorChange={(cursor) => {
-								if (paneId === activePaneId) updateCursor(cursor)
-							}}
-						/>
-					))
+					pane.tabs.map((tab) =>
+						tab.tabType === "view" ? (
+							<ViewTabContent
+								key={tab.id}
+								tab={tab}
+								paneId={paneId}
+								isActive={tab.id === pane.activeTabId}
+							/>
+						) : (
+							<TabEditor
+								key={tab.id}
+								tab={tab}
+								paneId={paneId}
+								isActive={tab.id === pane.activeTabId}
+								editorConfig={editorConfig}
+								onCursorChange={(cursor) => {
+									if (paneId === activePaneId) updateCursor(cursor)
+								}}
+							/>
+						),
+					)
 				)}
 			</div>
 

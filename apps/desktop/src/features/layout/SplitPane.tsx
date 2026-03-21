@@ -29,30 +29,39 @@ interface ResizerProps {
 
 function Resizer({ direction, onDrag }: ResizerProps) {
 	const startPos = useRef(0)
+	const dragging = useRef(false)
 
-	const handleMouseDown = (e: React.MouseEvent) => {
-		startPos.current = direction === "horizontal" ? e.clientX : e.clientY
+	const handlePointerDown = (e: React.PointerEvent) => {
 		e.preventDefault()
+		e.currentTarget.setPointerCapture(e.pointerId)
+		startPos.current = direction === "horizontal" ? e.clientX : e.clientY
+		dragging.current = true
+		document.body.style.userSelect = "none"
+	}
 
-		const handleMouseMove = (ev: MouseEvent) => {
-			const current = direction === "horizontal" ? ev.clientX : ev.clientY
-			onDrag(current - startPos.current)
+	const handlePointerMove = (e: React.PointerEvent) => {
+		if (!dragging.current) return
+		const current = direction === "horizontal" ? e.clientX : e.clientY
+		const delta = current - startPos.current
+		if (delta !== 0) {
+			onDrag(delta)
 			startPos.current = current
 		}
+	}
 
-		const handleMouseUp = () => {
-			document.removeEventListener("mousemove", handleMouseMove)
-			document.removeEventListener("mouseup", handleMouseUp)
-		}
-
-		document.addEventListener("mousemove", handleMouseMove)
-		document.addEventListener("mouseup", handleMouseUp)
+	const handlePointerUp = (e: React.PointerEvent) => {
+		if (!dragging.current) return
+		dragging.current = false
+		e.currentTarget.releasePointerCapture(e.pointerId)
+		document.body.style.userSelect = ""
 	}
 
 	return (
 		<div
 			className={`split-resizer split-resizer--${direction}`}
-			onMouseDown={handleMouseDown}
+			onPointerDown={handlePointerDown}
+			onPointerMove={handlePointerMove}
+			onPointerUp={handlePointerUp}
 			aria-hidden="true"
 		/>
 	)

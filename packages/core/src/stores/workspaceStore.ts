@@ -5,10 +5,13 @@ import { immer } from "zustand/middleware/immer"
 import { noteCache } from "../noteCache"
 
 export type SplitDirection = "horizontal" | "vertical"
+export type TabType = "file" | "view"
 
 export interface Tab {
 	id: string
+	tabType: TabType
 	filePath: string
+	viewId: string | null
 	title: string
 	isPinned: boolean
 	isDirty: boolean
@@ -45,6 +48,7 @@ interface RecentlyClosed {
 export interface OpenTabOptions {
 	paneId?: string
 	split?: SplitDirection
+	splitPosition?: "before" | "after"
 }
 
 export interface WorkspaceState {
@@ -55,15 +59,25 @@ export interface WorkspaceState {
 	recentlyClosed: RecentlyClosed[]
 
 	openTab: (filePath: string, opts?: OpenTabOptions) => void
+	openViewTab: (viewId: string, title: string, opts?: OpenTabOptions) => void
+	openInSplit: (filePath: string, paneId: string, direction: SplitDirection) => void
 	closeTab: (tabId: string, paneId: string) => void
 	closeTabsByPath: (filePath: string) => void
 	updateTabPath: (oldPath: string, newPath: string) => void
 	activateTab: (tabId: string, paneId: string) => void
 	pinTab: (tabId: string, paneId: string) => void
 	markTabDirty: (tabId: string, dirty: boolean) => void
-	splitPane: (paneId: string, direction: SplitDirection) => void
+	splitPane: (paneId: string, direction: SplitDirection, position?: "before" | "after") => void
 	closePane: (paneId: string) => void
 	resizeSplit: (nodeId: string, sizes: number[]) => void
+	moveTab: (tabId: string, fromPaneId: string, toPaneId: string) => void
+	moveTabToNewSplit: (
+		tabId: string,
+		fromPaneId: string,
+		targetPaneId: string,
+		direction: SplitDirection,
+		position: "before" | "after",
+	) => void
 	goToTabIndex: (index: number) => void
 	navigateMRU: (delta: 1 | -1) => void
 	reopenLastClosed: () => void
@@ -114,6 +128,17 @@ function findTabInPanes(
 	return null
 }
 
+function findViewTabInPanes(
+	panes: Record<string, Pane>,
+	viewId: string,
+): { tabId: string; paneId: string } | null {
+	for (const [paneId, pane] of Object.entries(panes)) {
+		const tab = pane.tabs.find((t) => t.tabType === "view" && t.viewId === viewId)
+		if (tab) return { tabId: tab.id, paneId }
+	}
+	return null
+}
+
 function findTabPane(panes: Record<string, Pane>, tabId: string): string | null {
 	for (const [paneId, pane] of Object.entries(panes)) {
 		if (pane.tabs.some((t) => t.id === tabId)) return paneId
@@ -148,14 +173,16 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 				let targetPaneId = opts?.paneId ?? activePaneId
 
 				if (opts?.split) {
-					get().splitPane(targetPaneId, opts.split)
+					get().splitPane(targetPaneId, opts.split, opts.splitPosition)
 					targetPaneId = get().activePaneId
 				}
 
 				const tabId = crypto.randomUUID()
 				const tab: Tab = {
 					id: tabId,
+					tabType: "file",
 					filePath,
+					viewId: null,
 					title: titleFromPath(filePath),
 					isPinned: false,
 					isDirty: false,
@@ -171,6 +198,73 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 					pane.tabs.push(tab)
 					pane.activeTabId = tabId
 					s.activePaneId = targetPaneId
+					s.mruOrder = [tabId, ...s.mruOrder.filter((id) => id !== tabId)]
+				})
+			},
+
+			openViewTab: (viewId, title, opts) => {
+				const { panes, activePaneId } = get()
+
+				const existing = findViewTabInPanes(panes, viewId)
+				if (existing) {
+					get().activateTab(existing.tabId, existing.paneId)
+					return
+				}
+
+				let targetPaneId = opts?.paneId ?? activePaneId
+
+				if (opts?.split) {
+					get().splitPane(targetPaneId, opts.split, opts.splitPosition)
+					targetPaneId = get().activePaneId
+				}
+
+				const tabId = crypto.randomUUID()
+				const tab: Tab = {
+					id: tabId,
+					tabType: "view",
+					filePath: "",
+					viewId,
+					title,
+					isPinned: false,
+					isDirty: false,
+					lastAccessed: Date.now(),
+					isSuspended: false,
+				}
+
+				set((s) => {
+					const pane = s.panes[targetPaneId]
+					if (!pane) return
+					pane.tabs.push(tab)
+					pane.activeTabId = tabId
+					s.activePaneId = targetPaneId
+					s.mruOrder = [tabId, ...s.mruOrder.filter((id) => id !== tabId)]
+				})
+			},
+
+			openInSplit: (filePath, paneId, direction) => {
+				get().splitPane(paneId, direction)
+				const newPaneId = get().activePaneId
+
+				const tabId = crypto.randomUUID()
+				const tab: Tab = {
+					id: tabId,
+					tabType: "file",
+					filePath,
+					viewId: null,
+					title: titleFromPath(filePath),
+					isPinned: false,
+					isDirty: false,
+					lastAccessed: Date.now(),
+					isSuspended: false,
+				}
+
+				noteCache.openTab(filePath)
+
+				set((s) => {
+					const pane = s.panes[newPaneId]
+					if (!pane) return
+					pane.tabs.push(tab)
+					pane.activeTabId = tabId
 					s.mruOrder = [tabId, ...s.mruOrder.filter((id) => id !== tabId)]
 				})
 			},
@@ -196,12 +290,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 						null
 				}
 
-				const openInOtherPanes = Object.entries(panes)
-					.filter(([id]) => id !== paneId)
-					.some(([, p]) => p.tabs.some((t) => t.filePath === tab.filePath))
+				if (tab.tabType === "file" && tab.filePath) {
+					const openInOtherPanes = Object.entries(panes)
+						.filter(([id]) => id !== paneId)
+						.some(([, p]) => p.tabs.some((t) => t.filePath === tab.filePath))
 
-				if (!openInOtherPanes) {
-					noteCache.closeTab(tab.filePath)
+					if (!openInOtherPanes) {
+						noteCache.closeTab(tab.filePath)
+					}
 				}
 
 				set((s) => {
@@ -210,11 +306,17 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 					p.tabs = p.tabs.filter((t) => t.id !== tabId)
 					p.activeTabId = nextTabId
 					s.mruOrder = mruOrder.filter((id) => id !== tabId)
-					s.recentlyClosed = [
-						{ filePath: tab.filePath, title: tab.title },
-						...recentlyClosed.slice(0, MAX_RECENT_CLOSED - 1),
-					]
+					if (tab.tabType === "file" && tab.filePath) {
+						s.recentlyClosed = [
+							{ filePath: tab.filePath, title: tab.title },
+							...recentlyClosed.slice(0, MAX_RECENT_CLOSED - 1),
+						]
+					}
 				})
+
+				if (remainingTabs.length === 0 && Object.keys(get().panes).length > 1) {
+					get().closePane(paneId)
+				}
 			},
 
 			closeTabsByPath: (filePath) => {
@@ -274,9 +376,20 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 				})
 			},
 
-			splitPane: (paneId, direction) => {
+			splitPane: (paneId, direction, position) => {
 				const newPaneId = crypto.randomUUID()
 				const splitNodeId = crypto.randomUUID()
+
+				const children: SplitTree[] =
+					position === "before"
+						? [
+								{ type: "leaf", id: newPaneId },
+								{ type: "leaf", id: paneId },
+							]
+						: [
+								{ type: "leaf", id: paneId },
+								{ type: "leaf", id: newPaneId },
+							]
 
 				set((s) => {
 					s.panes[newPaneId] = { id: newPaneId, tabs: [], activeTabId: null }
@@ -284,10 +397,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 						type: "split",
 						id: splitNodeId,
 						direction,
-						children: [
-							{ type: "leaf", id: paneId },
-							{ type: "leaf", id: newPaneId },
-						],
+						children,
 						sizes: [50, 50],
 					})
 					s.activePaneId = newPaneId
@@ -304,6 +414,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 				const otherPaneId = Object.keys(panes).find((id) => id !== paneId)
 
 				for (const tab of pane.tabs) {
+					if (tab.tabType !== "file" || !tab.filePath) continue
 					const openInOtherPanes = Object.entries(panes)
 						.filter(([id]) => id !== paneId)
 						.some(([, p]) => p.tabs.some((t) => t.filePath === tab.filePath))
@@ -336,6 +447,91 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 				set((s) => {
 					s.splitTree = updateSizes(s.splitTree)
 				})
+			},
+
+			moveTab: (tabId, fromPaneId, toPaneId) => {
+				if (fromPaneId === toPaneId) return
+				const { panes } = get()
+				const fromPane = panes[fromPaneId]
+				if (!fromPane) return
+				const tab = fromPane.tabs.find((t) => t.id === tabId)
+				if (!tab) return
+
+				const tabCopy = { ...tab, lastAccessed: Date.now() }
+
+				set((s) => {
+					const from = s.panes[fromPaneId]
+					const to = s.panes[toPaneId]
+					if (!from || !to) return
+					from.tabs = from.tabs.filter((t) => t.id !== tabId)
+					if (from.activeTabId === tabId) {
+						from.activeTabId = from.tabs[from.tabs.length - 1]?.id ?? null
+					}
+					to.tabs.push(tabCopy)
+					to.activeTabId = tabId
+					s.activePaneId = toPaneId
+				})
+
+				const updatedFromPane = get().panes[fromPaneId]
+				if (updatedFromPane && updatedFromPane.tabs.length === 0) {
+					if (Object.keys(get().panes).length > 1) {
+						get().closePane(fromPaneId)
+					}
+				}
+			},
+
+			moveTabToNewSplit: (tabId, fromPaneId, targetPaneId, direction, position) => {
+				const { panes } = get()
+				const fromPane = panes[fromPaneId]
+				if (!fromPane) return
+				const tab = fromPane.tabs.find((t) => t.id === tabId)
+				if (!tab) return
+
+				const newPaneId = crypto.randomUUID()
+				const splitNodeId = crypto.randomUUID()
+				const tabCopy = { ...tab, lastAccessed: Date.now() }
+
+				set((s) => {
+					const from = s.panes[fromPaneId]
+					if (!from) return
+					from.tabs = from.tabs.filter((t) => t.id !== tabId)
+					if (from.activeTabId === tabId) {
+						from.activeTabId = from.tabs[from.tabs.length - 1]?.id ?? null
+					}
+
+					s.panes[newPaneId] = {
+						id: newPaneId,
+						tabs: [tabCopy],
+						activeTabId: tabId,
+					}
+
+					const children: SplitTree[] =
+						position === "before"
+							? [
+									{ type: "leaf", id: newPaneId },
+									{ type: "leaf", id: targetPaneId },
+								]
+							: [
+									{ type: "leaf", id: targetPaneId },
+									{ type: "leaf", id: newPaneId },
+								]
+
+					s.splitTree = replaceInTree(s.splitTree, targetPaneId, {
+						type: "split",
+						id: splitNodeId,
+						direction,
+						children,
+						sizes: [50, 50],
+					})
+					s.activePaneId = newPaneId
+				})
+
+				const updatedFromPane = get().panes[fromPaneId]
+				if (updatedFromPane && updatedFromPane.tabs.length === 0) {
+					if (Object.keys(get().panes).length > 1) {
+						get().closePane(fromPaneId)
+					}
+				}
 			},
 
 			goToTabIndex: (index) => {
@@ -404,6 +600,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 						activePaneId: string
 					}
 					if (data.panes && data.splitTree) {
+						for (const pane of Object.values(data.panes)) {
+							for (const tab of pane.tabs) {
+								if (!tab.tabType) tab.tabType = "file"
+								if (tab.viewId === undefined) tab.viewId = null
+							}
+						}
 						set((s) => {
 							s.panes = data.panes
 							s.splitTree = data.splitTree
@@ -411,7 +613,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 						})
 					}
 				} catch {
-					// No workspace file yet — start fresh
+					// No workspace file yet
 				}
 			},
 

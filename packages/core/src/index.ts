@@ -10,6 +10,16 @@ export { type AuthState, useAuthStore } from "./stores/authStore"
 export { type BookmarksState, useBookmarksStore } from "./stores/bookmarksStore"
 export { type DevicesState, useDevicesStore } from "./stores/devicesStore"
 export {
+	type DragSource,
+	type DragSourceType,
+	type DragState,
+	type DropTarget,
+	type DropZone,
+	type SidebarViewDragSource,
+	type TabDragSource,
+	useDragStore,
+} from "./stores/dragStore"
+export {
 	type CursorPosition,
 	type EditorMode,
 	type EditorState,
@@ -44,6 +54,7 @@ export {
 	type SplitNode,
 	type SplitTree,
 	type Tab,
+	type TabType,
 	useWorkspaceStore,
 	type WorkspaceState,
 } from "./stores/workspaceStore"

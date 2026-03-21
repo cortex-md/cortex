@@ -76,7 +76,9 @@ const CORE_NAV_ITEMS: NavItem[] = [
 	{ id: "tags", icon: TagIcon, label: "Tags" },
 ]
 
-const NAV_BOTTOM_ITEMS: NavItem[] = [{ id: "settings", icon: SettingsIcon, label: "Settings" }]
+const NAV_BOTTOM_ITEMS: NavItem[] = [
+	{ id: "settings", icon: SettingsIcon, label: "Settings", draggable: false },
+]
 
 setReconfigurePluginExtensions(reconfigurePluginExtensions as never)
 setLivePreviewBuilder(buildPluginLivePreview as never)
@@ -579,6 +581,18 @@ export default function App() {
 
 		return () => clearInterval(suspensionInterval)
 	}, [suspendInactiveTabs])
+
+	useEffect(() => {
+		const preventDefaultDrag = (e: DragEvent) => {
+			e.preventDefault()
+			if (e.dataTransfer) e.dataTransfer.dropEffect = "move"
+		}
+		document.addEventListener("dragover", preventDefaultDrag)
+		document.addEventListener("drop", (e) => e.preventDefault())
+		return () => {
+			document.removeEventListener("dragover", preventDefaultDrag)
+		}
+	}, [])
 
 	useEffect(() => {
 		const unlisteners = [

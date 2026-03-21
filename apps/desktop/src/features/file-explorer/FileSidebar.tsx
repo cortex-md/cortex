@@ -143,6 +143,12 @@ function showNativeFileContextMenu(
 			createFile: (parentPath) => actions.onNewFile(parentPath ?? node.path),
 			createFolder: (parentPath) => actions.onNewFolder(parentPath ?? node.path),
 			openInNewTab: (path) => actions.onOpenFile(path),
+			openInRightSplit: (path) => {
+				const { activePaneId } = useWorkspaceStore.getState()
+				if (activePaneId) {
+					useWorkspaceStore.getState().openInSplit(path, activePaneId, "horizontal")
+				}
+			},
 			rename: (path) => actions.onStartRename(path),
 			addBookmark: () => {},
 			delete: (path, isDir) => actions.onDelete(path, isDir),
@@ -366,6 +372,16 @@ function TreeNodeView({
 								<ContextMenuItem onSelect={() => onOpenFile(node.path)}>
 									<ExternalLinkIcon />
 									Open in new tab
+								</ContextMenuItem>
+								<ContextMenuItem
+									onSelect={() => {
+										const ws = useWorkspaceStore.getState()
+										if (ws.activePaneId) {
+											ws.openInSplit(node.path, ws.activePaneId, "horizontal")
+										}
+									}}
+								>
+									Open in Right Split
 								</ContextMenuItem>
 								<ContextMenuSeparator />
 							</>

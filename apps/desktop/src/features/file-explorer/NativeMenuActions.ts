@@ -12,6 +12,7 @@ export interface FileContextMenuActions {
 	createFile: (parentPath?: string) => void
 	createFolder: (parentPath?: string) => void
 	openInNewTab: (path: string) => void
+	openInRightSplit?: (path: string) => void
 	rename: (path: string) => void
 	addBookmark: (path: string, fileName: string) => void
 	manageTags?: (path: string) => void
@@ -54,6 +55,14 @@ export function buildFileContextMenuItems(
 			text: "Open in New Tab",
 			action: () => actions.openInNewTab(path),
 		})
+		if (actions.openInRightSplit) {
+			items.push({
+				id: "open-right-split",
+				type: "normal",
+				text: "Open in Right Split",
+				action: () => actions.openInRightSplit!(path),
+			})
+		}
 	}
 
 	items.push({
