@@ -439,14 +439,65 @@ In development (via `devtools` middleware):
 - Time-travel debug: click actions to revert state
 - Export/import state snapshots
 
-## Testing Considerations
+## Testing
 
-Stores are just functions — easy to test:
+Tests live in `src/__tests__/`. Run with:
+
+```bash
+bun run --cwd packages/core vitest run
+# or from the monorepo root:
+bun run test
+```
+
+### Mocking `@cortex/platform`
+
+`getPlatform()` must be mocked in every test that touches stores or NoteCache. Add `vi.mock` directly in the test file (not in setup.ts) when you need per-test mock control:
 
 ```typescript
-const store = useMyStore.getState()
-store.increment()
-expect(store.count).toBe(1)
+const mockReadFile = vi.fn()
+const mockWriteFile = vi.fn()
+
+vi.mock("@cortex/platform", () => ({
+  getPlatform: vi.fn(() => ({
+    fs: {
+      readFile: mockReadFile,
+      writeFile: mockWriteFile,
+      hashFile: vi.fn().mockResolvedValue("abc123"),
+    },
+  })),
+}))
+```
+
+### Resetting Store State Between Tests
+
+Use `setState` to reset stores in `beforeEach`:
+
+```typescript
+beforeEach(() => {
+  useSyncLogStore.setState({ entries: [], nextId: 0 })
+  useEditorStore.setState({ activeFilePath: null, mode: "live-preview", cursor: null })
+})
+```
+
+### Fake Timers for NoteCache Debounce
+
+NoteCache auto-saves with a 2-second debounce. Use fake timers:
+
+```typescript
+vi.useFakeTimers()
+
+noteCache.write("/file.md", "new content", {})
+await vi.advanceTimersByTimeAsync(2001) // trigger debounce
+expect(mockWriteFile).toHaveBeenCalled()
+
+vi.useRealTimers()
+```
+
+### Spying on NoteCache Methods
+
+```typescript
+vi.spyOn(noteCache, "flush").mockResolvedValue()
+vi.spyOn(noteCache, "openTab").mockResolvedValue()
 ```
 
 ## No Side Effects in Stores
