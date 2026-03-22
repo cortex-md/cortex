@@ -11,6 +11,7 @@ export interface CommunityThemeManifest {
 	displayName: string
 	author: string
 	version: string
+	minAppVersion?: string
 	colorschemes: {
 		dark: string
 		light: string

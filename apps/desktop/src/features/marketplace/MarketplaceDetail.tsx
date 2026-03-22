@@ -1,6 +1,13 @@
 import { ReadingView } from "@cortex/editor"
-import { isEntryInstalled, type MarketplaceTab, useMarketplaceStore } from "@cortex/marketplace"
 import {
+	isEntryInstalled,
+	isVersionCompatible,
+	type MarketplaceTab,
+	useMarketplaceStore,
+} from "@cortex/marketplace"
+import {
+	Alert,
+	AlertDescription,
 	Button,
 	Empty,
 	EmptyDescription,
@@ -10,7 +17,7 @@ import {
 	Skeleton,
 	Spinner,
 } from "@cortex/ui"
-import { Download, Package, Trash2 } from "lucide-react"
+import { ArrowUp, Download, Package, Trash2, TriangleAlert } from "lucide-react"
 import { useEffect } from "react"
 
 interface MarketplaceDetailProps {
@@ -25,6 +32,9 @@ export function MarketplaceDetail({ tab }: MarketplaceDetailProps) {
 		loadingEntryId,
 		readmeCache,
 		readmeLoading,
+		appVersion,
+		minVersionCache,
+		availableUpdates,
 	} = useMarketplaceStore()
 	const installEntry = useMarketplaceStore((s) => s.installEntry)
 	const uninstallEntry = useMarketplaceStore((s) => s.uninstallEntry)
@@ -35,6 +45,12 @@ export function MarketplaceDetail({ tab }: MarketplaceDetailProps) {
 	const isInstalled = entry ? isEntryInstalled(entry.id, tab) : false
 	const isLoading = loadingEntryId === entry?.id
 	const readme = entry ? readmeCache[entry.id] : undefined
+
+	const minVersion = entry ? minVersionCache[entry.id] : undefined
+	const hasCompatibilityWarning =
+		Boolean(minVersion) && Boolean(appVersion) && !isVersionCompatible(appVersion!, minVersion!)
+	const latestVersion = entry ? availableUpdates[entry.id] : undefined
+	const hasUpdate = isInstalled && Boolean(latestVersion)
 
 	useEffect(() => {
 		if (entry && readme === undefined) loadReadme(entry)
@@ -72,8 +88,31 @@ export function MarketplaceDetail({ tab }: MarketplaceDetailProps) {
 					<p className="text-xs text-text-muted">by {entry.author}</p>
 					<p className="text-xs text-text-muted">{entry.description}</p>
 				</div>
-				<div className="shrink-0">
-					{isInstalled ? (
+				<div className="shrink-0 flex flex-col gap-1.5 items-end">
+					{isInstalled && hasUpdate ? (
+						<>
+							<Button
+								variant="default"
+								size="sm"
+								onClick={() => installEntry(entry)}
+								disabled={isLoading}
+								className="gap-1.5"
+							>
+								{isLoading ? <Spinner className="size-3" /> : <ArrowUp size={13} />}
+								Update to {latestVersion}
+							</Button>
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={() => uninstallEntry(entry)}
+								disabled={isLoading}
+								className="gap-1.5 text-text-muted hover:text-destructive"
+							>
+								<Trash2 size={13} />
+								Uninstall
+							</Button>
+						</>
+					) : isInstalled ? (
 						<Button
 							variant="destructive"
 							size="sm"
@@ -98,6 +137,18 @@ export function MarketplaceDetail({ tab }: MarketplaceDetailProps) {
 					)}
 				</div>
 			</div>
+
+			{hasCompatibilityWarning && (
+				<div className="px-5 pb-3 animate-in fade-in-0 duration-300">
+					<Alert variant="destructive">
+						<TriangleAlert size={14} />
+						<AlertDescription>
+							This {tab === "plugins" ? "plugin" : "theme"} requires Cortex v{minVersion} or later.
+							You are running v{appVersion}. It may not work correctly.
+						</AlertDescription>
+					</Alert>
+				</div>
+			)}
 
 			<Separator />
 

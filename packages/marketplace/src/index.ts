@@ -9,9 +9,12 @@ export {
 } from "./marketplaceStore"
 export {
 	fetchLatestRelease,
+	fetchManifestMinVersion,
 	fetchPluginRegistry,
 	fetchReadme,
 	fetchThemeRegistry,
 	invalidateRegistryCache,
 } from "./registryService"
 export type { GitHubRelease, GitHubReleaseAsset, RegistryEntry } from "./types"
+export { detectAvailableUpdates, readInstalledVersion } from "./updateService"
+export { compareVersions, isVersionCompatible } from "./versionUtils"
