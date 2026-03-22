@@ -44,28 +44,36 @@ packages/editor/
 - `buildPluginLivePreview(declaration)` — Converts a `LivePreviewDeclaration` into a CM6 Extension (used by plugin-runtime via bridge)
 - `livePreviewExtension()` — All built-in live preview plugins composed
 - `buildHighlightStyle(tokens)` — Creates CM6 highlight style from CSS variables
-- `markdownKeymapBindings` — Raw `KeyBinding[]` array for markdown shortcuts (included in baseExtensions)
+- `markdownKeymapCompartment` — CM6 `Compartment` for the dynamic markdown keymap (reconfigurable at runtime)
+- `defaultMarkdownBindings` — Default `FormatBinding[]` array (id, keys, enabled) matching hotkeys defaults
+- `defaultMarkdownKeymapExtension()` — Creates the initial compartment extension for use in `baseExtensions()`
+- `reconfigureMarkdownKeymap(view, bindings)` — Reconfigures the markdown keymap compartment with new bindings
+- `type FormatBinding` — `{ id: string; keys: string; enabled: boolean }`
 - Markdown commands: `toggleBold`, `toggleItalic`, `toggleStrikethrough`, `toggleInlineCode`, `toggleBlockquote`, `toggleHeading`, `toggleTaskList`, `toggleUnorderedList`, `toggleOrderedList`, `insertLink`, `insertImage`, `insertCodeBlock`, `insertTable`, `insertCallout`, `duplicateLine`, `copyLine`, `removeParagraphFormatting`
 
-## Markdown Keyboard Shortcuts
+## Markdown Keyboard Shortcuts (Dynamic / User-Customizable)
 
-All shortcuts are handled inside CM6 (not the global hotkey system). They work when the editor has focus:
+Shortcuts are handled **inside CM6** via a `Compartment` (not the global hotkey system). They work when the editor has focus. The keymap is driven by the `@cortex/hotkeys` store and reconfigures reactively when the user changes bindings in Settings.
 
-| Shortcut | Action |
-|---|---|
-| `⌘B` | Toggle **bold** |
-| `⌘I` | Toggle *italic* |
-| `⌘⇧X` | Toggle ~~strikethrough~~ |
-| `` ⌘` `` | Toggle `inline code` |
-| `⌘K` | Insert link |
-| `⌘⇧K` | Insert image |
-| `⌘⌥1/2/3` | Toggle Heading 1/2/3 |
-| `⌘⇧.` | Toggle blockquote |
-| `` ⌘⇧` `` | Insert code block |
-| `⌘L` | Toggle task list / check done |
-| `⌘⇧L` | Toggle unordered list |
-| `⌘⇧O` | Toggle ordered list |
-| `⌘⇧Y` | Insert table |
+**Integration in `PaneView.tsx`**: `TabEditor` subscribes to the `Format` category bindings snapshot from `useHotkeysStore`. When any binding changes, `reconfigureMarkdownKeymap` updates the CM6 compartment for that editor view.
+
+Default bindings (user-customizable via Settings → Hotkeys):
+
+| Shortcut | Action | Hotkey ID |
+|---|---|---|
+| `⌘B` | Toggle **bold** | `format.bold` |
+| `⌘I` | Toggle *italic* | `format.italic` |
+| `⌘⇧X` | Toggle ~~strikethrough~~ | `format.strikethrough` |
+| `` ⌘` `` | Toggle `inline code` | `format.inline-code` |
+| `⌘K` | Insert link | `format.link` |
+| `⌘⇧K` | Insert image | `format.image` |
+| `⌘⌥1/2/3` | Toggle Heading 1/2/3 | `format.heading-1/2/3` |
+| `⌘⇧.` | Toggle blockquote | `format.blockquote` |
+| `` ⌘⇧` `` | Insert code block | `format.code-block` |
+| `⌘L` | Toggle task list / check done | `format.task-list` |
+| `⌘⇧L` | Toggle unordered list | `format.unordered-list` |
+| `⌘⇧O` | Toggle ordered list | `format.ordered-list` |
+| `⌘⇧Y` | Insert table | `format.table` |
 
 ## Plugin Live Preview Builder
 

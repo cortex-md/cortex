@@ -27,7 +27,7 @@ import {
 } from "@codemirror/view"
 import { buildHighlightStyle, type SyntaxTokens } from "./highlight"
 import { livePreviewExtension } from "./livePreview"
-import { markdownKeymapBindings } from "./markdownKeymap"
+import { defaultMarkdownKeymapExtension } from "./markdownKeymap"
 
 const codeLanguages = [
 	LanguageDescription.of({ name: "JavaScript", alias: ["js"], load: async () => javascript() }),
@@ -135,13 +135,8 @@ export function baseExtensions(
 		search({ top: true }),
 		highlightActiveLine(),
 		EditorState.allowMultipleSelections.of(true),
-		keymap.of([
-			indentWithTab,
-			...markdownKeymapBindings,
-			...defaultKeymap,
-			...historyKeymap,
-			...searchKeymap,
-		]),
+		keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap, ...searchKeymap]),
+		defaultMarkdownKeymapExtension(),
 		buildHighlightStyle(syntaxTokens),
 		...(livePreview ? [livePreviewExtension()] : []),
 		markdown({

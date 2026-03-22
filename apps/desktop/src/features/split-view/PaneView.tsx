@@ -9,7 +9,14 @@ import {
 	useWorkspaceStore,
 } from "@cortex/core"
 import type { CursorInfo, EditorConfig } from "@cortex/editor"
-import { clipboardImageExtension, EditorView, ReadingView, SideBySideView } from "@cortex/editor"
+import {
+	clipboardImageExtension,
+	EditorView,
+	ReadingView,
+	reconfigureMarkdownKeymap,
+	SideBySideView,
+} from "@cortex/editor"
+import { useHotkeysStore } from "@cortex/hotkeys"
 import { getPlatform } from "@cortex/platform"
 import {
 	getRegisteredRendererPlugins,
@@ -120,6 +127,13 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 		[],
 	)
 
+	const formatBindingsSnapshot = useHotkeysStore((s) =>
+		s.bindings
+			.filter((b) => b.category === "Format")
+			.map((b) => `${b.id}=${b.keys}:${b.enabled}`)
+			.join(","),
+	)
+
 	const handleImagePaste = useCallback(
 		async (imageBlob: Blob): Promise<string | null> => {
 			const vaultPath = useVaultStore.getState().vault?.path
@@ -192,6 +206,16 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 		},
 		[isActive],
 	)
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: formatBindingsSnapshot is an intentional change-signal; bindings are read fresh from store
+	useEffect(() => {
+		const view = viewRef.current
+		if (!view) return
+		const formatBindings = useHotkeysStore
+			.getState()
+			.bindings.filter((b) => b.category === "Format")
+		reconfigureMarkdownKeymap(view as import("@codemirror/view").EditorView, formatBindings)
+	}, [formatBindingsSnapshot])
 
 	useEffect(() => {
 		if (isActive && viewRef.current) {

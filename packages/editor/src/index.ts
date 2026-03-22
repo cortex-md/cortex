@@ -32,6 +32,12 @@ export {
 	toggleTaskList,
 	toggleUnorderedList,
 } from "./markdownCommands"
-export { markdownKeymapBindings } from "./markdownKeymap"
+export {
+	defaultMarkdownBindings,
+	defaultMarkdownKeymapExtension,
+	type FormatBinding,
+	markdownKeymapCompartment,
+	reconfigureMarkdownKeymap,
+} from "./markdownKeymap"
 export { ReadingView } from "./ReadingView"
 export { SideBySideView } from "./SideBySideView"
