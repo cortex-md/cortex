@@ -1,6 +1,15 @@
 import { ReadingView } from "@cortex/editor"
 import { isEntryInstalled, type MarketplaceTab, useMarketplaceStore } from "@cortex/marketplace"
-import { Button, Separator, Skeleton, Spinner } from "@cortex/ui"
+import {
+	Button,
+	Empty,
+	EmptyDescription,
+	EmptyMedia,
+	ScrollArea,
+	Separator,
+	Skeleton,
+	Spinner,
+} from "@cortex/ui"
 import { Download, Package, Trash2 } from "lucide-react"
 import { useEffect } from "react"
 
@@ -33,10 +42,14 @@ export function MarketplaceDetail({ tab }: MarketplaceDetailProps) {
 
 	if (!entry) {
 		return (
-			<div className="flex flex-col items-center justify-center h-full text-text-muted gap-3">
-				<Package size={40} className="opacity-30" />
-				<p className="text-xs">Select a {tab === "plugins" ? "plugin" : "theme"} to see details</p>
-			</div>
+			<Empty className="h-full border-none">
+				<EmptyMedia variant="icon">
+					<Package />
+				</EmptyMedia>
+				<EmptyDescription>
+					Select a {tab === "plugins" ? "plugin" : "theme"} to see details
+				</EmptyDescription>
+			</Empty>
 		)
 	}
 
@@ -88,7 +101,7 @@ export function MarketplaceDetail({ tab }: MarketplaceDetailProps) {
 
 			<Separator />
 
-			<div className="flex-1 overflow-y-auto">
+			<ScrollArea className="flex-1">
 				{readmeLoading && readme === undefined ? (
 					<div className="p-5 flex flex-col gap-3">
 						<Skeleton className="h-4 w-2/3" />
@@ -102,9 +115,11 @@ export function MarketplaceDetail({ tab }: MarketplaceDetailProps) {
 						<ReadingView content={readme} />
 					</div>
 				) : (
-					<p className="text-xs text-text-muted p-5">No README available.</p>
+					<Empty className="py-8 border-none">
+						<EmptyDescription>No README available.</EmptyDescription>
+					</Empty>
 				)}
-			</div>
+			</ScrollArea>
 		</div>
 	)
 }

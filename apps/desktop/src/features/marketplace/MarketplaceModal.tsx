@@ -1,5 +1,6 @@
 import { type MarketplaceTab, useMarketplaceStore } from "@cortex/marketplace"
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -7,6 +8,10 @@ import {
 	Tabs,
 	TabsList,
 	TabsTrigger,
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
 } from "@cortex/ui"
 import { RefreshCw } from "lucide-react"
 import { useEffect } from "react"
@@ -47,14 +52,16 @@ export function MarketplaceModal({ open, initialTab, onOpenChange }: Marketplace
 							<TabsTrigger value="themes">Themes</TabsTrigger>
 						</TabsList>
 					</Tabs>
-					<button
-						type="button"
-						onClick={refreshRegistry}
-						className="text-text-muted hover:text-text-primary transition-colors p-1 rounded"
-						title="Refresh registry"
-					>
-						<RefreshCw size={14} />
-					</button>
+					<TooltipProvider>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button variant="ghost" size="icon-sm" onClick={refreshRegistry}>
+									<RefreshCw size={14} />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>Refresh registry</TooltipContent>
+						</Tooltip>
+					</TooltipProvider>
 				</div>
 
 				<div className="flex flex-1 overflow-hidden">
