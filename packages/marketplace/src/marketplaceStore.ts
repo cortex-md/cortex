@@ -1,14 +1,17 @@
+import { getPlatform } from "@cortex/platform"
 import { create } from "zustand"
 import { devtools } from "zustand/middleware"
 import { immer } from "zustand/middleware/immer"
 import { installPlugin, installTheme, uninstallPlugin, uninstallTheme } from "./installService"
 import {
+	fetchManifestMinVersion,
 	fetchPluginRegistry,
 	fetchReadme,
 	fetchThemeRegistry,
 	invalidateRegistryCache,
 } from "./registryService"
 import type { RegistryEntry } from "./types"
+import { detectAvailableUpdates } from "./updateService"
 
 export interface MarketplaceCallbacks {
 	getPluginsDir: () => string | null
@@ -37,6 +40,11 @@ export interface MarketplaceState {
 	registryError: string | null
 	readmeCache: Record<string, string>
 	readmeLoading: boolean
+	appVersion: string | null
+	minVersionCache: Record<string, string>
+	availableUpdates: Record<string, string>
+	updatesChecking: boolean
+	updatesChecked: boolean
 
 	setActiveTab: (tab: MarketplaceTab) => void
 	setSearchQuery: (query: string) => void
@@ -46,6 +54,7 @@ export interface MarketplaceState {
 	installEntry: (entry: RegistryEntry) => Promise<void>
 	uninstallEntry: (entry: RegistryEntry) => Promise<void>
 	loadReadme: (entry: RegistryEntry) => Promise<void>
+	checkUpdates: () => Promise<void>
 }
 
 export const useMarketplaceStore = create<MarketplaceState>()(
@@ -60,6 +69,11 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 			registryError: null,
 			readmeCache: {},
 			readmeLoading: false,
+			appVersion: null,
+			minVersionCache: {},
+			availableUpdates: {},
+			updatesChecking: false,
+			updatesChecked: false,
 
 			setActiveTab: (tab) =>
 				set((s) => {
@@ -73,20 +87,46 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 					s.searchQuery = query
 				}),
 
-			selectEntry: (id) =>
+			selectEntry: (id) => {
 				set((s) => {
 					s.selectedEntryId = id
-				}),
+				})
+
+				if (!id) return
+				const { pluginEntries, themeEntries, activeTab, minVersionCache } = get()
+				const allEntries = activeTab === "plugins" ? pluginEntries : themeEntries
+				const entry = allEntries.find((e) => e.id === id)
+				if (!entry || id in minVersionCache) return
+
+				fetchManifestMinVersion(entry.repo)
+					.then((minVersion) => {
+						if (!minVersion) return
+						set((s) => {
+							s.minVersionCache[id] = minVersion
+						})
+					})
+					.catch(() => {})
+			},
 
 			loadRegistry: async () => {
 				if (get().pluginEntries.length > 0 && get().themeEntries.length > 0) return
 				try {
-					const [plugins, themes] = await Promise.all([fetchPluginRegistry(), fetchThemeRegistry()])
+					const [plugins, themes, version] = await Promise.all([
+						fetchPluginRegistry(),
+						fetchThemeRegistry(),
+						get().appVersion
+							? Promise.resolve(get().appVersion as string)
+							: getPlatform().app.getCurrentAppVersion(),
+					])
 					set((s) => {
 						s.pluginEntries = plugins
 						s.themeEntries = themes
+						s.appVersion = version
 						s.registryError = null
 					})
+					if (!get().updatesChecked) {
+						get().checkUpdates()
+					}
 				} catch (e) {
 					set((s) => {
 						s.registryError = String(e)
@@ -100,6 +140,8 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 					s.pluginEntries = []
 					s.themeEntries = []
 					s.registryError = null
+					s.availableUpdates = {}
+					s.updatesChecked = false
 				})
 				await get().loadRegistry()
 			},
@@ -120,6 +162,9 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 						if (!dir) return
 						await installTheme(entry, dir, callbacks.reloadThemes)
 					}
+					set((s) => {
+						delete s.availableUpdates[entry.id]
+					})
 				} finally {
 					set((s) => {
 						s.loadingEntryId = null
@@ -166,6 +211,48 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 					set((s) => {
 						s.readmeCache[entry.id] = ""
 						s.readmeLoading = false
+					})
+				}
+			},
+
+			checkUpdates: async () => {
+				if (!callbacks || get().updatesChecking) return
+				set((s) => {
+					s.updatesChecking = true
+				})
+				try {
+					const { pluginEntries, themeEntries } = get()
+					const pluginsDir = callbacks.getPluginsDir()
+					const themesDir = callbacks.getThemesDir()
+
+					const installedPluginIds = pluginEntries
+						.filter((e) => callbacks!.isPluginInstalled(e.id))
+						.map((e) => e.id)
+
+					const installedThemeIds = themeEntries
+						.filter((e) => callbacks!.isThemeInstalled(e.id))
+						.map((e) => e.id)
+
+					const [pluginUpdates, themeUpdates] = await Promise.all([
+						pluginsDir && installedPluginIds.length > 0
+							? detectAvailableUpdates(pluginEntries, installedPluginIds, pluginsDir)
+							: Promise.resolve({}),
+						themesDir && installedThemeIds.length > 0
+							? detectAvailableUpdates(themeEntries, installedThemeIds, themesDir)
+							: Promise.resolve({}),
+					])
+
+					set((s) => {
+						s.availableUpdates = { ...pluginUpdates, ...themeUpdates }
+						s.updatesChecked = true
+					})
+				} catch {
+					set((s) => {
+						s.updatesChecked = true
+					})
+				} finally {
+					set((s) => {
+						s.updatesChecking = false
 					})
 				}
 			},

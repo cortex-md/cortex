@@ -8,8 +8,9 @@ import {
 	Input,
 	ScrollArea,
 	Skeleton,
+	Spinner,
 } from "@cortex/ui"
-import { PackageSearch, TriangleAlert } from "lucide-react"
+import { ArrowUp, PackageSearch, TriangleAlert } from "lucide-react"
 import { useMemo } from "react"
 import { MarketplaceCard } from "./MarketplaceCard"
 
@@ -18,8 +19,15 @@ interface MarketplaceBrowserProps {
 }
 
 export function MarketplaceBrowser({ tab }: MarketplaceBrowserProps) {
-	const { pluginEntries, themeEntries, searchQuery, selectedEntryId, registryError } =
-		useMarketplaceStore()
+	const {
+		pluginEntries,
+		themeEntries,
+		searchQuery,
+		selectedEntryId,
+		registryError,
+		availableUpdates,
+		updatesChecking,
+	} = useMarketplaceStore()
 	const setSearchQuery = useMarketplaceStore((s) => s.setSearchQuery)
 	const selectEntry = useMarketplaceStore((s) => s.selectEntry)
 	const loadReadme = useMarketplaceStore((s) => s.loadReadme)
@@ -37,6 +45,11 @@ export function MarketplaceBrowser({ tab }: MarketplaceBrowserProps) {
 				e.description.toLowerCase().includes(query),
 		)
 	}, [allEntries, searchQuery])
+
+	const updateCount = useMemo(
+		() => allEntries.filter((e) => isEntryInstalled(e.id, tab) && availableUpdates[e.id]).length,
+		[allEntries, tab, availableUpdates],
+	)
 
 	const handleSelect = (id: string) => {
 		selectEntry(id)
@@ -68,6 +81,25 @@ export function MarketplaceBrowser({ tab }: MarketplaceBrowserProps) {
 							<TriangleAlert size={14} />
 							<AlertDescription>Failed to load registry. Check your connection.</AlertDescription>
 						</Alert>
+					)}
+
+					{updateCount > 0 && (
+						<Alert className="mx-1 my-2 py-2 animate-in fade-in-0 slide-in-from-top-2 duration-300">
+							<ArrowUp size={14} />
+							<AlertDescription className="flex items-center justify-between">
+								<span>
+									{updateCount} update{updateCount > 1 ? "s" : ""} available
+								</span>
+								{updatesChecking && <Spinner className="size-3" />}
+							</AlertDescription>
+						</Alert>
+					)}
+
+					{updatesChecking && updateCount === 0 && !isLoading && (
+						<div className="flex items-center gap-2 px-3 py-2 animate-in fade-in-0 duration-300">
+							<Spinner className="size-3 text-text-muted" />
+							<span className="text-[10px] text-text-muted">Checking for updates…</span>
+						</div>
 					)}
 
 					{isLoading &&
