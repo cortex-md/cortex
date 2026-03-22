@@ -40,7 +40,12 @@ export {
 	type TagsState,
 	useTagsStore,
 } from "./stores/tagsStore"
-export { type LeftSidebarView, type UIState, useUIStore } from "./stores/uiStore"
+export {
+	type LeftSidebarView,
+	type MarketplaceTab,
+	type UIState,
+	useUIStore,
+} from "./stores/uiStore"
 export {
 	useVaultStore,
 	type VaultRegistryEntry,

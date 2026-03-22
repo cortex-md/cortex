@@ -1,8 +1,10 @@
+import { useUIStore } from "@cortex/core"
 import type { FontInfo } from "@cortex/platform"
 import { getPlatform } from "@cortex/platform"
 import type { AppearanceSettings } from "@cortex/settings"
 import { getThemeManager, type ThemeFamily } from "@cortex/theme"
-import { Label, NativeSelect, NativeSelectOption, Slider } from "@cortex/ui"
+import { Button, Label, NativeSelect, NativeSelectOption, Slider } from "@cortex/ui"
+import { Store } from "lucide-react"
 import { useEffect, useState } from "react"
 import type { UpdateSettingFn } from "."
 import { applyAppearanceSettings, buildAppearanceOverrides } from "./applyAppearance"
@@ -15,6 +17,7 @@ interface AppearanceSectionProps {
 export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps) {
 	const [systemFonts, setSystemFonts] = useState<FontInfo[]>([])
 	const [themeFamilies, setThemeFamilies] = useState<ThemeFamily[]>([])
+	const openMarketplace = useUIStore((s) => s.openMarketplace)
 
 	useEffect(() => {
 		getPlatform().font.listSystemFonts().then(setSystemFonts)
@@ -72,9 +75,20 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 	return (
 		<section>
 			<div className="mb-6">
-				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-					Theme
-				</h3>
+				<div className="flex items-center justify-between mb-3">
+					<h3 className="text-[10px] font-bold m-0 text-text-muted uppercase tracking-wide">
+						Theme
+					</h3>
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => openMarketplace("themes")}
+						className="text-xs h-6 px-2 gap-1.5"
+					>
+						<Store size={12} />
+						Browse themes
+					</Button>
+				</div>
 				<div className="flex items-center justify-between px-0 py-2 gap-4">
 					<Label htmlFor="theme">Theme</Label>
 					<NativeSelect

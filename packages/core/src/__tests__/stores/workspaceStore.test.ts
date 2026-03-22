@@ -111,7 +111,9 @@ describe("closeTab()", () => {
 	})
 
 	it("is a no-op when pane does not exist", () => {
-		expect(() => useWorkspaceStore.getState().closeTab("nonexistent", "nonexistent-pane")).not.toThrow()
+		expect(() =>
+			useWorkspaceStore.getState().closeTab("nonexistent", "nonexistent-pane"),
+		).not.toThrow()
 	})
 })
 

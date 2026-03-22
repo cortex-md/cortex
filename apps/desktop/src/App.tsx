@@ -11,6 +11,7 @@ import {
 } from "@cortex/core"
 import { buildPluginLivePreview, reconfigurePluginExtensions } from "@cortex/editor"
 import { useHotkey, useHotkeyListener, useHotkeysStore } from "@cortex/hotkeys"
+import { setMarketplaceCallbacks } from "@cortex/marketplace"
 import { getPlatform } from "@cortex/platform"
 import GitHubEmojiPlugin from "@cortex/plugin-github-emoji"
 import {
@@ -56,6 +57,7 @@ import { FileSidebar } from "./features/file-explorer/FileSidebar"
 import { type NavItem, SidebarNav } from "./features/file-explorer/SidebarNav"
 import { EmptyVaultLayout } from "./features/layout/empty-vault-layout"
 import { SplitPaneView } from "./features/layout/SplitPane"
+import { MarketplaceModal } from "./features/marketplace"
 import { QuickFinder } from "./features/quick-finder/QuickFinder"
 import { SearchSidebar } from "./features/search/SearchSidebar"
 import { applyAppearanceSettings } from "./features/settings/applyAppearance"
@@ -131,6 +133,24 @@ setWorkspaceFunctions({
 	},
 })
 
+setMarketplaceCallbacks({
+	getPluginsDir: () => {
+		const vault = useVaultStore.getState().vault
+		return vault ? `${vault.path}/.cortex/plugins` : null
+	},
+	getThemesDir: () => {
+		const vault = useVaultStore.getState().vault
+		return vault ? `${vault.path}/.cortex/themes` : null
+	},
+	reloadPlugins: (dir) => discoverCommunityPlugins(dir),
+	reloadThemes: loadCommunityThemes,
+	isPluginInstalled: (id) => id in usePluginStore.getState().plugins,
+	isThemeInstalled: (id) =>
+		getThemeManager()
+			.getThemeFamilies()
+			.some((f) => f.name === id),
+})
+
 registerBundledPlugin(
 	{
 		id: "github-emoji",
@@ -194,6 +214,9 @@ export default function App() {
 		settingsOpen,
 		openSettings,
 		closeSettings,
+		marketplaceOpen,
+		marketplaceInitialTab,
+		closeMarketplace,
 	} = useUIStore()
 	const { settings, loadSettings } = useSettingsStore()
 	const loadOverrides = useHotkeysStore((s) => s.loadOverrides)
@@ -731,6 +754,11 @@ export default function App() {
 			<StatusBar />
 
 			<SettingsModal open={settingsOpen} onOpenChange={(open) => !open && closeSettings()} />
+			<MarketplaceModal
+				open={marketplaceOpen}
+				initialTab={marketplaceInitialTab}
+				onOpenChange={(open) => !open && closeMarketplace()}
+			/>
 			<QuickFinder />
 			<CommandPalette />
 			<TagPicker />

@@ -106,7 +106,7 @@ describe("extractYamlArray", () => {
 	})
 
 	it("strips quotes from inline values", () => {
-		const yaml = 'tags: ["react", \'typescript\']'
+		const yaml = "tags: [\"react\", 'typescript']"
 		expect(extractYamlArray(yaml, "tags")).toEqual(["react", "typescript"])
 	})
 

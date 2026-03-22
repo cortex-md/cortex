@@ -45,4 +45,8 @@ export class FileSystem implements IFileSystem {
 			await invoke<void>("stop_watching")
 		}
 	}
+
+	async downloadAndExtract(url: string, destDir: string): Promise<void> {
+		await invoke<void>("download_and_extract", { url, destDir })
+	}
 }
