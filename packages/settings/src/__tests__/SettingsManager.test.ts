@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { getPlatform } from "@cortex/platform"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SettingsManager } from "../SettingsManager"
 
 vi.mock("@cortex/platform", () => ({
@@ -73,9 +73,7 @@ describe("loadFromVault()", () => {
 
 describe("get()", () => {
 	it("returns stored value for a setting key", async () => {
-		mockPlatform.fs.readFile.mockResolvedValue(
-			JSON.stringify({ editor: { tabSize: 4 } }),
-		)
+		mockPlatform.fs.readFile.mockResolvedValue(JSON.stringify({ editor: { tabSize: 4 } }))
 		const manager = new SettingsManager()
 		await manager.loadFromVault("/vault")
 		expect(manager.get("editor", "tabSize")).toBe(4)
