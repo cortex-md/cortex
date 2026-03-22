@@ -46,6 +46,7 @@ import { NoteHistoryPanel } from "../sync/NoteHistoryPanel"
 import { TabBar } from "../tabs/TabBar"
 import { getCoreViewComponent } from "./coreViewRegistry"
 import { DropZoneOverlay } from "./DropZoneOverlay"
+import { EditorContextMenu } from "./EditorContextMenu"
 
 function computeRelativePath(fromDir: string, toFile: string): string {
 	const fromParts = fromDir.split("/").filter(Boolean)
@@ -114,6 +115,10 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 	const { markTabDirty } = useWorkspaceStore()
 	const mode = useEditorStore((s) => s.mode)
 	const viewRef = useRef<CMView | null>(null)
+	const getEditorView = useCallback(
+		() => viewRef.current as import("@codemirror/view").EditorView | null,
+		[],
+	)
 
 	const handleImagePaste = useCallback(
 		async (imageBlob: Blob): Promise<string | null> => {
@@ -195,46 +200,48 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 	}, [isActive])
 
 	return (
-		<div
-			className="absolute inset-0 flex flex-col"
-			style={{ display: isActive ? "flex" : "none" }}
-			aria-hidden={!isActive}
-		>
-			{tab.isSuspended ? (
-				<Button
-					variant="ghost"
-					className="flex-1 flex items-center justify-center text-xs text-text-muted cursor-pointer bg-bg-primary border-none font-family-ui w-full hover:bg-bg-secondary"
-					onClick={() => {
-						useWorkspaceStore.getState().activateTab(tab.id, paneId)
-					}}
-				>
-					Tab suspended — click to resume
-				</Button>
-			) : content === null ? (
-				<div className="flex-1 bg-bg-primary" />
-			) : mode === "reading" ? (
-				<ReadingView content={content} plugins={getRegisteredRendererPlugins()} />
-			) : mode === "side-by-side" ? (
-				<SideBySideView
-					content={content}
-					filePath={tab.filePath}
-					editorConfig={editorConfig}
-					rendererPlugins={getRegisteredRendererPlugins()}
-					onChange={handleChange}
-				/>
-			) : (
-				<EditorView
-					content={content}
-					filePath={tab.filePath}
-					editorConfig={editorConfig}
-					livePreview={mode === "live-preview"}
-					extraExtensions={clipboardExtensions}
-					onChange={handleChange}
-					onCursorChange={isActive ? onCursorChange : undefined}
-					onViewReady={handleViewReady}
-				/>
-			)}
-		</div>
+		<EditorContextMenu getEditorView={getEditorView}>
+			<div
+				className="absolute inset-0 flex flex-col"
+				style={{ display: isActive ? "flex" : "none" }}
+				aria-hidden={!isActive}
+			>
+				{tab.isSuspended ? (
+					<Button
+						variant="ghost"
+						className="flex-1 flex items-center justify-center text-xs text-text-muted cursor-pointer bg-bg-primary border-none font-family-ui w-full hover:bg-bg-secondary"
+						onClick={() => {
+							useWorkspaceStore.getState().activateTab(tab.id, paneId)
+						}}
+					>
+						Tab suspended — click to resume
+					</Button>
+				) : content === null ? (
+					<div className="flex-1 bg-bg-primary" />
+				) : mode === "reading" ? (
+					<ReadingView content={content} plugins={getRegisteredRendererPlugins()} />
+				) : mode === "side-by-side" ? (
+					<SideBySideView
+						content={content}
+						filePath={tab.filePath}
+						editorConfig={editorConfig}
+						rendererPlugins={getRegisteredRendererPlugins()}
+						onChange={handleChange}
+					/>
+				) : (
+					<EditorView
+						content={content}
+						filePath={tab.filePath}
+						editorConfig={editorConfig}
+						livePreview={mode === "live-preview"}
+						extraExtensions={clipboardExtensions}
+						onChange={handleChange}
+						onCursorChange={isActive ? onCursorChange : undefined}
+						onViewReady={handleViewReady}
+					/>
+				)}
+			</div>
+		</EditorContextMenu>
 	)
 }
 

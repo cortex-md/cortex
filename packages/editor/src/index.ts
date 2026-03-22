@@ -13,5 +13,25 @@ export { buildHighlightStyle, resolveSyntaxTokens, type SyntaxTokens } from "./h
 export { getLanguageSupport } from "./languages"
 export { livePreviewExtension } from "./livePreview"
 export { buildPluginLivePreview } from "./livePreview/pluginLivePreviewBuilder"
+export {
+	copyLine,
+	duplicateLine,
+	insertCallout,
+	insertCodeBlock,
+	insertImage,
+	insertLink,
+	insertTable,
+	removeParagraphFormatting,
+	toggleBlockquote,
+	toggleBold,
+	toggleHeading,
+	toggleInlineCode,
+	toggleItalic,
+	toggleOrderedList,
+	toggleStrikethrough,
+	toggleTaskList,
+	toggleUnorderedList,
+} from "./markdownCommands"
+export { markdownKeymapBindings } from "./markdownKeymap"
 export { ReadingView } from "./ReadingView"
 export { SideBySideView } from "./SideBySideView"
