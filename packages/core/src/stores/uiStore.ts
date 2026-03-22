@@ -3,6 +3,7 @@ import { devtools } from "zustand/middleware"
 import { immer } from "zustand/middleware/immer"
 
 export type LeftSidebarView = "files" | "search" | "bookmarks" | "tags"
+export type MarketplaceTab = "plugins" | "themes"
 
 export interface UIState {
 	leftSidebarCollapsed: boolean
@@ -28,6 +29,11 @@ export interface UIState {
 	settingsInitialSection: string | null
 	openSettings: (section?: string) => void
 	closeSettings: () => void
+
+	marketplaceOpen: boolean
+	marketplaceInitialTab: MarketplaceTab
+	openMarketplace: (tab?: MarketplaceTab) => void
+	closeMarketplace: () => void
 }
 
 const MIN_SIDEBAR_WIDTH = 180
@@ -93,6 +99,20 @@ export const useUIStore = create<UIState>()(
 				set((s) => {
 					s.settingsOpen = false
 					s.settingsInitialSection = null
+				}),
+
+			marketplaceOpen: false,
+			marketplaceInitialTab: "plugins" as MarketplaceTab,
+
+			openMarketplace: (tab = "plugins") =>
+				set((s) => {
+					s.marketplaceOpen = true
+					s.marketplaceInitialTab = tab
+				}),
+
+			closeMarketplace: () =>
+				set((s) => {
+					s.marketplaceOpen = false
 				}),
 		})),
 		{ name: "uiStore" },

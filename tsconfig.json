@@ -25,6 +25,7 @@
 		{ "path": "packages/plugin-api" },
 		{ "path": "packages/plugin-runtime" },
 		{ "path": "packages/renderer" },
+		{ "path": "packages/marketplace" },
 		{ "path": "apps/desktop" },
 		{ "path": "plugins/github-emoji" },
 		{ "path": "apps/desktop/tsconfig.node.json" }

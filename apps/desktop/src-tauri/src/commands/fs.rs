@@ -1,5 +1,6 @@
 use serde::Serialize;
 use std::fs;
+use std::io;
 use std::path::Path;
 
 #[derive(Serialize, Clone)]
@@ -61,6 +62,41 @@ pub fn hash_file(path: String) -> Result<String, String> {
     let data = fs::read(&path).map_err(|e| e.to_string())?;
     let hash = blake3::hash(&data);
     Ok(hash.to_hex().to_string())
+}
+
+#[tauri::command]
+pub async fn download_and_extract(url: String, dest_dir: String) -> Result<(), String> {
+    let response = reqwest::get(&url).await.map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("Download failed: {}", response.status()));
+    }
+    let bytes = response.bytes().await.map_err(|e| e.to_string())?;
+    let cursor = io::Cursor::new(bytes);
+    let mut archive = zip::ZipArchive::new(cursor).map_err(|e| e.to_string())?;
+    let dest = Path::new(&dest_dir);
+    fs::create_dir_all(dest).map_err(|e| e.to_string())?;
+    for i in 0..archive.len() {
+        let mut entry = archive.by_index(i).map_err(|e| e.to_string())?;
+        let raw_name = entry.name().to_string();
+        let stripped = raw_name
+            .splitn(2, '/')
+            .nth(1)
+            .unwrap_or(&raw_name);
+        if stripped.is_empty() {
+            continue;
+        }
+        let out_path = dest.join(stripped);
+        if entry.is_dir() {
+            fs::create_dir_all(&out_path).map_err(|e| e.to_string())?;
+        } else {
+            if let Some(parent) = out_path.parent() {
+                fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            }
+            let mut out_file = fs::File::create(&out_path).map_err(|e| e.to_string())?;
+            io::copy(&mut entry, &mut out_file).map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
 }
 
 #[tauri::command]

@@ -12,6 +12,7 @@
 	"dependencies": {
 		"@cortex/core": "workspace:*",
 		"@cortex/editor": "workspace:*",
+		"@cortex/marketplace": "workspace:*",
 		"@cortex/hotkeys": "workspace:*",
 		"@cortex/ipc": "workspace:*",
 		"@cortex/platform": "workspace:*",

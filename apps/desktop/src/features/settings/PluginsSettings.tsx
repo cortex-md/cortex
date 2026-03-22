@@ -1,4 +1,4 @@
-import { useVaultStore } from "@cortex/core"
+import { useUIStore, useVaultStore } from "@cortex/core"
 import { getPlatform } from "@cortex/platform"
 import {
 	disablePlugin,
@@ -9,7 +9,7 @@ import {
 	usePluginStore,
 } from "@cortex/plugin-runtime"
 import { Button, LucideIcon, Switch } from "@cortex/ui"
-import { FolderOpen } from "lucide-react"
+import { FolderOpen, Store } from "lucide-react"
 import { useCallback } from "react"
 
 function PluginRow({ record }: { record: PluginRecord }) {
@@ -54,6 +54,7 @@ function PluginRow({ record }: { record: PluginRecord }) {
 
 export function PluginsSection() {
 	const plugins = usePluginStore((s) => s.plugins)
+	const openMarketplace = useUIStore((s) => s.openMarketplace)
 
 	const pluginRecords = Object.values(plugins)
 	const corePlugins = pluginRecords.filter((p) => p.manifest.author === "Cortex")
@@ -97,15 +98,26 @@ export function PluginsSection() {
 					<h3 className="text-[10px] font-bold m-0 text-text-muted uppercase tracking-wide">
 						Community Plugins
 					</h3>
-					<Button
-						variant="ghost"
-						size="sm"
-						onClick={handleOpenPluginsFolder}
-						className="text-xs h-6 px-2 gap-1.5"
-					>
-						<FolderOpen size={12} />
-						Open folder
-					</Button>
+					<div className="flex items-center gap-1">
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => openMarketplace("plugins")}
+							className="text-xs h-6 px-2 gap-1.5"
+						>
+							<Store size={12} />
+							Browse
+						</Button>
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={handleOpenPluginsFolder}
+							className="text-xs h-6 px-2 gap-1.5"
+						>
+							<FolderOpen size={12} />
+							Open folder
+						</Button>
+					</div>
 				</div>
 				{communityPlugins.length === 0 ? (
 					<p className="text-xs text-text-muted py-2">
