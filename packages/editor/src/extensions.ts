@@ -117,12 +117,14 @@ function typographyExtension(fontSize: number, lineHeight: number) {
 
 export interface BaseExtensionsOptions {
 	livePreview?: boolean
+	resolveImageUrl?: (src: string, filePath: string) => string
+	filePath?: string
 }
 
 export function baseExtensions(
 	syntaxTokens: SyntaxTokens,
 	config: EditorConfig = DEFAULT_EDITOR_CONFIG,
-	{ livePreview = true }: BaseExtensionsOptions = {},
+	{ livePreview = true, resolveImageUrl, filePath }: BaseExtensionsOptions = {},
 ) {
 	return [
 		history(),
@@ -138,7 +140,7 @@ export function baseExtensions(
 		keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap, ...searchKeymap]),
 		defaultMarkdownKeymapExtension(),
 		buildHighlightStyle(syntaxTokens),
-		...(livePreview ? [livePreviewExtension()] : []),
+		...(livePreview ? [livePreviewExtension(resolveImageUrl, filePath)] : []),
 		markdown({
 			base: markdownLanguage,
 			codeLanguages,

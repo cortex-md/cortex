@@ -85,7 +85,19 @@ export function MarketplaceDetail({ tab }: MarketplaceDetailProps) {
 				</div>
 				<div className="flex flex-col gap-1 min-w-0 flex-1">
 					<h2 className="text-sm font-semibold">{entry.name}</h2>
-					<p className="text-xs text-text-muted">by {entry.author}</p>
+					{entry.authorUrl ? (
+						<a
+							href={entry.authorUrl}
+							target="_blank"
+							rel="noreferrer"
+							className="text-xs text-text-muted hover:text-text-primary hover:underline w-fit"
+							onClick={(e) => e.stopPropagation()}
+						>
+							by {entry.author}
+						</a>
+					) : (
+						<p className="text-xs text-text-muted">by {entry.author}</p>
+					)}
 					<p className="text-xs text-text-muted">{entry.description}</p>
 				</div>
 				<div className="shrink-0 flex flex-col gap-1.5 items-end">

@@ -1,12 +1,6 @@
-import { RangeSetBuilder } from "@codemirror/state"
-import {
-	Decoration,
-	type DecorationSet,
-	type EditorView,
-	ViewPlugin,
-	type ViewUpdate,
-	WidgetType,
-} from "@codemirror/view"
+import type { EditorState } from "@codemirror/state"
+import { RangeSetBuilder, StateField, type Transaction } from "@codemirror/state"
+import { Decoration, type DecorationSet, EditorView, WidgetType } from "@codemirror/view"
 import { isCursorInRange } from "./utils"
 
 interface FrontmatterRange {
@@ -143,21 +137,26 @@ class FrontmatterWidget extends WidgetType {
 	}
 
 	ignoreEvent() {
-		return true
+		return false
 	}
 }
 
-function buildDecorations(view: EditorView): DecorationSet {
-	const fm = findFrontmatter(view.state.doc)
+function buildDecorations(state: EditorState): DecorationSet {
+	const fm = findFrontmatter(state.doc)
 	if (!fm) return Decoration.none
 
-	const cursorInside = isCursorInRange(view.state, fm.from, fm.to - 1)
+	const closingDelimiterLine = state.doc.lineAt(fm.to - 1)
+	const yamlContentStart = fm.from + 4
+	const yamlContentEnd = closingDelimiterLine.from - 1
+	const cursorInside =
+		yamlContentEnd > yamlContentStart && isCursorInRange(state, yamlContentStart, yamlContentEnd)
+
 	const builder = new RangeSetBuilder<Decoration>()
 
 	if (cursorInside) {
 		const fmLineDeco = Decoration.line({ class: "cm-frontmatter-line" })
 		for (let pos = fm.from; pos < fm.to; ) {
-			const line = view.state.doc.lineAt(pos)
+			const line = state.doc.lineAt(pos)
 			if (line.text.length > 0 || pos === fm.from) {
 				builder.add(line.from, line.from, fmLineDeco)
 			}
@@ -165,12 +164,13 @@ function buildDecorations(view: EditorView): DecorationSet {
 		}
 	} else {
 		const fields = parseYamlFields(fm.yamlContent)
-		const lastLine = view.state.doc.lineAt(fm.to - 1)
+		const lastLine = state.doc.lineAt(fm.to - 1)
 		builder.add(
 			fm.from,
 			lastLine.to,
 			Decoration.replace({
 				widget: new FrontmatterWidget(fields),
+				block: true,
 			}),
 		)
 	}
@@ -178,21 +178,17 @@ function buildDecorations(view: EditorView): DecorationSet {
 	return builder.finish()
 }
 
-export const frontmatterPlugin = ViewPlugin.fromClass(
-	class {
-		decorations: DecorationSet
-
-		constructor(view: EditorView) {
-			this.decorations = buildDecorations(view)
-		}
-
-		update(update: ViewUpdate) {
-			if (update.docChanged || update.selectionSet || update.viewportChanged) {
-				this.decorations = buildDecorations(update.view)
-			}
-		}
+export const frontmatterPlugin = StateField.define<DecorationSet>({
+	create(state) {
+		return buildDecorations(state)
 	},
-	{
-		decorations: (v) => v.decorations,
+	update(decorations, transaction: Transaction) {
+		if (transaction.docChanged || transaction.selection) {
+			return buildDecorations(transaction.state)
+		}
+		return decorations
 	},
-)
+	provide(field) {
+		return EditorView.decorations.from(field)
+	},
+})

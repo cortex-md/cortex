@@ -29,6 +29,7 @@ interface RegistryEntry {
   id: string
   name: string
   author: string
+  authorUrl?: string      // optional author website / profile URL
   description: string
   coverImageUrl: string   // may be empty string
   repo: string            // "owner/repo"
@@ -37,20 +38,18 @@ interface RegistryEntry {
 
 ## Installation Flow
 
+Plugins:
 1. Fetch `https://api.github.com/repos/{owner}/{repo}/releases/latest`
-2. Find first `.zip` asset, fall back to `zipball_url`
-3. Call `platform.fs.downloadAndExtract(zipUrl, destDir)` — Rust command downloads + extracts
-4. Re-run discovery (plugin or theme) to register the new entry
+2. Find `manifest.json` and `main.js` assets in the release
+3. Create dest dir, download each file via `platform.http.fetch` + `platform.fs.writeFile`
+4. Optionally download `styles.css` if present
+5. Re-run plugin discovery to register the new entry
 
-Zip contents should be flat (no top-level directory) for plugins:
-- `manifest.json`
-- `main.js`
-
-For themes:
-- `manifest.json`
-- `dark.css`, `light.css`
-
-If the zip has a single top-level directory (GitHub source zip format), the Rust extractor strips it automatically.
+Themes:
+1. Fetch latest release
+2. Download `manifest.json`, parse it to get colorscheme file names
+3. Download each colorscheme CSS file (e.g. `dark.css`, `light.css`)
+4. Re-run theme discovery
 
 ## Bridge Pattern
 
@@ -67,19 +66,24 @@ setMarketplaceCallbacks({
 })
 ```
 
+## Store Filtering and Sorting
+
+The store exposes `filterInstalled: boolean` and `sortOrder: "default" | "newest" | "oldest"` state with corresponding setters. Both reset to defaults when `setActiveTab()` is called. Filtering/sorting is applied client-side in `MarketplaceBrowser`. Date-based sorting lazily fetches `published_at` from the GitHub releases API via `loadReleaseDates()` (triggered automatically when sort order changes from "default"), cached in `releaseDates: Record<string, string>`.
+
 ## Key Exports
 
 - `useMarketplaceStore` — Zustand store with all UI state and actions
 - `setMarketplaceCallbacks(cbs)` — Wire platform-specific callbacks (call once at app init)
 - `isEntryInstalled(id, tab)` — Check if a plugin/theme is installed
 - `RegistryEntry` — Type for registry entries
+- `MarketplaceSortOrder` — `"default" | "newest" | "oldest"`
 - `fetchPluginRegistry() / fetchThemeRegistry()` — Fetch with in-memory cache
 - `fetchReadme(repo)` — Fetch README.md from GitHub (tries main, then master branch)
 - `invalidateRegistryCache()` — Force re-fetch on next loadRegistry()
 
 ## Dependencies
 
-- `@cortex/platform` — `getPlatform().http.fetch()` for network, `getPlatform().fs.downloadAndExtract()` for install
+- `@cortex/platform` — `getPlatform().http.fetch()` for network, `getPlatform().fs.writeFile()` + `createDir()` for install
 - `@cortex/plugin-runtime` — `discoverCommunityPlugins()`, `usePluginStore`
 - `@cortex/theme` — `getThemeManager()` for theme registration checks
 - `zustand` + `immer` — state management

@@ -4,7 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Cortex** is a modular desktop markdown editor built with Tauri (Rust native shell) + React 19 + TypeScript. The architecture is a monorepo using bun workspaces, with clear separation between:
+**Cortex** is a modular markdown platform with desktop app and developer tooling. The architecture is a monorepo using bun workspaces, with clear separation between:
+- **apps/cli** — Official Cortex CLI (Go) for plugin/theme create, validate, and publish workflows
 - **apps/desktop** — The Tauri application entry point
 - **packages/** — Reusable modules (ui, core, platform, ipc, theme, editor, settings)
 

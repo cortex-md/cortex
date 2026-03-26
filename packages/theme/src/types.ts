@@ -10,6 +10,7 @@ export interface CommunityThemeManifest {
 	name: string
 	displayName: string
 	author: string
+	authorUrl?: string
 	version: string
 	minAppVersion?: string
 	colorschemes: {

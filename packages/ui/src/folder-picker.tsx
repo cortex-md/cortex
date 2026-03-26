@@ -1,3 +1,5 @@
+"use client"
+
 import { FileIcon, FolderIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { Input } from "./input"

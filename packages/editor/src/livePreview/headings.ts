@@ -48,27 +48,29 @@ function buildDecorations(view: EditorView): DecorationSet {
 				const headingFrom = node.from
 				const headingTo = node.to
 
-				if (isCursorOnLine(view.state, headingFrom, headingTo)) return
-
+				const cursorOnLine = isCursorOnLine(view.state, headingFrom, headingTo)
 				const line = view.state.doc.lineAt(headingFrom)
+
 				decorations.push({
 					from: line.from,
 					to: line.from,
 					value: Decoration.line({ class: `cm-h${level}` }),
 				})
 
-				const cursor = node.node.cursor()
-				cursor.firstChild()
-				do {
-					if (cursor.name === "HeaderMark") {
-						const replaceEnd = Math.min(cursor.to + 1, line.to)
-						decorations.push({
-							from: cursor.from,
-							to: replaceEnd,
-							value: Decoration.replace({}),
-						})
-					}
-				} while (cursor.nextSibling())
+				if (!cursorOnLine) {
+					const cursor = node.node.cursor()
+					cursor.firstChild()
+					do {
+						if (cursor.name === "HeaderMark") {
+							const replaceEnd = Math.min(cursor.to + 1, line.to)
+							decorations.push({
+								from: cursor.from,
+								to: replaceEnd,
+								value: Decoration.replace({}),
+							})
+						}
+					} while (cursor.nextSibling())
+				}
 			},
 		})
 	}

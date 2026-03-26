@@ -206,9 +206,9 @@
 	--syntax-heading: #a06a10;
 	--syntax-meta: #b3b2a8;
 
-	--font-ui: "DM Sans", system-ui, -apple-system, sans-serif;
-	--font-editor: "Lora", Georgia, "Times New Roman", serif;
-	--font-mono: "DM Mono", "JetBrains Mono", "Fira Code", Menlo, monospace;
+	--font-ui: ui-sans-serif, -apple-system, "system-ui";
+	--font-editor: "DM Sans", system-ui, -apple-system, sans-serif;
+	--font-mono: system-ui, -apple-system, sans-serif;
 
 	--status-error: #b83535;
 	--error-bg: #fdeaea;

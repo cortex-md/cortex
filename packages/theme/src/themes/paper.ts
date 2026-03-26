@@ -114,9 +114,9 @@ export const paperTheme: Theme = {
 			},
 		},
 		fonts: {
-			ui: '"DM Sans", system-ui, -apple-system, sans-serif',
-			editor: '"Lora", Georgia, "Times New Roman", serif',
-			mono: '"DM Mono", "JetBrains Mono", "Fira Code", Menlo, monospace',
+			ui: 'ui-sans-serif, -apple-system, "system-ui"',
+			editor: 'ui-sans-serif, -apple-system, "system-ui"',
+			mono: 'ui-sans-serif, -apple-system, "system-ui"',
 		},
 		status: {
 			error: "#b83535",

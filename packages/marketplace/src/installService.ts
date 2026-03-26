@@ -2,12 +2,17 @@ import { getPlatform } from "@cortex/platform"
 import { discoverCommunityPlugins, usePluginStore } from "@cortex/plugin-runtime"
 import { getThemeManager } from "@cortex/theme"
 import { fetchLatestRelease } from "./registryService"
-import type { RegistryEntry } from "./types"
+import type { GitHubReleaseAsset, RegistryEntry } from "./types"
 
-async function resolveZipUrl(repo: string): Promise<string> {
-	const release = await fetchLatestRelease(repo)
-	const zipAsset = release.assets.find((a) => a.name.endsWith(".zip"))
-	return zipAsset?.browser_download_url ?? release.zipball_url
+async function downloadAsset(asset: GitHubReleaseAsset, destPath: string): Promise<void> {
+	const response = await getPlatform().http.fetch(asset.browser_download_url)
+	if (!response.ok) throw new Error(`Failed to download ${asset.name}: ${response.status}`)
+	const content = await response.text()
+	await getPlatform().fs.writeFile(destPath, content)
+}
+
+function findAsset(assets: GitHubReleaseAsset[], name: string): GitHubReleaseAsset | undefined {
+	return assets.find((a) => a.name === name)
 }
 
 export async function installPlugin(
@@ -15,9 +20,24 @@ export async function installPlugin(
 	pluginsDir: string,
 	loadCommunityPlugins: (dir: string) => Promise<void>,
 ): Promise<void> {
-	const zipUrl = await resolveZipUrl(entry.repo)
+	const release = await fetchLatestRelease(entry.repo)
 	const destDir = `${pluginsDir}/${entry.id}`
-	await getPlatform().fs.downloadAndExtract(zipUrl, destDir)
+	await getPlatform().fs.createDir(destDir)
+
+	const manifestAsset = findAsset(release.assets, "manifest.json")
+	const mainAsset = findAsset(release.assets, "main.js")
+	if (!manifestAsset || !mainAsset) {
+		throw new Error(`Release for ${entry.id} is missing required assets (manifest.json, main.js)`)
+	}
+
+	await downloadAsset(manifestAsset, `${destDir}/manifest.json`)
+	await downloadAsset(mainAsset, `${destDir}/main.js`)
+
+	const stylesAsset = findAsset(release.assets, "styles.css")
+	if (stylesAsset) {
+		await downloadAsset(stylesAsset, `${destDir}/styles.css`)
+	}
+
 	await discoverCommunityPlugins(pluginsDir)
 	await loadCommunityPlugins(pluginsDir)
 }
@@ -33,9 +53,28 @@ export async function installTheme(
 	themesDir: string,
 	reloadCommunityThemes: (dir: string) => Promise<void>,
 ): Promise<void> {
-	const zipUrl = await resolveZipUrl(entry.repo)
+	const release = await fetchLatestRelease(entry.repo)
 	const destDir = `${themesDir}/${entry.id}`
-	await getPlatform().fs.downloadAndExtract(zipUrl, destDir)
+	await getPlatform().fs.createDir(destDir)
+
+	const manifestAsset = findAsset(release.assets, "manifest.json")
+	if (!manifestAsset) {
+		throw new Error(`Release for ${entry.id} is missing manifest.json`)
+	}
+	await downloadAsset(manifestAsset, `${destDir}/manifest.json`)
+
+	const manifestContent = await getPlatform().fs.readFile(`${destDir}/manifest.json`)
+	const parsedManifest = JSON.parse(manifestContent) as { colorschemes?: Record<string, string> }
+	const colorschemes = parsedManifest.colorschemes ?? {}
+
+	for (const [key, cssFile] of Object.entries(colorschemes)) {
+		const cssAsset = findAsset(release.assets, cssFile) ?? findAsset(release.assets, `${key}.css`)
+		if (!cssAsset) {
+			throw new Error(`Release for ${entry.id} is missing colorscheme asset: ${key}.css`)
+		}
+		await downloadAsset(cssAsset, `${destDir}/${cssFile}`)
+	}
+
 	await reloadCommunityThemes(themesDir)
 }
 

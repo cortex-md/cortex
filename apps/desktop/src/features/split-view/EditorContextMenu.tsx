@@ -32,12 +32,9 @@ import {
 	ContextMenuTrigger,
 } from "@cortex/ui"
 import type { ReactNode } from "react"
-import { useCallback, useRef } from "react"
+import { useCallback, useMemo, useRef } from "react"
 import type { MenuItem } from "@/utils/context-menu"
 import { NativeMenuActions } from "@/utils/context-menu"
-
-const isNativePlatform = getPlatform().capabilities.includes("menu")
-const nativeMenu = new NativeMenuActions()
 
 interface Props {
 	getEditorView: () => EditorView | null
@@ -194,6 +191,8 @@ function buildNativeMenuItems(view: EditorView, hasSelection: boolean): MenuItem
 
 export function EditorContextMenu({ getEditorView, children }: Props) {
 	const capturedViewRef = useRef<EditorView | null>(null)
+	const isNativePlatform = useMemo(() => getPlatform().capabilities.includes("menu"), [])
+	const nativeMenu = useMemo(() => new NativeMenuActions(), [])
 
 	const handleNativeContextMenu = useCallback(
 		(event: React.MouseEvent) => {
@@ -209,7 +208,7 @@ export function EditorContextMenu({ getEditorView, children }: Props) {
 				position: { x: event.clientX, y: event.clientY },
 			})
 		},
-		[getEditorView],
+		[getEditorView, nativeMenu],
 	)
 
 	const handleRadixContextMenuOpen = useCallback(() => {

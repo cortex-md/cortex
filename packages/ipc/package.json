@@ -10,7 +10,6 @@
 		"@cortex/platform": "workspace:*",
 		"@tauri-apps/api": "^2.5.0",
 		"@tauri-apps/plugin-dialog": "^2.6.0",
-		"@tauri-apps/plugin-http": "^2.5.7",
 		"@tauri-apps/plugin-opener": "^2"
 	},
 	"devDependencies": {

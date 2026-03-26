@@ -9,8 +9,14 @@ import {
 } from "@codemirror/view"
 import { isCursorInRange } from "./utils"
 
+interface DecorationEntry {
+	from: number
+	to: number
+	value: Decoration
+}
+
 function buildDecorations(view: EditorView): DecorationSet {
-	const builder = new RangeSetBuilder<Decoration>()
+	const decorations: DecorationEntry[] = []
 	const tree = syntaxTree(view.state)
 
 	for (const { from, to } of view.visibleRanges) {
@@ -26,33 +32,58 @@ function buildDecorations(view: EditorView): DecorationSet {
 				if (isCursorInRange(view.state, nodeFrom, nodeTo)) return
 
 				if (node.name === "Link") {
-					const linkNode = node.node
-					const urlChild = linkNode.getChild("URL")
-					const linkText = linkNode.getChild("LinkLabel") ?? linkNode.firstChild
+					const cursor = node.node.cursor()
+					if (!cursor.firstChild()) return
 
-					if (!linkText) return
+					const linkMarks: Array<{ from: number; to: number }> = []
+					do {
+						if (cursor.name === "LinkMark") {
+							linkMarks.push({ from: cursor.from, to: cursor.to })
+						}
+					} while (cursor.nextSibling())
 
-					builder.add(nodeFrom, linkText.from, Decoration.replace({}))
-					builder.add(linkText.from, linkText.to, Decoration.mark({ class: "cm-link" }))
-					if (urlChild) {
-						builder.add(linkText.to, nodeTo, Decoration.replace({}))
-					} else {
-						builder.add(linkText.to, nodeTo, Decoration.replace({}))
-					}
+					if (linkMarks.length < 2) return
+
+					const textStart = linkMarks[0].to
+					const textEnd = linkMarks[1].from
+
+					if (textStart >= textEnd) return
+
+					decorations.push({ from: nodeFrom, to: textStart, value: Decoration.replace({}) })
+					decorations.push({
+						from: textStart,
+						to: textEnd,
+						value: Decoration.mark({ class: "cm-link" }),
+					})
+					decorations.push({ from: textEnd, to: nodeTo, value: Decoration.replace({}) })
 				}
 
 				if (node.name === "WikiLink") {
 					const text = view.state.doc.sliceString(nodeFrom, nodeTo)
 					if (text.startsWith("[[") && text.endsWith("]]")) {
-						builder.add(nodeFrom, nodeFrom + 2, Decoration.replace({}))
-						builder.add(nodeFrom + 2, nodeTo - 2, Decoration.mark({ class: "cm-wiki-link" }))
-						builder.add(nodeTo - 2, nodeTo, Decoration.replace({}))
+						decorations.push({ from: nodeFrom, to: nodeFrom + 2, value: Decoration.replace({}) })
+						decorations.push({
+							from: nodeFrom + 2,
+							to: nodeTo - 2,
+							value: Decoration.mark({ class: "cm-wiki-link" }),
+						})
+						decorations.push({ from: nodeTo - 2, to: nodeTo, value: Decoration.replace({}) })
 					}
 				}
 			},
 		})
 	}
 
+	decorations.sort((a, b) => {
+		if (a.from !== b.from) return a.from - b.from
+		if (a.to !== b.to) return a.to - b.to
+		return 0
+	})
+
+	const builder = new RangeSetBuilder<Decoration>()
+	for (const deco of decorations) {
+		builder.add(deco.from, deco.to, deco.value)
+	}
 	return builder.finish()
 }
 

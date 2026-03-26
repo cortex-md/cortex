@@ -26,6 +26,7 @@ export interface PluginManifest {
 	version: string
 	minAppVersion: string
 	author: string
+	authorUrl?: string
 	description: string
 	icon: string
 	main: string

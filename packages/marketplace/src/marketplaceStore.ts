@@ -4,6 +4,7 @@ import { devtools } from "zustand/middleware"
 import { immer } from "zustand/middleware/immer"
 import { installPlugin, installTheme, uninstallPlugin, uninstallTheme } from "./installService"
 import {
+	fetchLatestRelease,
 	fetchManifestMinVersion,
 	fetchPluginRegistry,
 	fetchReadme,
@@ -29,12 +30,15 @@ export function setMarketplaceCallbacks(cbs: MarketplaceCallbacks): void {
 }
 
 export type MarketplaceTab = "plugins" | "themes"
+export type MarketplaceSortOrder = "default" | "newest" | "oldest"
 
 export interface MarketplaceState {
 	pluginEntries: RegistryEntry[]
 	themeEntries: RegistryEntry[]
 	activeTab: MarketplaceTab
 	searchQuery: string
+	filterInstalled: boolean
+	sortOrder: MarketplaceSortOrder
 	selectedEntryId: string | null
 	loadingEntryId: string | null
 	registryError: string | null
@@ -45,9 +49,13 @@ export interface MarketplaceState {
 	availableUpdates: Record<string, string>
 	updatesChecking: boolean
 	updatesChecked: boolean
+	releaseDates: Record<string, string>
+	releaseDatesLoading: boolean
 
 	setActiveTab: (tab: MarketplaceTab) => void
 	setSearchQuery: (query: string) => void
+	setFilterInstalled: (value: boolean) => void
+	setSortOrder: (order: MarketplaceSortOrder) => void
 	selectEntry: (id: string | null) => void
 	loadRegistry: () => Promise<void>
 	refreshRegistry: () => Promise<void>
@@ -55,6 +63,7 @@ export interface MarketplaceState {
 	uninstallEntry: (entry: RegistryEntry) => Promise<void>
 	loadReadme: (entry: RegistryEntry) => Promise<void>
 	checkUpdates: () => Promise<void>
+	loadReleaseDates: () => Promise<void>
 }
 
 export const useMarketplaceStore = create<MarketplaceState>()(
@@ -64,6 +73,8 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 			themeEntries: [],
 			activeTab: "plugins" as MarketplaceTab,
 			searchQuery: "",
+			filterInstalled: false,
+			sortOrder: "default" as MarketplaceSortOrder,
 			selectedEntryId: null,
 			loadingEntryId: null,
 			registryError: null,
@@ -74,11 +85,15 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 			availableUpdates: {},
 			updatesChecking: false,
 			updatesChecked: false,
+			releaseDates: {},
+			releaseDatesLoading: false,
 
 			setActiveTab: (tab) =>
 				set((s) => {
 					s.activeTab = tab
 					s.searchQuery = ""
+					s.filterInstalled = false
+					s.sortOrder = "default"
 					s.selectedEntryId = null
 				}),
 
@@ -86,6 +101,20 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 				set((s) => {
 					s.searchQuery = query
 				}),
+
+			setFilterInstalled: (value) =>
+				set((s) => {
+					s.filterInstalled = value
+				}),
+
+			setSortOrder: (order) => {
+				set((s) => {
+					s.sortOrder = order
+				})
+				if (order !== "default") {
+					get().loadReleaseDates()
+				}
+			},
 
 			selectEntry: (id) => {
 				set((s) => {
@@ -111,21 +140,24 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 			loadRegistry: async () => {
 				if (get().pluginEntries.length > 0 && get().themeEntries.length > 0) return
 				try {
-					const [plugins, themes, version] = await Promise.all([
-						fetchPluginRegistry(),
-						fetchThemeRegistry(),
-						get().appVersion
-							? Promise.resolve(get().appVersion as string)
-							: getPlatform().app.getCurrentAppVersion(),
-					])
+					const [plugins, themes] = await Promise.all([fetchPluginRegistry(), fetchThemeRegistry()])
 					set((s) => {
 						s.pluginEntries = plugins
 						s.themeEntries = themes
-						s.appVersion = version
 						s.registryError = null
 					})
 					if (!get().updatesChecked) {
 						get().checkUpdates()
+					}
+					if (!get().appVersion) {
+						getPlatform()
+							.app.getCurrentAppVersion()
+							.then((version) => {
+								set((s) => {
+									s.appVersion = version
+								})
+							})
+							.catch(() => {})
 					}
 				} catch (e) {
 					set((s) => {
@@ -253,6 +285,37 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 				} finally {
 					set((s) => {
 						s.updatesChecking = false
+					})
+				}
+			},
+
+			loadReleaseDates: async () => {
+				if (get().releaseDatesLoading) return
+				const { pluginEntries, themeEntries, activeTab, releaseDates } = get()
+				const allEntries = activeTab === "plugins" ? pluginEntries : themeEntries
+				const uncached = allEntries.filter((e) => !(e.id in releaseDates))
+				if (uncached.length === 0) return
+
+				set((s) => {
+					s.releaseDatesLoading = true
+				})
+				try {
+					const results = await Promise.allSettled(
+						uncached.map(async (entry) => {
+							const release = await fetchLatestRelease(entry.repo)
+							return { id: entry.id, date: release.published_at }
+						}),
+					)
+					set((s) => {
+						for (const result of results) {
+							if (result.status === "fulfilled") {
+								s.releaseDates[result.value.id] = result.value.date
+							}
+						}
+					})
+				} finally {
+					set((s) => {
+						s.releaseDatesLoading = false
 					})
 				}
 			},

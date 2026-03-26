@@ -7,10 +7,17 @@ import { formattingPlugin } from "./formatting"
 import { frontmatterPlugin } from "./frontmatter"
 import { headingsPlugin } from "./headings"
 import { horizontalRulePlugin } from "./horizontalRule"
+import { imagesPlugin } from "./images"
 import { inlineCodePlugin } from "./inlineCode"
 import { linksPlugin } from "./links"
 
-export function livePreviewExtension(): Extension {
+export function livePreviewExtension(
+	resolveImageUrl?: (src: string, filePath: string) => string,
+	filePath?: string,
+): Extension {
+	const imageResolver = resolveImageUrl ?? ((src) => src)
+	const currentFilePath = filePath ?? ""
+
 	return [
 		frontmatterPlugin,
 		headingsPlugin,
@@ -21,6 +28,7 @@ export function livePreviewExtension(): Extension {
 		horizontalRulePlugin,
 		blockquotePlugin,
 		codeBlockPlugin,
+		imagesPlugin(imageResolver, currentFilePath),
 	]
 }
 
@@ -31,5 +39,6 @@ export { formattingPlugin } from "./formatting"
 export { frontmatterPlugin } from "./frontmatter"
 export { headingsPlugin } from "./headings"
 export { horizontalRulePlugin } from "./horizontalRule"
+export { imagesPlugin } from "./images"
 export { inlineCodePlugin } from "./inlineCode"
 export { linksPlugin } from "./links"

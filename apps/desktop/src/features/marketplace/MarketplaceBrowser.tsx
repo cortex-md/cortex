@@ -1,11 +1,19 @@
-import { isEntryInstalled, type MarketplaceTab, useMarketplaceStore } from "@cortex/marketplace"
+import {
+	isEntryInstalled,
+	type MarketplaceSortOrder,
+	type MarketplaceTab,
+	useMarketplaceStore,
+} from "@cortex/marketplace"
 import {
 	Alert,
 	AlertDescription,
+	Button,
 	Empty,
 	EmptyDescription,
 	EmptyMedia,
 	Input,
+	NativeSelect,
+	NativeSelectOption,
 	ScrollArea,
 	Skeleton,
 	Spinner,
@@ -23,12 +31,18 @@ export function MarketplaceBrowser({ tab }: MarketplaceBrowserProps) {
 		pluginEntries,
 		themeEntries,
 		searchQuery,
+		filterInstalled,
+		sortOrder,
 		selectedEntryId,
 		registryError,
 		availableUpdates,
 		updatesChecking,
+		releaseDates,
+		releaseDatesLoading,
 	} = useMarketplaceStore()
 	const setSearchQuery = useMarketplaceStore((s) => s.setSearchQuery)
+	const setFilterInstalled = useMarketplaceStore((s) => s.setFilterInstalled)
+	const setSortOrder = useMarketplaceStore((s) => s.setSortOrder)
 	const selectEntry = useMarketplaceStore((s) => s.selectEntry)
 	const loadReadme = useMarketplaceStore((s) => s.loadReadme)
 
@@ -36,15 +50,32 @@ export function MarketplaceBrowser({ tab }: MarketplaceBrowserProps) {
 	const isLoading = allEntries.length === 0 && !registryError
 
 	const filteredEntries = useMemo(() => {
-		if (!searchQuery.trim()) return allEntries
-		const query = searchQuery.toLowerCase()
-		return allEntries.filter(
-			(e) =>
-				e.name.toLowerCase().includes(query) ||
-				e.author.toLowerCase().includes(query) ||
-				e.description.toLowerCase().includes(query),
-		)
-	}, [allEntries, searchQuery])
+		let entries = allEntries
+
+		if (searchQuery.trim()) {
+			const query = searchQuery.toLowerCase()
+			entries = entries.filter(
+				(e) =>
+					e.name.toLowerCase().includes(query) ||
+					e.author.toLowerCase().includes(query) ||
+					e.description.toLowerCase().includes(query),
+			)
+		}
+
+		if (filterInstalled) {
+			entries = entries.filter((e) => isEntryInstalled(e.id, tab))
+		}
+
+		if (sortOrder !== "default") {
+			entries = [...entries].sort((a, b) => {
+				const dateA = releaseDates[a.id] ? new Date(releaseDates[a.id]).getTime() : 0
+				const dateB = releaseDates[b.id] ? new Date(releaseDates[b.id]).getTime() : 0
+				return sortOrder === "newest" ? dateB - dateA : dateA - dateB
+			})
+		}
+
+		return entries
+	}, [allEntries, searchQuery, filterInstalled, sortOrder, tab, releaseDates])
 
 	const updateCount = useMemo(
 		() => allEntries.filter((e) => isEntryInstalled(e.id, tab) && availableUpdates[e.id]).length,
@@ -59,7 +90,7 @@ export function MarketplaceBrowser({ tab }: MarketplaceBrowserProps) {
 
 	return (
 		<div className="flex flex-col h-full">
-			<div className="p-3 border-b border-border shrink-0">
+			<div className="p-3 border-b border-border shrink-0 flex flex-col gap-2">
 				<div className="relative">
 					<PackageSearch
 						size={14}
@@ -71,6 +102,24 @@ export function MarketplaceBrowser({ tab }: MarketplaceBrowserProps) {
 						onChange={(e) => setSearchQuery(e.target.value)}
 						className="pl-8 h-8 text-xs"
 					/>
+				</div>
+				<div className="flex items-center gap-2">
+					<Button
+						variant={filterInstalled ? "secondary" : "ghost"}
+						size="sm"
+						className="h-7 text-xs px-2.5"
+						onClick={() => setFilterInstalled(!filterInstalled)}
+					>
+						Installed
+					</Button>
+					<NativeSelect
+						value={sortOrder}
+						onChange={(e) => setSortOrder(e.target.value as MarketplaceSortOrder)}
+					>
+						<NativeSelectOption value="default">Default</NativeSelectOption>
+						<NativeSelectOption value="newest">Newest first</NativeSelectOption>
+						<NativeSelectOption value="oldest">Oldest first</NativeSelectOption>
+					</NativeSelect>
 				</div>
 			</div>
 
@@ -99,6 +148,13 @@ export function MarketplaceBrowser({ tab }: MarketplaceBrowserProps) {
 						<div className="flex items-center gap-2 px-3 py-2 animate-in fade-in-0 duration-300">
 							<Spinner className="size-3 text-text-muted" />
 							<span className="text-[10px] text-text-muted">Checking for updates…</span>
+						</div>
+					)}
+
+					{releaseDatesLoading && sortOrder !== "default" && !isLoading && (
+						<div className="flex items-center gap-2 px-3 py-2 animate-in fade-in-0 duration-300">
+							<Spinner className="size-3 text-text-muted" />
+							<span className="text-[10px] text-text-muted">Loading release dates…</span>
 						</div>
 					)}
 
@@ -137,7 +193,9 @@ export function MarketplaceBrowser({ tab }: MarketplaceBrowserProps) {
 
 			<div className="px-3 py-2 border-t border-border shrink-0">
 				<span className="text-[10px] text-text-muted">
-					{filteredEntries.length} {tab} available
+					{filteredEntries.length === allEntries.length
+						? `${allEntries.length} ${tab} available`
+						: `${filteredEntries.length} of ${allEntries.length} ${tab}`}
 				</span>
 			</div>
 		</div>

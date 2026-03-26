@@ -69,18 +69,26 @@ export function TabBar({ tabs, activeTabId, paneId, onActivate, onClose, onConte
 							<span className="tab-title truncate">{tab.title}</span>
 							{tab.isDirty && <span className="tab-dirty-dot" aria-hidden="true" />}
 							{!tab.isPinned && (
-								<button
-									type="button"
-									className="tab-close-btn opacity-0 group-hover/tab:opacity-100 data-[active=true]:opacity-100 shrink-0 rounded p-0.5 hover:bg-bg-tertiary"
-									data-active={isActive || undefined}
-									onClick={(e) => {
-										e.stopPropagation()
-										onClose(tab.id)
-									}}
-									onPointerDown={(e) => e.stopPropagation()}
-								>
-									<XIcon size={12} />
-								</button>
+								<>
+									{/* biome-ignore lint/a11y/noStaticElementInteractions: span close button cannot be a <button> — TabsTrigger already renders as <button> */}
+									<span
+										className="tab-close-btn opacity-0 group-hover/tab:opacity-100 data-[active=true]:opacity-100 shrink-0 rounded p-0.5 hover:bg-bg-tertiary"
+										data-active={isActive || undefined}
+										onClick={(e) => {
+											e.stopPropagation()
+											onClose(tab.id)
+										}}
+										onKeyDown={(e) => {
+											if (e.key === "Enter" || e.key === " ") {
+												e.stopPropagation()
+												onClose(tab.id)
+											}
+										}}
+										onPointerDown={(e) => e.stopPropagation()}
+									>
+										<XIcon size={12} />
+									</span>
+								</>
 							)}
 						</TabsTrigger>
 					)

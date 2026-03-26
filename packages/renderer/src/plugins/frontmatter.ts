@@ -1,7 +1,5 @@
 import type { Plugin } from "unified"
 
-const FRONTMATTER_PATTERN = /^---\r?\n([\s\S]*?)\r?\n---/
-
 interface FrontmatterField {
 	key: string
 	value: string
@@ -56,25 +54,15 @@ function parseYamlFields(yaml: string): FrontmatterField[] {
 	return fields
 }
 
-export const remarkFrontmatter: Plugin = () => {
+export const remarkStripFrontmatter: Plugin = () => {
 	return (tree, file) => {
-		const markdown = String(file)
-		const match = FRONTMATTER_PATTERN.exec(markdown)
-		if (!match) return
-
-		const yamlContent = match[1]
-		const fields = parseYamlFields(yamlContent)
-		file.data.frontmatterFields = fields
-
-		const parent = tree as unknown as { children: Array<{ type: string }> }
+		const parent = tree as unknown as { children: Array<{ type: string; value?: string }> }
 		const firstChild = parent.children[0]
-		if (firstChild?.type === "thematicBreak" || firstChild?.type === "yaml") {
-			parent.children.shift()
+		if (firstChild?.type !== "yaml") return
 
-			if (parent.children[0]?.type === "thematicBreak") {
-				parent.children.shift()
-			}
-		}
+		const fields = parseYamlFields(firstChild.value ?? "")
+		file.data.frontmatterFields = fields
+		parent.children.shift()
 	}
 }
 
@@ -123,7 +111,7 @@ function buildFieldRow(field: FrontmatterField): HastElement {
 	return hastElement("div", { className: "frontmatter-row" }, [keyEl, valueEl])
 }
 
-export const rehypeFrontmatter: Plugin = () => {
+export const rehypeInjectFrontmatterCard: Plugin = () => {
 	return (tree, file) => {
 		const fields = file.data.frontmatterFields as FrontmatterField[] | undefined
 		if (!fields || fields.length === 0) return

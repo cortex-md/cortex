@@ -2,6 +2,7 @@ export { installPlugin, installTheme, uninstallPlugin, uninstallTheme } from "./
 export {
 	isEntryInstalled,
 	type MarketplaceCallbacks,
+	type MarketplaceSortOrder,
 	type MarketplaceState,
 	type MarketplaceTab,
 	setMarketplaceCallbacks,

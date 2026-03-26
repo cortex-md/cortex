@@ -11,3 +11,4 @@ docs/internal/
 /apps/web
 /apps/cli
 .claudeignore
+coverage/

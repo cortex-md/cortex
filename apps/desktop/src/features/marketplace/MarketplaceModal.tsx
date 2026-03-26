@@ -39,7 +39,7 @@ export function MarketplaceModal({ open, initialTab, onOpenChange }: Marketplace
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="overflow-hidden p-0 max-w-[1000px] h-[680px] flex flex-col">
+			<DialogContent className="overflow-hidden sm:max-w-5xl  p-0 h-[680px] flex flex-col">
 				<DialogTitle className="sr-only">Marketplace</DialogTitle>
 				<DialogDescription className="sr-only">
 					Browse and install community plugins and themes.

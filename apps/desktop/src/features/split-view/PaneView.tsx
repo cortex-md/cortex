@@ -34,6 +34,7 @@ import {
 	DropdownMenuShortcut,
 	Kbd,
 } from "@cortex/ui"
+import { convertFileSrc } from "@tauri-apps/api/core"
 import {
 	ClipboardCopyIcon,
 	Columns2Icon,
@@ -172,6 +173,15 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 		[handleImagePaste],
 	)
 
+	const resolveImageUrl = useCallback((src: string, currentFilePath: string): string => {
+		if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:")) {
+			return src
+		}
+		const fileDir = currentFilePath.substring(0, currentFilePath.lastIndexOf("/"))
+		const absolutePath = src.startsWith("/") ? src : `${fileDir}/${src}`
+		return convertFileSrc(absolutePath)
+	}, [])
+
 	useEffect(() => {
 		noteCache.read(tab.filePath).then(setContent)
 	}, [tab.filePath])
@@ -258,6 +268,7 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 						filePath={tab.filePath}
 						editorConfig={editorConfig}
 						livePreview={mode === "live-preview"}
+						resolveImageUrl={resolveImageUrl}
 						extraExtensions={clipboardExtensions}
 						onChange={handleChange}
 						onCursorChange={isActive ? onCursorChange : undefined}

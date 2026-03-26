@@ -40,6 +40,9 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
+      - name: Tests
+        run: bun run test
+
   rust:
     name: Rust — fmt, cargo check
     runs-on: ubuntu-latest

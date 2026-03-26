@@ -20,6 +20,7 @@ interface Props {
 	filePath: string
 	editorConfig?: EditorConfig
 	livePreview?: boolean
+	resolveImageUrl?: (src: string, filePath: string) => string
 	extraExtensions?: Extension[]
 	onChange: (content: string) => void
 	onCursorChange?: (cursor: CursorInfo) => void
@@ -31,6 +32,7 @@ export function EditorView({
 	filePath,
 	editorConfig = DEFAULT_EDITOR_CONFIG,
 	livePreview = true,
+	resolveImageUrl,
 	extraExtensions,
 	onChange,
 	onCursorChange,
@@ -57,7 +59,11 @@ export function EditorView({
 			state: EditorState.create({
 				doc: content,
 				extensions: [
-					...baseExtensions(syntaxTokens, editorConfigRef.current, { livePreview }),
+					...baseExtensions(syntaxTokens, editorConfigRef.current, {
+						livePreview,
+						resolveImageUrl,
+						filePath,
+					}),
 					...(extraExtensions ?? []),
 					CMEditorView.updateListener.of((update) => {
 						if (update.docChanged) {

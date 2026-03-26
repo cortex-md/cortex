@@ -4,11 +4,8 @@ import {
 	type FolderPickerOption,
 	Input,
 	Label,
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
+	NativeSelect,
+	NativeSelectOption,
 	Switch,
 } from "@cortex/ui"
 import type { UpdateSettingFn } from "."
@@ -98,19 +95,14 @@ export function EditorSection({ settings, onUpdate, vaultFolders = [] }: EditorS
 					<Label htmlFor="image-storage" className="flex-1">
 						Image storage location
 					</Label>
-					<Select
+					<NativeSelect
 						value={settings.imageStorageLocation}
-						onValueChange={(value) => onUpdate("editor", "imageStorageLocation", value)}
+						onSelect={(e: any) => onUpdate("editor", "imageStorageLocation", e.target.value)}
 					>
-						<SelectTrigger id="image-storage">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="same">Same folder as note</SelectItem>
-							<SelectItem value="root">Vault root</SelectItem>
-							<SelectItem value="custom">Custom folder</SelectItem>
-						</SelectContent>
-					</Select>
+						<NativeSelectOption value="same">Same folder as note</NativeSelectOption>
+						<NativeSelectOption value="root">Vault root</NativeSelectOption>
+						<NativeSelectOption value="custom">Custom folder</NativeSelectOption>
+					</NativeSelect>
 				</div>
 
 				{settings.imageStorageLocation === "custom" && (

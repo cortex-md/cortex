@@ -6,7 +6,7 @@ export const AppearanceSettingsSchema = z.object({
 	accentColor: z.string().default("#e8a83c"),
 	uiFontFamily: z.string().default("DM Sans"),
 	uiFontSize: z.number().min(10).max(24).default(14),
-	editorFontFamily: z.string().default("Lora"),
+	editorFontFamily: z.string().default("ui-sans-serif"),
 	editorFontSize: z.number().min(10).max(24).default(16),
 	lineHeight: z.number().min(1).max(2).default(1.5),
 })
