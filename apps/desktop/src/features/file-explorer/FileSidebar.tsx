@@ -211,8 +211,8 @@ function TreeNodeRow({
 			role="treeitem"
 			tabIndex={0}
 			size={"sm"}
-			className={`flex items-center text-left gap-1 px-1.5 w-full rounded-sm cursor-pointer text-text-secondary text-xs hover:bg-bg-hover hover:text-text-primary select-none outline-none focus-visible:ring-1 focus-visible:ring-border-focus ${
-				isActive ? "bg-accent text-primary" : ""
+			className={`file-tree-item flex items-center text-left gap-1 px-1.5 w-full rounded-sm text-text-secondary text-xs hover:bg-bg-hover hover:text-text-primary select-none outline-none focus-visible:ring-1 focus-visible:ring-border-focus ${
+				isActive ? "active bg-accent text-primary" : ""
 			}`}
 			style={{ paddingLeft: `${depth * 12 + 6}px` }}
 			onClick={() => {
@@ -666,26 +666,32 @@ export function FileSidebar() {
 	}
 
 	return (
-		<div className="flex flex-col h-full px-1.5 overflow-hidden">
-			<div className="flex items-center justify-between px-2 py-1.5 flex-shrink-0">
+		<div className="file-sidebar flex flex-col h-full px-1.5 overflow-hidden">
+			<div className="file-sidebar-header flex items-center justify-between px-2 py-1.5 flex-shrink-0">
 				<span className="text-[10px] font-bold text-text-muted uppercase tracking-wide">Files</span>
 				<div className="flex items-center gap-0.5">
-					<button
+					<Button
 						type="button"
+						variant="ghost"
+						size="icon-xs"
 						onClick={() => handleNewFile(vault.path)}
-						className="p-1 rounded-sm text-text-muted hover:text-text-primary hover:bg-bg-hover cursor-pointer"
+						className="sidebar-action-button text-text-muted hover:text-text-primary hover:bg-bg-hover"
 						title="New Note"
+						aria-label="New Note"
 					>
 						<FilePlusIcon size={14} />
-					</button>
-					<button
+					</Button>
+					<Button
 						type="button"
+						variant="ghost"
+						size="icon-xs"
 						onClick={() => handleNewFolder(vault.path)}
-						className="p-1 rounded-sm text-text-muted hover:text-text-primary hover:bg-bg-hover cursor-pointer"
+						className="sidebar-action-button text-text-muted hover:text-text-primary hover:bg-bg-hover"
 						title="New Folder"
+						aria-label="New Folder"
 					>
 						<FolderPlusIcon size={14} />
-					</button>
+					</Button>
 				</div>
 			</div>
 			<div

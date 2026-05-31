@@ -24,7 +24,9 @@ export function SidebarNav({ items, bottomItems, activeId, onSelect }: Props) {
 				key={item.id}
 				variant="ghost"
 				type="button"
-				className={`flex text-xs justify-start w-full ${activeId === item.id && "bg-accent"}`}
+				className={`sidebar-nav-item flex text-xs justify-start w-full ${
+					activeId === item.id ? "bg-accent" : ""
+				}`}
 				onClick={() => onSelect(item.id)}
 				draggable={canDrag}
 				onDragStart={
@@ -55,7 +57,10 @@ export function SidebarNav({ items, bottomItems, activeId, onSelect }: Props) {
 	}
 
 	return (
-		<nav className="w-full flex flex-col items-start px-1.5" aria-label="Primary navigation">
+		<nav
+			className="sidebar-nav w-full flex flex-col items-start px-1.5"
+			aria-label="Primary navigation"
+		>
 			<div className="flex flex-col w-full">{items.map(renderItem)}</div>
 			{bottomItems && <div className="w-full">{bottomItems.map(renderItem)}</div>}
 		</nav>

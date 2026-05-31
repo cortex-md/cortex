@@ -36,6 +36,7 @@ import {
 import { useSearchStore } from "@cortex/search"
 import { useSettingsStore } from "@cortex/settings"
 import { getThemeManager } from "@cortex/theme"
+import { Button } from "@cortex/ui"
 import { listen } from "@tauri-apps/api/event"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import {
@@ -691,22 +692,42 @@ export default function App() {
 	}
 
 	return (
-		<div className="flex flex-col h-screen bg-bg-primary text-text-primary">
+		<div className="app-shell flex flex-col h-screen bg-bg-primary text-text-primary">
 			{/* biome-ignore lint/a11y/noStaticElementInteractions: titlebar drag region requires mousedown on a presentational div */}
 			<div
-				className="h-10 pl-24 flex-shrink-0"
+				className="app-titlebar h-10 pl-24 flex-shrink-0"
 				onMouseDown={(e) => {
 					if (e.button === 0) getCurrentWindow().startDragging()
 				}}
-			/>
-			<div className="flex flex-1 overflow-hidden">
+			>
+				{vault && (
+					<Button
+						type="button"
+						variant="ghost"
+						size="icon-sm"
+						className={`app-sidebar-toggle ${
+							leftSidebarCollapsed ? "app-sidebar-toggle--collapsed" : ""
+						}`}
+						aria-label={leftSidebarCollapsed ? "Show Sidebar" : "Hide Sidebar"}
+						aria-pressed={!leftSidebarCollapsed}
+						title={leftSidebarCollapsed ? "Show Sidebar" : "Hide Sidebar"}
+						onMouseDown={(event) => event.stopPropagation()}
+						onClick={toggleLeftSidebar}
+					>
+						<PanelLeftIcon size={24} strokeWidth={2} />
+					</Button>
+				)}
+			</div>
+			<div className="app-content flex flex-1 overflow-hidden">
 				{!vault ? (
 					<EmptyVaultLayout />
 				) : (
 					<>
 						<aside
-							className="flex-shrink-0 bg-sidebar-bg border-r border-sidebar-border flex flex-col overflow-hidden min-w-[180px] max-w-[400px]"
-							style={{ width: leftSidebarWidth }}
+							className={`app-sidebar flex-shrink-0 bg-sidebar-bg border-r border-sidebar-border flex flex-col overflow-hidden min-w-[180px] max-w-[400px] ${
+								leftSidebarCollapsed ? "app-sidebar--collapsed" : ""
+							}`}
+							style={{ width: leftSidebarCollapsed ? 0 : leftSidebarWidth }}
 							aria-label="Sidebar panel"
 						>
 							<VaultSwitcher />
@@ -732,23 +753,26 @@ export default function App() {
 							</div>
 						</aside>
 						<div
-							className="w-[3px] flex-shrink-0 cursor-col-resize bg-transparent hover:bg-accent transition-colors duration-150"
+							className={`app-sidebar-resizer w-[3px] flex-shrink-0 cursor-col-resize bg-transparent hover:bg-accent transition-colors duration-150 ${
+								leftSidebarCollapsed ? "app-sidebar-resizer--hidden" : ""
+							}`}
 							onMouseDown={handleSidebarResizeStart}
 							aria-hidden="true"
 						/>
 
-						<main className="flex-1 overflow-hidden flex flex-col min-w-0 bg-bg-primary">
-							<SplitPaneView
-								node={splitTree}
-								renderLeaf={(paneId) => <PaneView key={paneId} paneId={paneId} />}
-								onResize={resizeSplit}
-							/>
+						<main className="app-main flex-1 overflow-hidden flex flex-col min-w-0 bg-bg-primary">
+							<div className="flex-1 min-h-0 overflow-hidden">
+								<SplitPaneView
+									node={splitTree}
+									renderLeaf={(paneId) => <PaneView key={paneId} paneId={paneId} />}
+									onResize={resizeSplit}
+								/>
+							</div>
+							<StatusBar />
 						</main>
 					</>
 				)}
 			</div>
-
-			<StatusBar />
 
 			<SettingsModal open={settingsOpen} onOpenChange={(open) => !open && closeSettings()} />
 			<AuthModal />

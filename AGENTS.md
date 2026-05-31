@@ -274,6 +274,17 @@ UI doesn't directly access files; it reads/writes through noteCache.
 
 ## Important Implementation Details
 
+### macOS Native Sidebar
+macOS window material is configured through `apps/desktop/src-tauri/tauri.macos.conf.json`.
+Do not apply vibrancy manually in Rust for the main window; keep the native sidebar material in
+Tauri window configuration so it stays platform-scoped and avoids duplicate `NSVisualEffectView`
+layers. Traffic light placement is adjusted in the macOS setup path because Tauri's native
+`trafficLightPosition` controls the horizontal inset and titlebar height but not the button
+origin inside the titlebar. The React shell uses `app-shell`, `app-titlebar`, `app-content`,
+`app-sidebar`, `app-sidebar-resizer`, and `app-main` as CSS contracts for macOS-only native
+layout styling. The macOS sidebar toggle is rendered in the titlebar with `app-sidebar-toggle`
+and drives the existing `leftSidebarCollapsed` state with width-based native-style animation.
+
 ### Settings Marketplace
 `SettingsModal` owns the Marketplace tab. Community plugin/theme browse buttons should call `useUIStore().openMarketplace(tab)` so Settings opens directly on Marketplace with the requested tab selected. The Marketplace search view should occupy the full Settings content area; selecting a plugin or theme replaces search with the detail view and a back button returns to search.
 

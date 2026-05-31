@@ -51,10 +51,13 @@ export function VaultSwitcher() {
 				folderPath={selectedFolderPath}
 				onOpenChange={setIsCreateVaultOpen}
 			/>
-			<div className="px-1.5 pt-1.5 pb-1">
+			<div className="vault-switcher px-1.5 pt-1.5 pb-1">
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
-						<Button variant="ghost" className="w-full justify-between gap-2 px-2 py-1.5 h-auto">
+						<Button
+							variant="ghost"
+							className="vault-switcher-button w-full justify-between gap-2 px-2 py-1.5 h-auto"
+						>
 							<span className="flex items-center gap-2 min-w-0">
 								{currentEntry?.color && (
 									<span

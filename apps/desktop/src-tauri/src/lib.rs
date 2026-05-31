@@ -6,6 +6,63 @@ mod sync;
 
 use tauri::Manager;
 
+#[cfg(target_os = "macos")]
+const MACOS_TRAFFIC_LIGHT_X: f64 = 20.0;
+#[cfg(target_os = "macos")]
+const MACOS_TRAFFIC_LIGHT_TITLEBAR_INSET: f64 = 24.0;
+#[cfg(target_os = "macos")]
+const MACOS_TRAFFIC_LIGHT_Y: f64 = 6.0;
+
+#[cfg(target_os = "macos")]
+fn position_macos_traffic_lights<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>) {
+    use objc2::runtime::AnyObject;
+    use objc2::msg_send;
+    use objc2_foundation::{CGPoint, CGRect};
+
+    let Ok(ns_window) = window.ns_window() else {
+        return;
+    };
+
+    unsafe {
+        let ns_window = ns_window as *mut AnyObject;
+        let close: *mut AnyObject = msg_send![ns_window, standardWindowButton: 0usize];
+        let miniaturize: *mut AnyObject = msg_send![ns_window, standardWindowButton: 1usize];
+        let zoom: *mut AnyObject = msg_send![ns_window, standardWindowButton: 2usize];
+
+        if close.is_null() || miniaturize.is_null() || zoom.is_null() {
+            return;
+        }
+
+        let close_superview: *mut AnyObject = msg_send![close, superview];
+        if close_superview.is_null() {
+            return;
+        }
+
+        let titlebar_container_view: *mut AnyObject = msg_send![close_superview, superview];
+        if titlebar_container_view.is_null() {
+            return;
+        }
+
+        let close_rect: CGRect = msg_send![close, frame];
+        let window_frame: CGRect = msg_send![ns_window, frame];
+        let mut titlebar_rect: CGRect = msg_send![titlebar_container_view, frame];
+        titlebar_rect.size.height = close_rect.size.height + MACOS_TRAFFIC_LIGHT_TITLEBAR_INSET;
+        titlebar_rect.origin.y = window_frame.size.height - titlebar_rect.size.height;
+        let _: () = msg_send![titlebar_container_view, setFrame: titlebar_rect];
+
+        let miniaturize_rect: CGRect = msg_send![miniaturize, frame];
+        let space_between = miniaturize_rect.origin.x - close_rect.origin.x;
+        let buttons = [close, miniaturize, zoom];
+
+        for (index, button) in buttons.into_iter().enumerate() {
+            let mut origin: CGPoint = msg_send![button, frameOrigin];
+            origin.x = MACOS_TRAFFIC_LIGHT_X + index as f64 * space_between;
+            origin.y = MACOS_TRAFFIC_LIGHT_Y;
+            let _: () = msg_send![button, setFrameOrigin: origin];
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -95,12 +152,19 @@ pub fn run() {
             let engine = sync::engine::SyncEngine::new(app.handle().clone());
             tauri::async_runtime::spawn(engine.run(rx));
 
-            let window = app.get_webview_window("main").unwrap();
-
             #[cfg(target_os = "macos")]
             {
-                use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
-                let _ = apply_vibrancy(&window, NSVisualEffectMaterial::Sidebar, None, None);
+                let window = app.get_webview_window("main").unwrap();
+                position_macos_traffic_lights(&window);
+                let traffic_light_window = window.clone();
+                window.on_window_event(move |event| {
+                    if matches!(
+                        event,
+                        tauri::WindowEvent::Resized(_) | tauri::WindowEvent::ScaleFactorChanged { .. }
+                    ) {
+                        position_macos_traffic_lights(&traffic_light_window);
+                    }
+                });
 
                 let menu = commands::menu::build_menu(app.handle()).expect("Failed to build menu");
                 app.set_menu(menu).expect("Failed to set menu");

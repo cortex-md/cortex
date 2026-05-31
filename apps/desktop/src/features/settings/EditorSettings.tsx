@@ -97,7 +97,7 @@ export function EditorSection({ settings, onUpdate, vaultFolders = [] }: EditorS
 					</Label>
 					<NativeSelect
 						value={settings.imageStorageLocation}
-						onSelect={(e: any) => onUpdate("editor", "imageStorageLocation", e.target.value)}
+						onChange={(event) => onUpdate("editor", "imageStorageLocation", event.target.value)}
 					>
 						<NativeSelectOption value="same">Same folder as note</NativeSelectOption>
 						<NativeSelectOption value="root">Vault root</NativeSelectOption>

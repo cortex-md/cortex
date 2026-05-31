@@ -42,7 +42,7 @@ function SignedOutNotice() {
 				<div className="flex flex-col gap-3">
 					<p>Sync is available after you sign in to your Cortex account.</p>
 					<Button size="sm" className="w-fit" onClick={handleSignIn}>
-            Sign in
+						Sign in
 					</Button>
 				</div>
 			</AlertDescription>
