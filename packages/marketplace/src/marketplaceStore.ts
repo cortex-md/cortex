@@ -41,6 +41,7 @@ export interface MarketplaceState {
 	sortOrder: MarketplaceSortOrder
 	selectedEntryId: string | null
 	loadingEntryId: string | null
+	installError: string | null
 	registryError: string | null
 	readmeCache: Record<string, string>
 	readmeLoading: boolean
@@ -77,6 +78,7 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 			sortOrder: "default" as MarketplaceSortOrder,
 			selectedEntryId: null,
 			loadingEntryId: null,
+			installError: null,
 			registryError: null,
 			readmeCache: {},
 			readmeLoading: false,
@@ -95,6 +97,7 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 					s.filterInstalled = false
 					s.sortOrder = "default"
 					s.selectedEntryId = null
+					s.installError = null
 				}),
 
 			setSearchQuery: (query) =>
@@ -119,6 +122,7 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 			selectEntry: (id) => {
 				set((s) => {
 					s.selectedEntryId = id
+					s.installError = null
 				})
 
 				if (!id) return
@@ -183,19 +187,25 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 				const { activeTab } = get()
 				set((s) => {
 					s.loadingEntryId = entry.id
+					s.installError = null
 				})
 				try {
 					if (activeTab === "plugins") {
 						const dir = callbacks.getPluginsDir()
-						if (!dir) return
+						if (!dir) throw new Error("Open a vault before installing plugins.")
 						await installPlugin(entry, dir, callbacks.reloadPlugins)
 					} else {
 						const dir = callbacks.getThemesDir()
-						if (!dir) return
+						if (!dir) throw new Error("Open a vault before installing themes.")
 						await installTheme(entry, dir, callbacks.reloadThemes)
 					}
 					set((s) => {
 						delete s.availableUpdates[entry.id]
+						s.installError = null
+					})
+				} catch (error) {
+					set((s) => {
+						s.installError = getErrorMessage(error)
 					})
 				} finally {
 					set((s) => {
@@ -323,6 +333,11 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 		{ name: "marketplaceStore" },
 	),
 )
+
+function getErrorMessage(error: unknown): string {
+	if (error instanceof Error) return error.message
+	return String(error)
+}
 
 export function isEntryInstalled(id: string, tab: MarketplaceTab): boolean {
 	if (!callbacks) return false

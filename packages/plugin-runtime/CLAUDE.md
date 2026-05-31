@@ -100,6 +100,8 @@ vault/.cortex/
       data/                           # Free-form plugin data
 ```
 
+Community plugin discovery only accepts a safe relative `manifest.main` path. Empty paths, absolute paths, Windows drive paths, and any path containing `..` are ignored before the runtime attempts to read or evaluate the bundle. The loader accepts CommonJS bundles and self-contained ESM bundles with a default plugin class export. Bare ESM imports are not resolved by the runtime, so marketplace plugins should publish bundled release assets.
+
 ## Dependencies
 
 - `cortex-plugin-api` — types and base class

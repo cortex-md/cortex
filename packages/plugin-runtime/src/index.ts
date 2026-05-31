@@ -22,6 +22,7 @@ export {
 	disablePlugin,
 	discoverCommunityPlugins,
 	enablePlugin,
+	getCommunityPluginLoadError,
 	getCommunityPluginsDir,
 	getPluginInstance,
 	loadEnabledPlugins,

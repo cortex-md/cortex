@@ -18,17 +18,15 @@ const NEXT_MODE: Record<EditorMode, EditorMode> = {
 }
 
 export function StatusBar() {
-	const { activeFilePath, cursor, mode, setMode } = useEditorStore()
+	const { cursor, mode, setMode } = useEditorStore()
 	const statusBarItems = usePluginStore((s) => s.statusBarItems)
 
-	const fileName = activeFilePath ? (activeFilePath.split("/").pop() ?? activeFilePath) : null
 	const leftPluginItems = statusBarItems.filter((item) => item.position === "left")
 	const rightPluginItems = statusBarItems.filter((item) => item.position === "right")
 
 	return (
 		<div className="app-statusbar">
 			<div className="statusbar-left">
-				{fileName && <span className="statusbar-item statusbar-filename">{fileName}</span>}
 				{leftPluginItems.map((item) => (
 					<button
 						key={item.id}

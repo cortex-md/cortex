@@ -51,13 +51,13 @@ import {
 	TerminalIcon,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { AuthModal } from "./features/auth/AuthModal"
 import { BookmarksSidebar } from "./features/bookmarks/BookmarksSidebar"
 import { CommandPalette } from "./features/command-palette/CommandPalette"
 import { FileSidebar } from "./features/file-explorer/FileSidebar"
 import { type NavItem, SidebarNav } from "./features/file-explorer/SidebarNav"
 import { EmptyVaultLayout } from "./features/layout/empty-vault-layout"
 import { SplitPaneView } from "./features/layout/SplitPane"
-import { MarketplaceModal } from "./features/marketplace"
 import { QuickFinder } from "./features/quick-finder/QuickFinder"
 import { SearchSidebar } from "./features/search/SearchSidebar"
 import { applyAppearanceSettings } from "./features/settings/applyAppearance"
@@ -214,9 +214,6 @@ export default function App() {
 		settingsOpen,
 		openSettings,
 		closeSettings,
-		marketplaceOpen,
-		marketplaceInitialTab,
-		closeMarketplace,
 	} = useUIStore()
 	const { settings, loadSettings } = useSettingsStore()
 	const loadOverrides = useHotkeysStore((s) => s.loadOverrides)
@@ -754,11 +751,7 @@ export default function App() {
 			<StatusBar />
 
 			<SettingsModal open={settingsOpen} onOpenChange={(open) => !open && closeSettings()} />
-			<MarketplaceModal
-				open={marketplaceOpen}
-				initialTab={marketplaceInitialTab}
-				onOpenChange={(open) => !open && closeMarketplace()}
-			/>
+			<AuthModal />
 			<QuickFinder />
 			<CommandPalette />
 			<TagPicker />

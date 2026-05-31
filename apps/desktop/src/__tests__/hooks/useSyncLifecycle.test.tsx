@@ -36,12 +36,12 @@ function setupMocks(overrides: {
 }) {
 	vi.mocked(useSyncLogStore.getState).mockReturnValue({ log: logFn } as never)
 
-	vi.mocked(useVaultStore).mockImplementation((selector?: (s: unknown) => unknown) => {
+	vi.mocked(useVaultStore).mockImplementation(((selector?: (s: unknown) => unknown) => {
 		const state = { vault: overrides.vault ?? null }
 		return selector ? selector(state) : state
-	})
+	}) as never)
 
-	vi.mocked(useAuthStore).mockImplementation((selector?: (s: unknown) => unknown) => {
+	vi.mocked(useAuthStore).mockImplementation(((selector?: (s: unknown) => unknown) => {
 		const state = {
 			authenticated: overrides.authenticated ?? false,
 			selfHosted: overrides.selfHosted ?? false,
@@ -49,7 +49,7 @@ function setupMocks(overrides: {
 			serverUrl: overrides.serverUrl ?? "https://sync.example.com",
 		}
 		return selector ? selector(state) : state
-	})
+	}) as never)
 
 	vi.mocked(useRemoteVaultStore).mockReturnValue({
 		linkedVaultId: overrides.linkedVaultId ?? null,
@@ -98,7 +98,7 @@ describe("useSyncLifecycle", () => {
 		})
 	})
 
-	describe("when user is not authenticated and not selfHosted", () => {
+	describe("when user is not authenticated", () => {
 		it("does not call startSync", () => {
 			setupMocks({ authenticated: false, selfHosted: false, vault: mockVault, linkedVaultId: "id" })
 			renderHook(() => useSyncLifecycle())
@@ -106,8 +106,8 @@ describe("useSyncLifecycle", () => {
 		})
 	})
 
-	describe("when selfHosted is true (without authenticated)", () => {
-		it("calls startSync", () => {
+	describe("when selfHosted is true without authentication", () => {
+		it("does not call startSync", () => {
 			setupMocks({
 				authenticated: false,
 				selfHosted: true,
@@ -117,7 +117,7 @@ describe("useSyncLifecycle", () => {
 				linkedVaultId: "remote-vault-id",
 			})
 			renderHook(() => useSyncLifecycle())
-			expect(startSync).toHaveBeenCalled()
+			expect(startSync).not.toHaveBeenCalled()
 		})
 	})
 

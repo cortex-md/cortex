@@ -21,5 +21,6 @@ export interface FileSystem {
 	listDir(path: string): Promise<FileEntry[]>
 	hashFile(path: string): Promise<string>
 	startWatching(path: string, callback: (event: WatchEvent) => void): Promise<() => void>
+	downloadFile(url: string, destPath: string): Promise<void>
 	downloadAndExtract(url: string, destDir: string): Promise<void>
 }

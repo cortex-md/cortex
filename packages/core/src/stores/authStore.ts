@@ -34,7 +34,7 @@ export const useAuthStore = create<AuthState>()(
 	devtools(
 		immer((set, get) => ({
 			authenticated: false,
-			syncEnabled: true,
+			syncEnabled: false,
 			selfHosted: false,
 			user: null,
 			loading: false,
@@ -77,7 +77,7 @@ export const useAuthStore = create<AuthState>()(
 					])
 					set((state) => {
 						if (storedUrl) state.serverUrl = storedUrl
-						state.syncEnabled = storedSyncEnabled !== "false"
+						state.syncEnabled = storedSyncEnabled === "true"
 						state.selfHosted = storedSelfHosted === "true"
 					})
 				} catch {}
@@ -164,7 +164,6 @@ export const useAuthStore = create<AuthState>()(
 					await useSyncStore.getState().stopSync()
 					const platform = getPlatform()
 					await platform.auth.logout(allDevices)
-					await platform.keychain.set(SYNC_ENABLED_KEY, "true")
 					const { useRemoteVaultStore } = await import("./remoteVaultStore")
 					const { useVaultStore } = await import("./vaultStore")
 					const { vault } = useVaultStore.getState()
@@ -174,9 +173,12 @@ export const useAuthStore = create<AuthState>()(
 						useRemoteVaultStore.getState().clearLink()
 					}
 				} finally {
+					try {
+						await getPlatform().keychain.set(SYNC_ENABLED_KEY, "false")
+					} catch {}
 					set((state) => {
 						state.authenticated = false
-						state.syncEnabled = true
+						state.syncEnabled = false
 						state.user = null
 						state.error = null
 					})

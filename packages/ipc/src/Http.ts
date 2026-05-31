@@ -1,4 +1,5 @@
 import type { Http as IHttp } from "@cortex/platform"
+import { invoke } from "@tauri-apps/api/core"
 
 export class Http implements IHttp {
 	async fetch(url: string, options?: RequestInit): Promise<Response> {
@@ -6,10 +7,6 @@ export class Http implements IHttp {
 	}
 
 	async download(url: string): Promise<string> {
-		const response = await this.fetch(url)
-		if (!response.ok) {
-			throw new Error(`Failed to download: ${response.status} ${response.statusText}`)
-		}
-		return response.text()
+		return await invoke<string>("download_text", { url })
 	}
 }

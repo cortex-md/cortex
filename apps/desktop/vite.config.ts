@@ -11,6 +11,7 @@ export default defineConfig(async () => ({
 	resolve: {
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
+			"cortex-plugin-api": path.resolve(__dirname, "../../packages/plugin-api/src/index.ts"),
 		},
 	},
 

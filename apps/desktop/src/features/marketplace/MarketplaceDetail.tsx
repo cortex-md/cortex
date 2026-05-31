@@ -13,18 +13,37 @@ import {
 	EmptyDescription,
 	EmptyMedia,
 	ScrollArea,
-	Separator,
 	Skeleton,
 	Spinner,
 } from "@cortex/ui"
-import { ArrowUp, Download, Package, Trash2, TriangleAlert } from "lucide-react"
+import {
+	ArrowLeft,
+	ArrowUp,
+	Download,
+	ExternalLink,
+	Package,
+	Trash2,
+	TriangleAlert,
+} from "lucide-react"
 import { useEffect } from "react"
 
 interface MarketplaceDetailProps {
 	tab: MarketplaceTab
+	onBack: () => void
 }
 
-export function MarketplaceDetail({ tab }: MarketplaceDetailProps) {
+function getExternalUrl(value: string) {
+	if (value.startsWith("http://") || value.startsWith("https://")) return value
+	return `https://${value}`
+}
+
+function getRepositoryUrl(value: string) {
+	if (value.startsWith("http://") || value.startsWith("https://")) return value
+	if (value.startsWith("github.com/")) return `https://${value}`
+	return `https://github.com/${value}`
+}
+
+export function MarketplaceDetail({ tab, onBack }: MarketplaceDetailProps) {
 	const {
 		selectedEntryId,
 		pluginEntries,
@@ -35,6 +54,7 @@ export function MarketplaceDetail({ tab }: MarketplaceDetailProps) {
 		appVersion,
 		minVersionCache,
 		availableUpdates,
+		installError,
 	} = useMarketplaceStore()
 	const installEntry = useMarketplaceStore((s) => s.installEntry)
 	const uninstallEntry = useMarketplaceStore((s) => s.uninstallEntry)
@@ -51,6 +71,8 @@ export function MarketplaceDetail({ tab }: MarketplaceDetailProps) {
 		Boolean(minVersion) && Boolean(appVersion) && !isVersionCompatible(appVersion!, minVersion!)
 	const latestVersion = entry ? availableUpdates[entry.id] : undefined
 	const hasUpdate = isInstalled && Boolean(latestVersion)
+	const authorUrl = entry?.authorUrl ? getExternalUrl(entry.authorUrl) : null
+	const repositoryUrl = entry?.repo ? getRepositoryUrl(entry.repo) : null
 
 	useEffect(() => {
 		if (entry && readme === undefined) loadReadme(entry)
@@ -58,51 +80,126 @@ export function MarketplaceDetail({ tab }: MarketplaceDetailProps) {
 
 	if (!entry) {
 		return (
-			<Empty className="h-full border-none">
-				<EmptyMedia variant="icon">
-					<Package />
-				</EmptyMedia>
-				<EmptyDescription>
-					Select a {tab === "plugins" ? "plugin" : "theme"} to see details
-				</EmptyDescription>
-			</Empty>
+			<div className="flex h-full flex-col overflow-hidden">
+				<div className="shrink-0 border-b border-border px-4 py-3">
+					<Button variant="ghost" size="sm" className="gap-1.5" onClick={onBack}>
+						<ArrowLeft size={14} />
+						Back to search
+					</Button>
+				</div>
+				<Empty className="min-h-0 flex-1 border-none">
+					<EmptyMedia variant="icon">
+						<Package />
+					</EmptyMedia>
+					<EmptyDescription>
+						Select a {tab === "plugins" ? "plugin" : "theme"} to see details
+					</EmptyDescription>
+				</Empty>
+			</div>
 		)
 	}
 
 	return (
 		<div className="flex flex-col h-full overflow-hidden">
-			<div className="p-5 flex gap-4 shrink-0">
-				<div className="w-14 h-14 rounded-xl bg-bg-tertiary flex items-center justify-center shrink-0 overflow-hidden">
-					{entry.coverImageUrl ? (
-						<img
-							src={entry.coverImageUrl}
-							alt={entry.name}
-							className="w-full h-full object-cover rounded-xl"
-						/>
-					) : (
-						<Package size={24} className="text-text-muted" />
-					)}
+			<div className="shrink-0 border-b border-border">
+				<div className="px-4 pt-3">
+					<Button variant="ghost" size="sm" className="gap-1.5" onClick={onBack}>
+						<ArrowLeft size={14} />
+						Back to search
+					</Button>
 				</div>
-				<div className="flex flex-col gap-1 min-w-0 flex-1">
-					<h2 className="text-sm font-semibold">{entry.name}</h2>
-					{entry.authorUrl ? (
-						<a
-							href={entry.authorUrl}
-							target="_blank"
-							rel="noreferrer"
-							className="text-xs text-text-muted hover:text-text-primary hover:underline w-fit"
-							onClick={(e) => e.stopPropagation()}
-						>
-							by {entry.author}
-						</a>
-					) : (
-						<p className="text-xs text-text-muted">by {entry.author}</p>
-					)}
-					<p className="text-xs text-text-muted">{entry.description}</p>
-				</div>
-				<div className="shrink-0 flex flex-col gap-1.5 items-end">
-					{isInstalled && hasUpdate ? (
-						<>
+				<div className="flex flex-col gap-4 p-5 pt-3 sm:flex-row">
+					<div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-bg-tertiary">
+						{entry.coverImageUrl ? (
+							<img
+								src={entry.coverImageUrl}
+								alt={entry.name}
+								className="h-full w-full rounded-lg object-cover"
+							/>
+						) : (
+							<Package size={24} className="text-text-muted" />
+						)}
+					</div>
+					<div className="flex min-w-0 flex-1 flex-col gap-1">
+						<h2 className="text-sm font-semibold">{entry.name}</h2>
+						<p className="text-xs text-text-muted">{entry.description}</p>
+						<div className="mt-2 grid gap-1.5 text-xs text-text-muted sm:grid-cols-2">
+							<div className="flex min-w-0 flex-col gap-0.5">
+								<span className="text-[10px] font-medium uppercase text-text-muted">
+									Author name
+								</span>
+								<span className="truncate text-text-primary">{entry.author}</span>
+							</div>
+							{authorUrl && (
+								<a
+									href={authorUrl}
+									target="_blank"
+									rel="noreferrer"
+									className="flex min-w-0 flex-col gap-0.5 hover:text-text-primary"
+								>
+									<span className="text-[10px] font-medium uppercase text-text-muted">
+										Author link
+									</span>
+									<span className="inline-flex min-w-0 items-center gap-1">
+										<span className="truncate">{entry.authorUrl}</span>
+										<ExternalLink size={11} />
+									</span>
+								</a>
+							)}
+							{repositoryUrl && (
+								<a
+									href={repositoryUrl}
+									target="_blank"
+									rel="noreferrer"
+									className="flex min-w-0 flex-col gap-0.5 hover:text-text-primary"
+								>
+									<span className="text-[10px] font-medium uppercase text-text-muted">
+										Repository link
+									</span>
+									<span className="inline-flex min-w-0 items-center gap-1">
+										<span className="truncate">{entry.repo}</span>
+										<ExternalLink size={11} />
+									</span>
+								</a>
+							)}
+						</div>
+					</div>
+					<div className="flex shrink-0 flex-col items-stretch gap-1.5 sm:items-end">
+						{isInstalled && hasUpdate ? (
+							<>
+								<Button
+									variant="default"
+									size="sm"
+									onClick={() => installEntry(entry)}
+									disabled={isLoading}
+									className="gap-1.5"
+								>
+									{isLoading ? <Spinner className="size-3" /> : <ArrowUp size={13} />}
+									Update to {latestVersion}
+								</Button>
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() => uninstallEntry(entry)}
+									disabled={isLoading}
+									className="gap-1.5 text-text-muted hover:text-destructive"
+								>
+									<Trash2 size={13} />
+									Uninstall
+								</Button>
+							</>
+						) : isInstalled ? (
+							<Button
+								variant="destructive"
+								size="sm"
+								onClick={() => uninstallEntry(entry)}
+								disabled={isLoading}
+								className="gap-1.5"
+							>
+								{isLoading ? <Spinner className="size-3" /> : <Trash2 size={13} />}
+								Uninstall
+							</Button>
+						) : (
 							<Button
 								variant="default"
 								size="sm"
@@ -110,59 +207,34 @@ export function MarketplaceDetail({ tab }: MarketplaceDetailProps) {
 								disabled={isLoading}
 								className="gap-1.5"
 							>
-								{isLoading ? <Spinner className="size-3" /> : <ArrowUp size={13} />}
-								Update to {latestVersion}
+								{isLoading ? <Spinner className="size-3" /> : <Download size={13} />}
+								Install
 							</Button>
-							<Button
-								variant="ghost"
-								size="sm"
-								onClick={() => uninstallEntry(entry)}
-								disabled={isLoading}
-								className="gap-1.5 text-text-muted hover:text-destructive"
-							>
-								<Trash2 size={13} />
-								Uninstall
-							</Button>
-						</>
-					) : isInstalled ? (
-						<Button
-							variant="destructive"
-							size="sm"
-							onClick={() => uninstallEntry(entry)}
-							disabled={isLoading}
-							className="gap-1.5"
-						>
-							{isLoading ? <Spinner className="size-3" /> : <Trash2 size={13} />}
-							Uninstall
-						</Button>
-					) : (
-						<Button
-							variant="default"
-							size="sm"
-							onClick={() => installEntry(entry)}
-							disabled={isLoading}
-							className="gap-1.5"
-						>
-							{isLoading ? <Spinner className="size-3" /> : <Download size={13} />}
-							Install
-						</Button>
-					)}
+						)}
+					</div>
 				</div>
+
+				{hasCompatibilityWarning && (
+					<div className="px-5 pb-3 animate-in fade-in-0 duration-300">
+						<Alert variant="destructive">
+							<TriangleAlert size={14} />
+							<AlertDescription>
+								This {tab === "plugins" ? "plugin" : "theme"} requires Cortex v{minVersion} or
+								later. You are running v{appVersion}. It may not work correctly.
+							</AlertDescription>
+						</Alert>
+					</div>
+				)}
+
+				{installError && (
+					<div className="px-5 pb-3 animate-in fade-in-0 duration-300">
+						<Alert variant="destructive">
+							<TriangleAlert size={14} />
+							<AlertDescription>{installError}</AlertDescription>
+						</Alert>
+					</div>
+				)}
 			</div>
-
-			{hasCompatibilityWarning && (
-				<div className="px-5 pb-3 animate-in fade-in-0 duration-300">
-					<Alert variant="destructive">
-						<TriangleAlert size={14} />
-						<AlertDescription>
-							This {tab === "plugins" ? "plugin" : "theme"} requires Cortex v{minVersion} or later.
-							You are running v{appVersion}. It may not work correctly.
-						</AlertDescription>
-					</Alert>
-				</div>
-			)}
-
-			<Separator />
 
 			<ScrollArea className="flex-1">
 				{readmeLoading && readme === undefined ? (

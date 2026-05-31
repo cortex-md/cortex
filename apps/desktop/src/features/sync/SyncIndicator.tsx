@@ -43,7 +43,7 @@ export function SyncIndicator() {
 		error,
 	} = useSyncStore()
 	const authenticated = useAuthStore((s) => s.authenticated)
-	const selfHosted = useAuthStore((s) => s.selfHosted)
+	const syncEnabled = useAuthStore((s) => s.syncEnabled)
 	const vault = useVaultStore((s) => s.vault)
 	const linkedVaultId = useRemoteVaultStore((s) => s.linkedVaultId)
 	const openSettings = useUIStore((s) => s.openSettings)
@@ -54,7 +54,6 @@ export function SyncIndicator() {
 	const [deletedNotesOpen, setDeletedNotesOpen] = useState(false)
 	const [historyFilePath, setHistoryFilePath] = useState<string | null>(null)
 
-	const hasAuth = authenticated || selfHosted
 	const isSyncActive = engineState !== "idle" && linkedVaultId
 
 	if (vekRequired) {
@@ -73,7 +72,7 @@ export function SyncIndicator() {
 		)
 	}
 
-	if (engineState === "idle" && hasAuth && vault && !linkedVaultId) {
+	if (engineState === "idle" && authenticated && syncEnabled && vault && !linkedVaultId) {
 		return (
 			<button
 				type="button"

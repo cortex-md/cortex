@@ -28,10 +28,10 @@ function setupMocks(overrides: {
 	const resolveConflict = overrides.resolveConflict ?? vi.fn()
 
 	vi.mocked(useVaultStore).mockReturnValue({ vault: overrides.vault ?? mockVault } as never)
-	vi.mocked(useSyncStore).mockImplementation((selector?: (s: unknown) => unknown) => {
+	vi.mocked(useSyncStore).mockImplementation(((selector?: (s: unknown) => unknown) => {
 		const state = { conflicts: overrides.conflicts ?? {}, resolveConflict }
 		return selector ? selector(state) : state
-	})
+	}) as never)
 
 	return { resolveConflict }
 }

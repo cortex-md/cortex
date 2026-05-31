@@ -4,6 +4,7 @@ import { immer } from "zustand/middleware/immer"
 
 export type LeftSidebarView = "files" | "search" | "bookmarks" | "tags"
 export type MarketplaceTab = "plugins" | "themes"
+export type AuthView = "login" | "register"
 
 export interface UIState {
 	leftSidebarCollapsed: boolean
@@ -30,10 +31,14 @@ export interface UIState {
 	openSettings: (section?: string) => void
 	closeSettings: () => void
 
-	marketplaceOpen: boolean
+	authOpen: boolean
+	authInitialView: AuthView
+	authReturnTo: string | null
+	openAuth: (view?: AuthView, returnTo?: string | null) => void
+	closeAuth: () => void
+
 	marketplaceInitialTab: MarketplaceTab
 	openMarketplace: (tab?: MarketplaceTab) => void
-	closeMarketplace: () => void
 }
 
 const MIN_SIDEBAR_WIDTH = 180
@@ -66,6 +71,8 @@ export const useUIStore = create<UIState>()(
 				set((s) => {
 					s.rightSidebarCollapsed = !s.rightSidebarCollapsed
 				}),
+
+			quickFinderOpen: false,
 
 			toggleQuickFinder: () =>
 				set((s) => {
@@ -101,18 +108,30 @@ export const useUIStore = create<UIState>()(
 					s.settingsInitialSection = null
 				}),
 
-			marketplaceOpen: false,
+			authOpen: false,
+			authInitialView: "login" as AuthView,
+			authReturnTo: null,
+
+			openAuth: (view = "login", returnTo = null) =>
+				set((s) => {
+					s.authOpen = true
+					s.authInitialView = view
+					s.authReturnTo = returnTo
+				}),
+
+			closeAuth: () =>
+				set((s) => {
+					s.authOpen = false
+					s.authReturnTo = null
+				}),
+
 			marketplaceInitialTab: "plugins" as MarketplaceTab,
 
 			openMarketplace: (tab = "plugins") =>
 				set((s) => {
-					s.marketplaceOpen = true
+					s.settingsOpen = true
+					s.settingsInitialSection = "marketplace"
 					s.marketplaceInitialTab = tab
-				}),
-
-			closeMarketplace: () =>
-				set((s) => {
-					s.marketplaceOpen = false
 				}),
 		})),
 		{ name: "uiStore" },

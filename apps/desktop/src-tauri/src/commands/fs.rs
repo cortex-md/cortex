@@ -65,6 +65,28 @@ pub fn hash_file(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+pub async fn download_file(url: String, dest_path: String) -> Result<(), String> {
+    let response = reqwest::get(&url).await.map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("Download failed: {}", response.status()));
+    }
+    let bytes = response.bytes().await.map_err(|e| e.to_string())?;
+    if let Some(parent) = Path::new(&dest_path).parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    fs::write(&dest_path, bytes).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn download_text(url: String) -> Result<String, String> {
+    let response = reqwest::get(&url).await.map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("Download failed: {}", response.status()));
+    }
+    response.text().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn download_and_extract(url: String, dest_dir: String) -> Result<(), String> {
     let response = reqwest::get(&url).await.map_err(|e| e.to_string())?;
     if !response.status().is_success() {
@@ -78,10 +100,7 @@ pub async fn download_and_extract(url: String, dest_dir: String) -> Result<(), S
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).map_err(|e| e.to_string())?;
         let raw_name = entry.name().to_string();
-        let stripped = raw_name
-            .splitn(2, '/')
-            .nth(1)
-            .unwrap_or(&raw_name);
+        let stripped = raw_name.splitn(2, '/').nth(1).unwrap_or(&raw_name);
         if stripped.is_empty() {
             continue;
         }

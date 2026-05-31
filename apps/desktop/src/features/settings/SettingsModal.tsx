@@ -23,8 +23,9 @@ import {
 	SidebarMenuItem,
 	SidebarProvider,
 } from "@cortex/ui"
-import { Blocks, Keyboard, Palette, RefreshCw, Settings, Type } from "lucide-react"
+import { Blocks, Keyboard, Palette, RefreshCw, Settings, Store, Type } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { MarketplaceSection } from "../marketplace"
 import { AppearanceSection } from "./AppearanceSettings"
 import { EditorSection } from "./EditorSettings"
 import { GeneralSection } from "./GeneralSettings"
@@ -33,12 +34,13 @@ import { PluginsSection } from "./PluginsSettings"
 import { SyncSection } from "./SyncSettings"
 
 const coreSections = [
-	{ name: "General", id: "general", icon: Settings, component: GeneralSection },
-	{ name: "Appearance", id: "appearance", icon: Palette, component: AppearanceSection },
-	{ name: "Editor", id: "editor", icon: Type, component: EditorSection },
-	{ name: "Hotkeys", id: "hotkeys", icon: Keyboard, component: HotkeysSection },
-	{ name: "Sync", id: "sync", icon: RefreshCw, component: SyncSection },
-	{ name: "Plugins", id: "plugins", icon: Blocks, component: PluginsSection },
+	{ name: "General", id: "general", icon: Settings },
+	{ name: "Appearance", id: "appearance", icon: Palette },
+	{ name: "Editor", id: "editor", icon: Type },
+	{ name: "Hotkeys", id: "hotkeys", icon: Keyboard },
+	{ name: "Sync", id: "sync", icon: RefreshCw },
+	{ name: "Plugins", id: "plugins", icon: Blocks },
+	{ name: "Marketplace", id: "marketplace", icon: Store },
 ] as const
 
 interface SettingsModalProps {
@@ -48,6 +50,7 @@ interface SettingsModalProps {
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 	const settingsInitialSection = useUIStore((s) => s.settingsInitialSection)
+	const marketplaceInitialTab = useUIStore((s) => s.marketplaceInitialTab)
 	const [activeSectionId, setActiveSectionId] = useState<string>("general")
 	const { settings, updateSetting } = useSettingsStore()
 	const pluginSettingsTabs = usePluginStore((s) => s.settingsTabs)
@@ -153,7 +156,13 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 								</Breadcrumb>
 							</div>
 						</header>
-						<div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+						<div
+							className={
+								activeSectionId === "marketplace"
+									? "flex min-h-0 flex-1 flex-col overflow-hidden"
+									: "flex flex-1 flex-col gap-4 overflow-y-auto p-4"
+							}
+						>
 							{activeSectionId === "general" && (
 								<GeneralSection settings={settings.general} onUpdate={updateSetting} />
 							)}
@@ -170,6 +179,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 							{activeSectionId === "hotkeys" && <HotkeysSection />}
 							{activeSectionId === "sync" && <SyncSection />}
 							{activeSectionId === "plugins" && <PluginsSection />}
+							{activeSectionId === "marketplace" && (
+								<MarketplaceSection initialTab={marketplaceInitialTab} />
+							)}
 							{pluginTab && (
 								<PluginSettingsRenderer
 									pluginId={pluginTab.id}

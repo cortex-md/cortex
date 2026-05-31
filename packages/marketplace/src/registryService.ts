@@ -7,6 +7,11 @@ let cachedPlugins: RegistryEntry[] | null = null
 let cachedThemes: RegistryEntry[] | null = null
 const cachedMinVersions: Record<string, string | null> = {}
 
+interface ReleaseManifestResult {
+	found: boolean
+	minVersion: string | null
+}
+
 export async function fetchPluginRegistry(): Promise<RegistryEntry[]> {
 	if (cachedPlugins) return cachedPlugins
 	const response = await getPlatform().http.fetch(`${REGISTRY_BASE}/plugins.json`)
@@ -26,6 +31,9 @@ export async function fetchThemeRegistry(): Promise<RegistryEntry[]> {
 export function invalidateRegistryCache(): void {
 	cachedPlugins = null
 	cachedThemes = null
+	for (const repo of Object.keys(cachedMinVersions)) {
+		delete cachedMinVersions[repo]
+	}
 }
 
 export async function fetchLatestRelease(repo: string): Promise<GitHubRelease> {
@@ -53,8 +61,36 @@ export async function fetchReadme(repo: string): Promise<string> {
 	throw new Error(`README not found for ${repo}`)
 }
 
+async function fetchReleaseManifestMinVersion(repo: string): Promise<ReleaseManifestResult> {
+	let manifestAsset: GitHubRelease["assets"][number] | undefined
+	try {
+		const release = await fetchLatestRelease(repo)
+		manifestAsset = release.assets.find((asset) => asset.name === "manifest.json")
+	} catch {
+		return { found: false, minVersion: null }
+	}
+	if (!manifestAsset) return { found: false, minVersion: null }
+
+	try {
+		const manifestContent = await getPlatform().http.download(manifestAsset.browser_download_url)
+		const manifest = JSON.parse(manifestContent) as { minAppVersion?: unknown }
+		return {
+			found: true,
+			minVersion: typeof manifest.minAppVersion === "string" ? manifest.minAppVersion : null,
+		}
+	} catch {
+		return { found: true, minVersion: null }
+	}
+}
+
 export async function fetchManifestMinVersion(repo: string): Promise<string | null> {
 	if (repo in cachedMinVersions) return cachedMinVersions[repo]
+
+	const releaseManifest = await fetchReleaseManifestMinVersion(repo)
+	if (releaseManifest.found) {
+		cachedMinVersions[repo] = releaseManifest.minVersion
+		return releaseManifest.minVersion
+	}
 
 	const response = await fetchGitHubRaw(repo, "manifest.json")
 	if (response) {

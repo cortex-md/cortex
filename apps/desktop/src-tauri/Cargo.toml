@@ -1,5 +1,5 @@
 [package]
-name = "cortex-desktop"
+name = "Cortex"
 version = "0.1.0"
 description = "Cortex Desktop App"
 authors = ["you"]

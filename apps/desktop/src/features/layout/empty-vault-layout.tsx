@@ -8,6 +8,7 @@ import { CreateVaultModal } from "../vault/CreateVaultModal"
 function AccountBadge() {
 	const { authenticated, user } = useAuthStore()
 	const openSettings = useUIStore((s) => s.openSettings)
+	const openAuth = useUIStore((s) => s.openAuth)
 
 	if (authenticated && user) {
 		return (
@@ -28,7 +29,7 @@ function AccountBadge() {
 		<button
 			type="button"
 			className="absolute top-3 right-4 flex items-center gap-2 text-[11px] text-text-disabled hover:text-text-muted transition-colors cursor-pointer"
-			onClick={() => openSettings("sync")}
+			onClick={() => openAuth("login")}
 		>
 			<span>Sign in</span>
 		</button>

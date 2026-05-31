@@ -40,10 +40,10 @@ interface RegistryEntry {
 
 Plugins:
 1. Fetch `https://api.github.com/repos/{owner}/{repo}/releases/latest`
-2. Find `manifest.json` and `main.js` assets in the release
-3. Create dest dir, download each file via `platform.http.fetch` + `platform.fs.writeFile`
-4. Optionally download `styles.css` if present
-5. Re-run plugin discovery to register the new entry
+2. Install into a hidden staging directory first, then promote to `.cortex/plugins/<id>` only after validation succeeds
+3. Prefer release assets: download `manifest.json`, validate `manifest.id` and safe relative `manifest.main`, download the declared bundle asset, and optionally download `styles.css`
+4. If required assets are missing, fall back to `zipball_url`, extract it, locate `manifest.json`, the declared main bundle, and optional `styles.css`, then normalize them into the staging directory
+5. Re-run plugin discovery and confirm the plugin is registered; failed installs clean up staging/final folders and expose the runtime load error in marketplace UI. Plugin bundles may be CommonJS or self-contained ESM with a default plugin class export.
 
 Themes:
 1. Fetch latest release
@@ -68,7 +68,7 @@ setMarketplaceCallbacks({
 
 ## Store Filtering and Sorting
 
-The store exposes `filterInstalled: boolean` and `sortOrder: "default" | "newest" | "oldest"` state with corresponding setters. Both reset to defaults when `setActiveTab()` is called. Filtering/sorting is applied client-side in `MarketplaceBrowser`. Date-based sorting lazily fetches `published_at` from the GitHub releases API via `loadReleaseDates()` (triggered automatically when sort order changes from "default"), cached in `releaseDates: Record<string, string>`.
+The store exposes `filterInstalled: boolean` and `sortOrder: "default" | "newest" | "oldest"` state with corresponding setters. Both reset to defaults when `setActiveTab()` is called. Filtering/sorting is applied client-side in `MarketplaceBrowser`. Date-based sorting lazily fetches `published_at` from the GitHub releases API via `loadReleaseDates()` (triggered automatically when sort order changes from "default"), cached in `releaseDates: Record<string, string>`. Compatibility checks read `minAppVersion` from the latest release `manifest.json` asset first, then fall back to raw `manifest.json` on `main`/`master` for source-based packages.
 
 ## Key Exports
 
@@ -79,6 +79,7 @@ The store exposes `filterInstalled: boolean` and `sortOrder: "default" | "newest
 - `MarketplaceSortOrder` — `"default" | "newest" | "oldest"`
 - `fetchPluginRegistry() / fetchThemeRegistry()` — Fetch with in-memory cache
 - `fetchReadme(repo)` — Fetch README.md from GitHub (tries main, then master branch)
+- `fetchManifestMinVersion(repo)` — Fetch minAppVersion from release asset manifest first, then raw source manifest
 - `invalidateRegistryCache()` — Force re-fetch on next loadRegistry()
 
 ## Dependencies

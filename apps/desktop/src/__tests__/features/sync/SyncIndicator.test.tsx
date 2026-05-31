@@ -40,7 +40,7 @@ const mockVault = { path: "/vault", name: "Test Vault", uuid: "vault-id" }
 
 function mockAllStores(overrides: {
 	syncStore?: Partial<ReturnType<typeof useSyncStore>>
-	authStore?: { authenticated?: boolean; selfHosted?: boolean }
+	authStore?: { authenticated?: boolean; syncEnabled?: boolean }
 	vaultStore?: { vault?: typeof mockVault | null }
 	remoteVaultStore?: { linkedVaultId?: string | null }
 	uiStore?: { openSettings?: ReturnType<typeof vi.fn> }
@@ -57,30 +57,30 @@ function mockAllStores(overrides: {
 		...overrides.syncStore,
 	} as never)
 
-	vi.mocked(useAuthStore).mockImplementation((selector?: (s: unknown) => unknown) => {
-		const state = { authenticated: false, selfHosted: false, ...(overrides.authStore ?? {}) }
+	vi.mocked(useAuthStore).mockImplementation(((selector?: (s: unknown) => unknown) => {
+		const state = { authenticated: false, syncEnabled: false, ...(overrides.authStore ?? {}) }
 		return selector ? selector(state) : state
-	})
+	}) as never)
 
-	vi.mocked(useVaultStore).mockImplementation((selector?: (s: unknown) => unknown) => {
+	vi.mocked(useVaultStore).mockImplementation(((selector?: (s: unknown) => unknown) => {
 		const state = { vault: mockVault, ...(overrides.vaultStore ?? {}) }
 		return selector ? selector(state) : state
-	})
+	}) as never)
 
-	vi.mocked(useRemoteVaultStore).mockImplementation((selector?: (s: unknown) => unknown) => {
+	vi.mocked(useRemoteVaultStore).mockImplementation(((selector?: (s: unknown) => unknown) => {
 		const state = { linkedVaultId: "vault-remote-id", ...(overrides.remoteVaultStore ?? {}) }
 		return selector ? selector(state) : state
-	})
+	}) as never)
 
-	vi.mocked(useUIStore).mockImplementation((selector?: (s: unknown) => unknown) => {
+	vi.mocked(useUIStore).mockImplementation(((selector?: (s: unknown) => unknown) => {
 		const state = { openSettings: vi.fn(), ...(overrides.uiStore ?? {}) }
 		return selector ? selector(state) : state
-	})
+	}) as never)
 
-	vi.mocked(useEditorStore).mockImplementation((selector?: (s: unknown) => unknown) => {
+	vi.mocked(useEditorStore).mockImplementation(((selector?: (s: unknown) => unknown) => {
 		const state = { activeFilePath: null, ...(overrides.editorStore ?? {}) }
 		return selector ? selector(state) : state
-	})
+	}) as never)
 }
 
 afterEach(() => {
@@ -103,7 +103,7 @@ describe("SyncIndicator", () => {
 	describe("when engine is idle and user is authenticated without linked vault", () => {
 		beforeEach(() => {
 			mockAllStores({
-				authStore: { authenticated: true },
+				authStore: { authenticated: true, syncEnabled: true },
 				remoteVaultStore: { linkedVaultId: null },
 			})
 		})
@@ -116,7 +116,7 @@ describe("SyncIndicator", () => {
 		it("calls openSettings('sync') when clicked", async () => {
 			const openSettings = vi.fn()
 			mockAllStores({
-				authStore: { authenticated: true },
+				authStore: { authenticated: true, syncEnabled: true },
 				remoteVaultStore: { linkedVaultId: null },
 				uiStore: { openSettings },
 			})
@@ -132,6 +132,17 @@ describe("SyncIndicator", () => {
 		})
 
 		it("renders nothing", () => {
+			const { container } = render(<SyncIndicator />)
+			expect(container).toBeEmptyDOMElement()
+		})
+	})
+
+	describe("when engine is idle and sync is disabled", () => {
+		it("renders nothing", () => {
+			mockAllStores({
+				authStore: { authenticated: true, syncEnabled: false },
+				remoteVaultStore: { linkedVaultId: null },
+			})
 			const { container } = render(<SyncIndicator />)
 			expect(container).toBeEmptyDOMElement()
 		})

@@ -1,1 +1,1 @@
-export { MarketplaceModal } from "./MarketplaceModal"
+export { MarketplaceSection } from "./MarketplaceSection"

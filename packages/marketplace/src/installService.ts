@@ -1,18 +1,199 @@
-import { getPlatform } from "@cortex/platform"
-import { discoverCommunityPlugins, usePluginStore } from "@cortex/plugin-runtime"
+import { type FileEntry, getPlatform } from "@cortex/platform"
+import { getCommunityPluginLoadError, usePluginStore } from "@cortex/plugin-runtime"
 import { getThemeManager } from "@cortex/theme"
 import { fetchLatestRelease } from "./registryService"
-import type { GitHubReleaseAsset, RegistryEntry } from "./types"
+import type { GitHubRelease, GitHubReleaseAsset, RegistryEntry } from "./types"
+
+interface PluginManifestFile {
+	id?: unknown
+	main?: unknown
+}
+
+class MissingReleaseAssetsError extends Error {}
 
 async function downloadAsset(asset: GitHubReleaseAsset, destPath: string): Promise<void> {
-	const response = await getPlatform().http.fetch(asset.browser_download_url)
-	if (!response.ok) throw new Error(`Failed to download ${asset.name}: ${response.status}`)
-	const content = await response.text()
-	await getPlatform().fs.writeFile(destPath, content)
+	await getPlatform().fs.downloadFile(asset.browser_download_url, destPath)
 }
 
 function findAsset(assets: GitHubReleaseAsset[], name: string): GitHubReleaseAsset | undefined {
 	return assets.find((a) => a.name === name)
+}
+
+function joinPath(...segments: string[]): string {
+	return segments
+		.map((segment, index) =>
+			index === 0 ? segment.replace(/\/+$/g, "") : segment.replace(/^\/+|\/+$/g, ""),
+		)
+		.filter(Boolean)
+		.join("/")
+}
+
+function getPathBasename(path: string): string {
+	const normalized = path.replaceAll("\\", "/")
+	const parts = normalized.split("/").filter(Boolean)
+	return parts.at(-1) ?? normalized
+}
+
+function getPathDirname(path: string): string {
+	const normalized = path.replaceAll("\\", "/")
+	const index = normalized.lastIndexOf("/")
+	return index === -1 ? "" : normalized.slice(0, index)
+}
+
+function normalizeRelativePath(path: string): string {
+	const normalized = path.replaceAll("\\", "/").trim()
+	const segments = normalized.split("/").filter((segment) => segment && segment !== ".")
+	if (
+		normalized.length === 0 ||
+		normalized.startsWith("/") ||
+		/^[a-zA-Z]:/.test(normalized) ||
+		segments.length === 0 ||
+		segments.some((segment) => segment === "..")
+	) {
+		throw new Error(`Invalid plugin main path: ${path}`)
+	}
+	return segments.join("/")
+}
+
+function parsePluginManifest(raw: string, entry: RegistryEntry): string {
+	let manifest: PluginManifestFile
+	try {
+		manifest = JSON.parse(raw) as PluginManifestFile
+	} catch {
+		throw new Error(`Release for ${entry.id} contains invalid manifest.json`)
+	}
+
+	if (manifest.id !== entry.id) {
+		throw new Error(`Release manifest id must be "${entry.id}"`)
+	}
+	if (typeof manifest.main !== "string") {
+		throw new Error(`Release manifest for ${entry.id} is missing a valid main field`)
+	}
+
+	return normalizeRelativePath(manifest.main)
+}
+
+function findMainAsset(
+	assets: GitHubReleaseAsset[],
+	mainPath: string,
+): GitHubReleaseAsset | undefined {
+	return findAsset(assets, mainPath) ?? findAsset(assets, getPathBasename(mainPath))
+}
+
+async function safeDelete(path: string): Promise<void> {
+	try {
+		await getPlatform().fs.deleteFile(path)
+	} catch {}
+}
+
+async function readFirstExisting(
+	paths: string[],
+): Promise<{ path: string; content: string } | null> {
+	const seen = new Set<string>()
+	for (const path of paths) {
+		if (seen.has(path)) continue
+		seen.add(path)
+		try {
+			return { path, content: await getPlatform().fs.readFile(path) }
+		} catch {}
+	}
+	return null
+}
+
+async function findFileByName(rootDir: string, name: string): Promise<string | null> {
+	let entries: FileEntry[]
+	try {
+		entries = await getPlatform().fs.listDir(rootDir)
+	} catch {
+		return null
+	}
+
+	for (const entry of entries) {
+		if (!entry.isDir && entry.name === name) return entry.path
+	}
+
+	for (const entry of entries) {
+		if (!entry.isDir) continue
+		const nested = await findFileByName(entry.path, name)
+		if (nested) return nested
+	}
+
+	return null
+}
+
+async function installPluginFromReleaseAssets(
+	entry: RegistryEntry,
+	release: GitHubRelease,
+	stagingDir: string,
+): Promise<void> {
+	const manifestAsset = findAsset(release.assets, "manifest.json")
+	if (!manifestAsset) {
+		throw new MissingReleaseAssetsError(`Release for ${entry.id} is missing manifest.json`)
+	}
+
+	await downloadAsset(manifestAsset, `${stagingDir}/manifest.json`)
+	const manifestContent = await getPlatform().fs.readFile(`${stagingDir}/manifest.json`)
+	const main = parsePluginManifest(manifestContent, entry)
+
+	const mainAsset = findMainAsset(release.assets, main)
+	if (!mainAsset) {
+		throw new MissingReleaseAssetsError(`Release for ${entry.id} is missing ${main}`)
+	}
+
+	await downloadAsset(mainAsset, joinPath(stagingDir, main))
+
+	const stylesAsset = findAsset(release.assets, "styles.css")
+	if (stylesAsset) {
+		await downloadAsset(stylesAsset, `${stagingDir}/styles.css`)
+	}
+}
+
+async function installPluginFromSourceArchive(
+	entry: RegistryEntry,
+	release: GitHubRelease,
+	sourceDir: string,
+	stagingDir: string,
+): Promise<void> {
+	if (!release.zipball_url) {
+		throw new Error(`Release for ${entry.id} is missing downloadable assets and zipball_url`)
+	}
+
+	await getPlatform().fs.downloadAndExtract(release.zipball_url, sourceDir)
+
+	const manifestPath = await findFileByName(sourceDir, "manifest.json")
+	if (!manifestPath) {
+		throw new Error(`Source archive for ${entry.id} is missing manifest.json`)
+	}
+
+	const manifestContent = await getPlatform().fs.readFile(manifestPath)
+	const main = parsePluginManifest(manifestContent, entry)
+	const manifestDir = getPathDirname(manifestPath)
+	const mainFile = await readFirstExisting([joinPath(manifestDir, main), joinPath(sourceDir, main)])
+	const fallbackMainPath = mainFile ? null : await findFileByName(sourceDir, getPathBasename(main))
+	const fallbackMain = fallbackMainPath
+		? { path: fallbackMainPath, content: await getPlatform().fs.readFile(fallbackMainPath) }
+		: null
+	const resolvedMain = mainFile ?? fallbackMain
+	if (!resolvedMain) {
+		throw new Error(`Source archive for ${entry.id} is missing ${main}`)
+	}
+
+	await getPlatform().fs.writeFile(`${stagingDir}/manifest.json`, manifestContent)
+	await getPlatform().fs.writeFile(joinPath(stagingDir, main), resolvedMain.content)
+
+	let stylesFile = await readFirstExisting([
+		joinPath(manifestDir, "styles.css"),
+		joinPath(sourceDir, "styles.css"),
+	])
+	if (!stylesFile) {
+		const stylesPath = await findFileByName(sourceDir, "styles.css")
+		if (stylesPath) {
+			stylesFile = await readFirstExisting([stylesPath])
+		}
+	}
+	if (stylesFile) {
+		await getPlatform().fs.writeFile(`${stagingDir}/styles.css`, stylesFile.content)
+	}
 }
 
 export async function installPlugin(
@@ -22,24 +203,46 @@ export async function installPlugin(
 ): Promise<void> {
 	const release = await fetchLatestRelease(entry.repo)
 	const destDir = `${pluginsDir}/${entry.id}`
-	await getPlatform().fs.createDir(destDir)
+	const workspaceDir = `${pluginsDir}/.${entry.id}-install-${Date.now()}`
+	const stagingDir = `${workspaceDir}/plugin`
+	const sourceDir = `${workspaceDir}/source`
+	let installed = false
 
-	const manifestAsset = findAsset(release.assets, "manifest.json")
-	const mainAsset = findAsset(release.assets, "main.js")
-	if (!manifestAsset || !mainAsset) {
-		throw new Error(`Release for ${entry.id} is missing required assets (manifest.json, main.js)`)
+	await safeDelete(workspaceDir)
+	await getPlatform().fs.createDir(stagingDir)
+	try {
+		try {
+			await installPluginFromReleaseAssets(entry, release, stagingDir)
+		} catch (error) {
+			if (!(error instanceof MissingReleaseAssetsError)) throw error
+			await safeDelete(stagingDir)
+			await getPlatform().fs.createDir(stagingDir)
+			await installPluginFromSourceArchive(entry, release, sourceDir, stagingDir)
+		}
+
+		await safeDelete(destDir)
+		await getPlatform().fs.renameFile(stagingDir, destDir)
+		installed = true
+		await safeDelete(workspaceDir)
+
+		usePluginStore.getState().unregisterPlugin(entry.id)
+		await loadCommunityPlugins(pluginsDir)
+		if (!(entry.id in usePluginStore.getState().plugins)) {
+			const loadError = getCommunityPluginLoadError(entry.id)
+			throw new Error(
+				loadError
+					? `Plugin ${entry.id} was downloaded but could not be loaded: ${loadError}`
+					: `Plugin ${entry.id} was downloaded but could not be loaded. Check manifest.main and the bundle format.`,
+			)
+		}
+	} catch (error) {
+		await safeDelete(workspaceDir)
+		if (installed) {
+			await safeDelete(destDir)
+			usePluginStore.getState().unregisterPlugin(entry.id)
+		}
+		throw error
 	}
-
-	await downloadAsset(manifestAsset, `${destDir}/manifest.json`)
-	await downloadAsset(mainAsset, `${destDir}/main.js`)
-
-	const stylesAsset = findAsset(release.assets, "styles.css")
-	if (stylesAsset) {
-		await downloadAsset(stylesAsset, `${destDir}/styles.css`)
-	}
-
-	await discoverCommunityPlugins(pluginsDir)
-	await loadCommunityPlugins(pluginsDir)
 }
 
 export async function uninstallPlugin(id: string, pluginsDir: string): Promise<void> {

@@ -19,6 +19,14 @@ src/
 src-tauri/              # Rust source (Tauri commands, sync engine)
 ```
 
+## Settings and Marketplace
+
+`SettingsModal` owns settings navigation, including the embedded Marketplace tab. Marketplace UI lives under `features/marketplace/` as settings content, not as a standalone modal. Buttons that browse community plugins or themes should call `useUIStore().openMarketplace(tab)`, which opens Settings on the Marketplace tab and selects the requested marketplace tab.
+
+Marketplace search occupies the full Settings content area. Selecting a plugin or theme replaces the search view with the detail view, including README, compatibility, install/update/uninstall actions, and a back button to return to search.
+
+Marketplace plugin install and compatibility flows use native Tauri downloads for GitHub release assets (`download_file` and `download_text`) so browser CORS/redirect behavior does not affect release-hosted `manifest.json`, `main.js`, or `styles.css`.
+
 ## Testing
 
 Tests live in `src/__tests__/`. Run with:

@@ -20,6 +20,8 @@ pub fn run() {
             commands::fs::create_dir,
             commands::fs::hash_file,
             commands::fs::list_dir,
+            commands::fs::download_file,
+            commands::fs::download_text,
             commands::fs::download_and_extract,
             commands::vault::open_vault,
             commands::vault::scan_vault,

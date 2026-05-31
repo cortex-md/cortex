@@ -18,6 +18,7 @@ interface PluginModule {
 }
 
 const bundledPlugins = new Map<string, PluginModule>()
+const communityPluginLoadErrors = new Map<string, string>()
 
 export function registerBundledPlugin(manifest: PluginManifest, module: PluginModule): void {
 	bundledPlugins.set(manifest.id, module)
@@ -83,6 +84,10 @@ export function setCommunityPluginExternal(moduleId: string, moduleExports: unkn
 	communityPluginExternals[moduleId] = moduleExports
 }
 
+export function getCommunityPluginLoadError(pluginId: string): string | null {
+	return communityPluginLoadErrors.get(pluginId) ?? null
+}
+
 export async function discoverCommunityPlugins(pluginsDir: string): Promise<void> {
 	const fs = getPlatform().fs
 	let entries: Awaited<ReturnType<typeof fs.listDir>>
@@ -94,56 +99,121 @@ export async function discoverCommunityPlugins(pluginsDir: string): Promise<void
 
 	const pluginDirs = entries.filter((e) => e.isDir)
 	for (const dir of pluginDirs) {
+		let pluginId = dir.name
 		try {
 			const manifestPath = `${dir.path}/manifest.json`
 			const manifestContent = await fs.readFile(manifestPath)
 			const manifest = JSON.parse(manifestContent) as PluginManifest
 
-			if (!manifest.id || !manifest.main) continue
+			if (manifest.id) pluginId = manifest.id
+			communityPluginLoadErrors.delete(pluginId)
 
-			const mainPath = `${dir.path}/${manifest.main}`
+			if (!manifest.id) {
+				communityPluginLoadErrors.set(pluginId, "manifest.json is missing id")
+				continue
+			}
+			if (!manifest.main) {
+				communityPluginLoadErrors.set(pluginId, "manifest.json is missing main")
+				continue
+			}
+
+			const mainPath = resolvePluginMainPath(dir.path, manifest.main)
+			if (!mainPath) {
+				communityPluginLoadErrors.set(pluginId, "manifest.main must be a safe relative path")
+				continue
+			}
+
 			const moduleCode = await fs.readFile(mainPath)
 
-			const loadedModule = loadCommunityModule(moduleCode, manifest.id)
+			const loadedModule = await loadCommunityModule(moduleCode, manifest.id)
 			if (loadedModule) {
 				bundledPlugins.set(manifest.id, loadedModule)
 				usePluginStore.getState().registerPlugin(manifest)
 			}
-		} catch {}
+		} catch (error) {
+			communityPluginLoadErrors.set(pluginId, getErrorMessage(error))
+		}
 	}
 }
 
-function loadCommunityModule(code: string, pluginId: string): PluginModule | null {
-	try {
-		const moduleExports: Record<string, unknown> = {}
-		const moduleObj = { exports: moduleExports as Record<string, unknown> & { default?: unknown } }
-
-		const requireStub = (id: string): unknown => {
-			const resolved = communityPluginExternals[id]
-			if (resolved) return resolved
-			throw new Error(`Cannot require "${id}" in plugin "${pluginId}"`)
-		}
-
-		// biome-ignore lint/security/noGlobalEval: required to load community plugin CJS bundles
-		const indirectEval = globalThis.eval
-		const factory = indirectEval(`(function(module, exports, require) {\n${code}\n})`) as (
-			m: typeof moduleObj,
-			e: typeof moduleExports,
-			r: typeof requireStub,
-		) => void
-		factory(moduleObj, moduleExports, requireStub)
-
-		const defaultExport =
-			(moduleObj.exports.default as PluginConstructor) ??
-			(moduleObj.exports as unknown as PluginConstructor)
-
-		if (typeof defaultExport === "function") {
-			return { default: defaultExport }
-		}
-		return null
-	} catch {
+function resolvePluginMainPath(pluginDir: string, mainPath: string): string | null {
+	const normalized = mainPath.replaceAll("\\", "/").trim()
+	const segments = normalized.split("/").filter((segment) => segment && segment !== ".")
+	if (
+		normalized.length === 0 ||
+		normalized.startsWith("/") ||
+		/^[a-zA-Z]:/.test(normalized) ||
+		segments.length === 0 ||
+		segments.some((segment) => segment === "..")
+	) {
 		return null
 	}
+	return `${pluginDir}/${segments.join("/")}`
+}
+
+async function loadCommunityModule(code: string, pluginId: string): Promise<PluginModule> {
+	try {
+		return loadCommonJSCommunityModule(code, pluginId)
+	} catch (commonJSError) {
+		if (!isProbablyESMModule(code)) throw commonJSError
+		try {
+			return await loadESMCommunityModule(code)
+		} catch (esmError) {
+			throw new Error(
+				`${getErrorMessage(esmError)}; CommonJS fallback failed: ${getErrorMessage(commonJSError)}`,
+			)
+		}
+	}
+}
+
+function loadCommonJSCommunityModule(code: string, pluginId: string): PluginModule {
+	const moduleExports: Record<string, unknown> = {}
+	const moduleObj = { exports: moduleExports as Record<string, unknown> & { default?: unknown } }
+
+	const requireStub = (id: string): unknown => {
+		const resolved = communityPluginExternals[id]
+		if (resolved) return resolved
+		throw new Error(`Cannot require "${id}" in plugin "${pluginId}"`)
+	}
+
+	// biome-ignore lint/security/noGlobalEval: required to load community plugin CJS bundles
+	const indirectEval = globalThis.eval
+	const factory = indirectEval(`(function(module, exports, require) {\n${code}\n})`) as (
+		m: typeof moduleObj,
+		e: typeof moduleExports,
+		r: typeof requireStub,
+	) => void
+	factory(moduleObj, moduleExports, requireStub)
+
+	return normalizeCommunityModule(moduleObj.exports)
+}
+
+async function loadESMCommunityModule(code: string): Promise<PluginModule> {
+	const moduleUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(code)}`
+	const moduleExports = await import(/* @vite-ignore */ moduleUrl)
+	return normalizeCommunityModule(moduleExports)
+}
+
+function normalizeCommunityModule(moduleExports: unknown): PluginModule {
+	const exportsRecord = moduleExports as { default?: unknown }
+	const defaultExport = exportsRecord.default ?? moduleExports
+
+	if (typeof defaultExport !== "function") {
+		throw new Error("Plugin bundle must export a default plugin class")
+	}
+
+	return { default: defaultExport as PluginConstructor }
+}
+
+function isProbablyESMModule(code: string): boolean {
+	return (
+		/\bexport\s+(default|\{|\*|class|const|function|let|var)/.test(code) || /\bimport\s+/.test(code)
+	)
+}
+
+function getErrorMessage(error: unknown): string {
+	if (error instanceof Error) return error.message
+	return String(error)
 }
 
 export async function loadEnabledPlugins(
