@@ -1,6 +1,7 @@
 import { Slider as SliderPrimitive } from "radix-ui"
 import * as React from "react"
 
+import { nativeAccentFill } from "./lib/native-styles"
 import { cn } from "./lib/utils"
 
 function Slider({
@@ -38,7 +39,8 @@ function Slider({
 				<SliderPrimitive.Range
 					data-slot="slider-range"
 					className={cn(
-						"absolute bg-[#007aff] data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full",
+						"absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full",
+						nativeAccentFill,
 					)}
 				/>
 			</SliderPrimitive.Track>

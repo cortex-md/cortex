@@ -11,14 +11,14 @@ const toggleVariants = cva(
 	[
 		"inline-flex items-center justify-center gap-2 rounded-[6px] text-[13px] font-medium leading-4 whitespace-nowrap outline-none transition-[background-color,border-color,color,opacity]",
 		nativeFocusRing,
-		"hover:bg-muted/70 hover:text-foreground disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 data-[state=on]:bg-accent/80 data-[state=on]:text-accent-foreground dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+		"hover:bg-muted/70 hover:text-foreground disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 data-[state=on]:bg-brand-subtle data-[state=on]:text-brand-text dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 	],
 	{
 		variants: {
 			variant: {
 				default: "bg-transparent",
 				outline:
-					"border border-border/70 bg-background/70 hover:bg-accent/70 hover:text-accent-foreground",
+					"border border-border/70 bg-background/70 hover:bg-brand-subtle hover:text-brand-text",
 			},
 			size: {
 				default: "h-7 min-w-7 px-2",

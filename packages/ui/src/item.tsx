@@ -124,7 +124,7 @@ function ItemDescription({ className, ...props }: React.ComponentProps<"p">) {
 			data-slot="item-description"
 			className={cn(
 				"line-clamp-2 text-[13px] leading-5 font-normal text-balance text-muted-foreground",
-				"[&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary",
+				"[&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-brand",
 				className,
 			)}
 			{...props}

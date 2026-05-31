@@ -18,7 +18,7 @@ function NativeSelect({
 				data-slot="native-select"
 				data-size={size}
 				className={cn(
-					"h-9 w-full min-w-0 appearance-none rounded-full px-3 py-2 pr-9 text-[13px] leading-4 outline-none transition-[background-color,border-color,color,box-shadow] selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed data-[size=sm]:h-6 data-[size=sm]:rounded-[6px] data-[size=sm]:py-1",
+					"h-9 w-full min-w-0 appearance-none rounded-full px-3 py-2 pr-9 text-[13px] leading-4 outline-none transition-[background-color,border-color,color,box-shadow] selection:bg-brand selection:text-text-on-accent placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed data-[size=sm]:h-6 data-[size=sm]:rounded-[6px] data-[size=sm]:py-1",
 					nativeGlassSurface,
 					nativeFocusRing,
 					"aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",

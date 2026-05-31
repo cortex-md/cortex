@@ -1,7 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
 import type * as React from "react"
-import { nativeFocusRing } from "./lib/native-styles"
+import { nativeAccentText, nativeFocusRing } from "./lib/native-styles"
 import { cn } from "./lib/utils"
 
 const buttonVariants = cva(
@@ -23,7 +23,7 @@ const buttonVariants = cva(
 				secondary:
 					"border border-transparent bg-secondary/80 text-secondary-foreground hover:bg-secondary",
 				ghost: "hover:bg-accent/70 hover:text-accent-foreground dark:hover:bg-accent/50",
-				link: "text-primary underline-offset-4 hover:underline",
+				link: [nativeAccentText, "underline-offset-4 hover:underline"],
 			},
 			size: {
 				default: "h-7 px-3 py-1.5 has-[>svg]:px-2.5",

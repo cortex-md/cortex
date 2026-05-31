@@ -16,9 +16,12 @@ import { useIsMobile } from "./use-mobile"
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 const SIDEBAR_WIDTH = "16rem"
+const SIDEBAR_WIDTH_MACOS = "15rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
+
+type SidebarPlatform = "macos" | "windows" | "linux"
 
 type SidebarContextProps = {
 	state: "expanded" | "collapsed"
@@ -27,10 +30,22 @@ type SidebarContextProps = {
 	openMobile: boolean
 	setOpenMobile: (open: boolean) => void
 	isMobile: boolean
+	platform: SidebarPlatform
 	toggleSidebar: () => void
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
+
+function getDefaultSidebarPlatform(): SidebarPlatform {
+	if (typeof document === "undefined") {
+		return "windows"
+	}
+
+	const platform = document.body.dataset.platform
+	return platform === "macos" || platform === "windows" || platform === "linux"
+		? platform
+		: "windows"
+}
 
 function useSidebar() {
 	const context = React.useContext(SidebarContext)
@@ -45,6 +60,7 @@ function SidebarProvider({
 	defaultOpen = true,
 	open: openProp,
 	onOpenChange: setOpenProp,
+	platform: platformProp,
 	className,
 	style,
 	children,
@@ -53,9 +69,11 @@ function SidebarProvider({
 	defaultOpen?: boolean
 	open?: boolean
 	onOpenChange?: (open: boolean) => void
+	platform?: SidebarPlatform
 }) {
 	const isMobile = useIsMobile()
 	const [openMobile, setOpenMobile] = React.useState(false)
+	const platform = platformProp ?? getDefaultSidebarPlatform()
 
 	// This is the internal state of the sidebar.
 	// We use openProp and setOpenProp for control from outside the component.
@@ -106,9 +124,10 @@ function SidebarProvider({
 			isMobile,
 			openMobile,
 			setOpenMobile,
+			platform,
 			toggleSidebar,
 		}),
-		[state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
+		[state, open, setOpen, isMobile, openMobile, setOpenMobile, platform, toggleSidebar],
 	)
 
 	return (
@@ -116,9 +135,10 @@ function SidebarProvider({
 			<TooltipProvider delayDuration={0}>
 				<div
 					data-slot="sidebar-wrapper"
+					data-platform={platform}
 					style={
 						{
-							"--sidebar-width": SIDEBAR_WIDTH,
+							"--sidebar-width": platform === "macos" ? SIDEBAR_WIDTH_MACOS : SIDEBAR_WIDTH,
 							"--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
 							...style,
 						} as React.CSSProperties
@@ -148,14 +168,15 @@ function Sidebar({
 	variant?: "sidebar" | "floating" | "inset"
 	collapsible?: "offcanvas" | "icon" | "none"
 }) {
-	const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+	const { isMobile, state, openMobile, setOpenMobile, platform } = useSidebar()
 
 	if (collapsible === "none") {
 		return (
 			<div
 				data-slot="sidebar"
+				data-platform={platform}
 				className={cn(
-					"flex h-full w-(--sidebar-width) flex-col bg-sidebar/80 text-sidebar-foreground backdrop-blur-xl",
+					"flex h-full w-(--sidebar-width) flex-col text-sidebar-foreground backdrop-blur-xl group-data-[platform=macos]/sidebar-wrapper:bg-sidebar/55 group-data-[platform=macos]/sidebar-wrapper:saturate-150 group-data-[platform=windows]/sidebar-wrapper:bg-sidebar group-data-[platform=windows]/sidebar-wrapper:backdrop-blur-none group-data-[platform=linux]/sidebar-wrapper:bg-sidebar group-data-[platform=linux]/sidebar-wrapper:backdrop-blur-none",
 					className,
 				)}
 				{...props}
@@ -172,7 +193,8 @@ function Sidebar({
 					data-sidebar="sidebar"
 					data-slot="sidebar"
 					data-mobile="true"
-					className="w-(--sidebar-width) bg-sidebar/90 p-0 text-sidebar-foreground backdrop-blur-xl [&>button]:hidden"
+					data-platform={platform}
+					className="w-(--sidebar-width) bg-sidebar/90 p-0 text-sidebar-foreground backdrop-blur-xl data-[platform=windows]:bg-sidebar data-[platform=windows]:backdrop-blur-none data-[platform=linux]:bg-sidebar data-[platform=linux]:backdrop-blur-none [&>button]:hidden"
 					style={
 						{
 							"--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -198,6 +220,7 @@ function Sidebar({
 			data-variant={variant}
 			data-side={side}
 			data-slot="sidebar"
+			data-platform={platform}
 		>
 			{/* This is what handles the sidebar gap on desktop */}
 			<div
@@ -221,7 +244,7 @@ function Sidebar({
 					// Adjust the padding for floating and inset variants.
 					variant === "floating" || variant === "inset"
 						? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
-						: "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
+						: "border-sidebar-border/70 group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l group-data-[platform=macos]/sidebar-wrapper:border-sidebar-border/25",
 					className,
 				)}
 				{...props}
@@ -229,7 +252,7 @@ function Sidebar({
 				<div
 					data-sidebar="sidebar"
 					data-slot="sidebar-inner"
-					className="flex h-full w-full flex-col bg-sidebar/80 backdrop-blur-xl group-data-[variant=floating]:rounded-[10px] group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border/70"
+					className="flex h-full w-full flex-col bg-sidebar text-sidebar-foreground backdrop-blur-none group-data-[platform=macos]/sidebar-wrapper:bg-sidebar/55 group-data-[platform=macos]/sidebar-wrapper:backdrop-blur-2xl group-data-[platform=macos]/sidebar-wrapper:saturate-150 group-data-[variant=floating]:rounded-[10px] group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border/70"
 				>
 					{children}
 				</div>
@@ -290,7 +313,7 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
 		<main
 			data-slot="sidebar-inset"
 			className={cn(
-				"relative flex w-full flex-1 flex-col bg-background/80 backdrop-blur-xl",
+				"relative flex w-full flex-1 flex-col bg-background/80 backdrop-blur-xl group-data-[platform=macos]/sidebar-wrapper:bg-background/70 group-data-[platform=macos]/sidebar-wrapper:backdrop-blur-2xl group-data-[platform=windows]/sidebar-wrapper:bg-background group-data-[platform=windows]/sidebar-wrapper:backdrop-blur-none group-data-[platform=linux]/sidebar-wrapper:bg-background group-data-[platform=linux]/sidebar-wrapper:backdrop-blur-none",
 				"md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-[10px] md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2",
 				className,
 			)}
@@ -315,7 +338,10 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="sidebar-header"
 			data-sidebar="header"
-			className={cn("flex flex-col gap-2 p-2", className)}
+			className={cn(
+				"flex flex-col gap-2 p-2 group-data-[platform=macos]/sidebar-wrapper:min-h-12 group-data-[platform=macos]/sidebar-wrapper:px-2.5 group-data-[platform=macos]/sidebar-wrapper:pt-3 group-data-[platform=windows]/sidebar-wrapper:px-3 group-data-[platform=windows]/sidebar-wrapper:pt-3",
+				className,
+			)}
 			{...props}
 		/>
 	)
@@ -326,7 +352,10 @@ function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="sidebar-footer"
 			data-sidebar="footer"
-			className={cn("flex flex-col gap-2 p-2", className)}
+			className={cn(
+				"flex flex-col gap-2 p-2 group-data-[platform=macos]/sidebar-wrapper:px-2.5 group-data-[platform=windows]/sidebar-wrapper:px-3",
+				className,
+			)}
 			{...props}
 		/>
 	)
@@ -349,7 +378,7 @@ function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
 			data-slot="sidebar-content"
 			data-sidebar="content"
 			className={cn(
-				"flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+				"flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[platform=macos]/sidebar-wrapper:gap-1 group-data-[platform=windows]/sidebar-wrapper:gap-1.5 group-data-[collapsible=icon]:overflow-hidden",
 				className,
 			)}
 			{...props}
@@ -362,7 +391,10 @@ function SidebarGroup({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="sidebar-group"
 			data-sidebar="group"
-			className={cn("relative flex w-full min-w-0 flex-col p-2", className)}
+			className={cn(
+				"relative flex w-full min-w-0 flex-col p-2 group-data-[platform=macos]/sidebar-wrapper:px-2.5 group-data-[platform=macos]/sidebar-wrapper:py-1 group-data-[platform=windows]/sidebar-wrapper:px-3 group-data-[platform=windows]/sidebar-wrapper:py-1.5",
+				className,
+			)}
 			{...props}
 		/>
 	)
@@ -380,7 +412,7 @@ function SidebarGroupLabel({
 			data-slot="sidebar-group-label"
 			data-sidebar="group-label"
 			className={cn(
-				"flex h-7 shrink-0 items-center rounded-[6px] px-2 text-[11px] font-medium text-sidebar-foreground/70 ring-sidebar-ring outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+				"flex h-7 shrink-0 items-center rounded-[6px] px-2 text-[11px] font-medium text-sidebar-foreground/70 ring-sidebar-ring outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 group-data-[platform=macos]/sidebar-wrapper:h-6 group-data-[platform=macos]/sidebar-wrapper:text-sidebar-foreground/55 group-data-[platform=windows]/sidebar-wrapper:text-sidebar-foreground/65 [&>svg]:size-4 [&>svg]:shrink-0",
 				"group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
 				className,
 			)}
@@ -428,7 +460,10 @@ function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {
 		<ul
 			data-slot="sidebar-menu"
 			data-sidebar="menu"
-			className={cn("flex w-full min-w-0 flex-col gap-1", className)}
+			className={cn(
+				"flex w-full min-w-0 flex-col gap-1 group-data-[platform=macos]/sidebar-wrapper:gap-0.5",
+				className,
+			)}
 			{...props}
 		/>
 	)
@@ -446,7 +481,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-	"peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-[6px] p-2 text-left text-[13px] ring-sidebar-ring outline-hidden transition-[background-color,color,width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-accent/80 data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[state=open]:hover:bg-sidebar-accent/70 data-[state=open]:hover:text-sidebar-accent-foreground [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
+	"peer/menu-button relative flex w-full items-center gap-2 overflow-hidden rounded-[6px] px-2 py-0 text-left text-[13px] ring-sidebar-ring outline-hidden transition-[background-color,color,width,height,padding] before:absolute before:top-1 before:bottom-1 before:left-0 before:w-0.5 before:rounded-full before:bg-transparent group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! group-data-[platform=macos]/sidebar-wrapper:rounded-[6px] group-data-[platform=macos]/sidebar-wrapper:hover:bg-sidebar-accent/50 group-data-[platform=windows]/sidebar-wrapper:rounded-[4px] group-data-[platform=windows]/sidebar-wrapper:data-[active=true]:pl-2.5 group-data-[platform=windows]/sidebar-wrapper:data-[active=true]:before:bg-brand hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-accent/65 data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[state=open]:hover:bg-sidebar-accent/70 data-[state=open]:hover:text-sidebar-accent-foreground [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
 	{
 		variants: {
 			variant: {
@@ -533,7 +568,7 @@ function SidebarMenuAction({
 			data-slot="sidebar-menu-action"
 			data-sidebar="menu-action"
 			className={cn(
-				"absolute top-1.5 right-1 flex aspect-square w-5 items-center justify-center rounded-[6px] p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-[background-color,color,opacity,transform] peer-hover/menu-button:text-sidebar-accent-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+				"absolute top-1.5 right-1 flex aspect-square w-5 items-center justify-center rounded-[6px] p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-[background-color,color,opacity,transform] peer-hover/menu-button:text-sidebar-accent-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground focus-visible:ring-2 group-data-[platform=macos]/sidebar-wrapper:right-1.5 group-data-[platform=windows]/sidebar-wrapper:rounded-[4px] [&>svg]:size-4 [&>svg]:shrink-0",
 				// Increases the hit area of the button on mobile.
 				"after:absolute after:-inset-2 md:after:hidden",
 				"peer-data-[size=sm]/menu-button:top-1",
@@ -555,7 +590,7 @@ function SidebarMenuBadge({ className, ...props }: React.ComponentProps<"div">) 
 			data-slot="sidebar-menu-badge"
 			data-sidebar="menu-badge"
 			className={cn(
-				"pointer-events-none absolute right-1 flex h-5 min-w-5 items-center justify-center rounded-[6px] px-1 text-xs font-medium text-sidebar-foreground tabular-nums select-none",
+				"pointer-events-none absolute right-1 flex h-5 min-w-5 items-center justify-center rounded-[6px] px-1 text-xs font-medium text-sidebar-foreground tabular-nums select-none group-data-[platform=macos]/sidebar-wrapper:right-2 group-data-[platform=macos]/sidebar-wrapper:h-4 group-data-[platform=macos]/sidebar-wrapper:min-w-4 group-data-[platform=macos]/sidebar-wrapper:text-[11px] group-data-[platform=windows]/sidebar-wrapper:rounded-[4px]",
 				"peer-hover/menu-button:text-sidebar-accent-foreground peer-data-[active=true]/menu-button:text-sidebar-accent-foreground",
 				"peer-data-[size=sm]/menu-button:top-1",
 				"peer-data-[size=default]/menu-button:top-1.5",
@@ -607,7 +642,7 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 			data-slot="sidebar-menu-sub"
 			data-sidebar="menu-sub"
 			className={cn(
-				"mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l border-sidebar-border px-2.5 py-0.5",
+				"mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l border-sidebar-border px-2.5 py-0.5 group-data-[platform=macos]/sidebar-wrapper:mx-3 group-data-[platform=macos]/sidebar-wrapper:gap-0.5 group-data-[platform=macos]/sidebar-wrapper:border-sidebar-border/40",
 				"group-data-[collapsible=icon]:hidden",
 				className,
 			)}
@@ -647,8 +682,8 @@ function SidebarMenuSubButton({
 			data-size={size}
 			data-active={isActive}
 			className={cn(
-				"flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-[6px] px-2 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-[background-color,color,opacity] hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground",
-				"data-[active=true]:bg-sidebar-accent/80 data-[active=true]:text-sidebar-accent-foreground",
+				"flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-[6px] px-2 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-[background-color,color,opacity] hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 group-data-[platform=macos]/sidebar-wrapper:h-6 group-data-[platform=windows]/sidebar-wrapper:rounded-[4px] [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground",
+				"data-[active=true]:bg-sidebar-accent/65 data-[active=true]:text-sidebar-accent-foreground",
 				size === "sm" && "text-xs",
 				size === "md" && "text-sm",
 				"group-data-[collapsible=icon]:hidden",
