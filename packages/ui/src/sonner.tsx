@@ -23,10 +23,10 @@ const Toaster = ({ theme = "system", ...props }: ToasterProps) => {
 			}}
 			style={
 				{
-					"--normal-bg": "var(--popover)",
+					"--normal-bg": "color-mix(in srgb, var(--popover) 84%, transparent)",
 					"--normal-text": "var(--popover-foreground)",
-					"--normal-border": "var(--border)",
-					"--border-radius": "var(--radius)",
+					"--normal-border": "color-mix(in srgb, var(--border) 70%, transparent)",
+					"--border-radius": "10px",
 				} as React.CSSProperties
 			}
 			{...props}

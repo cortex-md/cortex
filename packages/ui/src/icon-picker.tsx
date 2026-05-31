@@ -269,7 +269,7 @@ const IconPicker = React.forwardRef<React.ComponentRef<typeof PopoverTrigger>, I
 				if (categoryIndex !== undefined && virtualizer) {
 					virtualizer.scrollToIndex(categoryIndex, {
 						align: "start",
-						behavior: "smooth",
+						behavior: "auto",
 					})
 				}
 			},

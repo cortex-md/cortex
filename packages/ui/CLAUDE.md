@@ -47,6 +47,31 @@ export function ComponentName({
 
 ## Key Principles
 
+### Native macOS Reference Mapping
+This package uses the Figma file `ZTx4yLga2PKeyRIELjN2OS`, frame `110:2`, as the native-feel reference for macOS polish. The selected reference nodes map to primitives this way:
+
+| Figma node | `@cortex/ui` primitive |
+|------------|------------------------|
+| `Switch` (`112:3425`, `112:3426`) | `Switch` |
+| `Window/Search` (`112:3427`) | `InputGroup variant="search"` with `InputGroupInput` |
+| `Window/Pop-Up Button` (`112:3428`) | `NativeSelect`, `SelectTrigger` |
+| `Window/Segmented Control` (`112:3429`) | `TabsList`/`TabsTrigger`, `ToggleGroup` |
+| `Text Field` (`112:3430`) | `Input`, `Textarea`, default `InputGroup` |
+| `Slider` (`112:3431`, `112:3432`) | `Slider` |
+| `Example`, `Small` (`112:3433`, `112:3436`) | `Sidebar`, `Card`, dialog/panel surfaces |
+| `Scrollbar - Vertical` (`112:3434`) | `ScrollArea`, `ScrollBar` |
+| `Notification` (`112:3435`) | `Toaster` |
+| `Push Button` (`112:3437`) | `Button size="xs"` and default button treatment |
+| `Alert` (`112:3438`) | `AlertDialog` |
+
+Native-feel rules for this package:
+- Use 6px radius for text fields and compact controls; use full pills only for search, pop-up, segmented controls, and switches.
+- Use 13px control typography with 16px line height for compact macOS controls.
+- Prefer transparent or token-backed material surfaces that the app layer can place over real vibrancy.
+- Do not add `cursor-pointer` to rows, buttons, tabs, menu items, or sidebar items. Keep text cursors only for text-entry affordances and resize cursors only for resize rails.
+- Avoid broad web elevation. Use native material surfaces and subtle borders instead of generic `shadow-xs`, `shadow-sm`, or `shadow-lg`.
+- Avoid broad `transition-all` and smooth scrolling in primitives.
+
 ### 1. Extend HTML Attributes
 Always extend the corresponding HTML attribute interface:
 

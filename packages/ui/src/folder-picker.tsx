@@ -3,6 +3,7 @@
 import { FileIcon, FolderIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { Input } from "./input"
+import { nativeGlassSurface } from "./lib/native-styles"
 import { cn } from "./lib/utils"
 
 export interface FolderPickerOption {
@@ -67,14 +68,19 @@ export function FolderPicker({
 				placeholder={placeholder}
 			/>
 			{dropdownOpen && filteredOptions.length > 0 && (
-				<div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+				<div
+					className={cn(
+						"absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-[10px] p-1",
+						nativeGlassSurface,
+					)}
+				>
 					{filteredOptions.map((option) => (
 						<button
 							key={option.value}
 							type="button"
 							onMouseDown={(e) => e.preventDefault()}
 							onClick={() => handleSelect(option.value)}
-							className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-left hover:bg-accent cursor-pointer"
+							className="flex items-center gap-2 w-full rounded-[6px] px-2 py-1.5 text-[13px] text-left hover:bg-accent/70"
 						>
 							{option.isDir ? (
 								<FolderIcon className="size-3.5 shrink-0 text-muted-foreground" />
@@ -87,8 +93,10 @@ export function FolderPicker({
 				</div>
 			)}
 			{dropdownOpen && search.trim() && filteredOptions.length === 0 && (
-				<div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-md">
-					<p className="px-3 py-2 text-sm text-muted-foreground text-center">No matching folders</p>
+				<div className={cn("absolute z-50 mt-1 w-full rounded-[10px] p-1", nativeGlassSurface)}>
+					<p className="px-3 py-2 text-[13px] text-muted-foreground text-center">
+						No matching folders
+					</p>
 				</div>
 			)}
 		</div>

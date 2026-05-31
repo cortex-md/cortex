@@ -28,7 +28,7 @@ function ItemSeparator({ className, ...props }: React.ComponentProps<typeof Sepa
 }
 
 const itemVariants = cva(
-	"group/item flex flex-wrap items-center rounded-md border border-transparent text-sm transition-colors duration-100 outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 [a]:transition-colors [a]:hover:bg-accent/50",
+	"group/item flex flex-wrap items-center rounded-[6px] border border-transparent text-[13px] transition-colors duration-100 outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 [a]:transition-colors [a]:hover:bg-accent/50",
 	{
 		variants: {
 			variant: {
@@ -37,8 +37,8 @@ const itemVariants = cva(
 				muted: "bg-muted/50",
 			},
 			size: {
-				default: "gap-4 p-4",
-				sm: "gap-2.5 px-4 py-3",
+				default: "gap-3 p-3",
+				sm: "gap-2.5 px-3 py-2",
 			},
 		},
 		defaultVariants: {
@@ -73,8 +73,8 @@ const itemMediaVariants = cva(
 		variants: {
 			variant: {
 				default: "bg-transparent",
-				icon: "size-8 rounded-sm border bg-muted [&_svg:not([class*='size-'])]:size-4",
-				image: "size-10 overflow-hidden rounded-sm [&_img]:size-full [&_img]:object-cover",
+				icon: "size-8 rounded-[6px] border bg-muted [&_svg:not([class*='size-'])]:size-4",
+				image: "size-10 overflow-hidden rounded-[6px] [&_img]:size-full [&_img]:object-cover",
 			},
 		},
 		defaultVariants: {
@@ -112,7 +112,7 @@ function ItemTitle({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="item-title"
-			className={cn("flex w-fit items-center gap-2 text-sm leading-snug font-medium", className)}
+			className={cn("flex w-fit items-center gap-2 text-[13px] leading-4 font-medium", className)}
 			{...props}
 		/>
 	)
@@ -123,7 +123,7 @@ function ItemDescription({ className, ...props }: React.ComponentProps<"p">) {
 		<p
 			data-slot="item-description"
 			className={cn(
-				"line-clamp-2 text-sm leading-normal font-normal text-balance text-muted-foreground",
+				"line-clamp-2 text-[13px] leading-5 font-normal text-balance text-muted-foreground",
 				"[&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary",
 				className,
 			)}
