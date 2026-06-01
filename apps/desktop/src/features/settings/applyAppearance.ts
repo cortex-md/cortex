@@ -1,5 +1,5 @@
 import type { AppearanceSettings } from "@cortex/settings"
-import { getThemeManager } from "@cortex/theme"
+import { getThemeManager, type ThemeTokens } from "@cortex/theme"
 
 const DEFAULT_ACCENT_COLOR = "#e8a83c"
 
@@ -12,18 +12,31 @@ function buildFontStack(fontFamily: string, fallbackCategory: string): string {
 
 function buildAccentOverrides(hex: string): Record<string, string> {
 	const activeTheme = getThemeManager().getActiveTheme()
-	const bgPrimary = activeTheme.tokens.semantic.bg.primary
-	const hoverBase = activeTheme.isDark ? "black" : "white"
+	const tokens = activeTheme.tokens as Partial<ThemeTokens>
+	const bgPrimary = tokens.semantic?.bg.primary ?? (activeTheme.isDark ? "#111110" : "#fafaf8")
+	const bgSecondary = tokens.semantic?.bg.secondary ?? (activeTheme.isDark ? "#1a1918" : "#f5f4f0")
+	const textPrimary = tokens.semantic?.text.primary ?? (activeTheme.isDark ? "#f2f2f1" : "#201d18")
+	const subtleAmount = activeTheme.isDark ? 16 : 12
+	const hoverAmount = activeTheme.isDark ? 24 : 18
+	const activeAmount = activeTheme.isDark ? 34 : 26
+	const textAmount = activeTheme.isDark ? 72 : 82
+	const accentSubtle = `color-mix(in srgb, ${hex} ${subtleAmount}%, ${bgPrimary})`
+	const accentText = `color-mix(in srgb, ${hex} ${textAmount}%, ${textPrimary})`
+
 	return {
 		"--accent": hex,
 		"--accent-border": hex,
-		"--accent-hover": `color-mix(in srgb, ${hex} 80%, ${hoverBase})`,
-		"--accent-subtle": `color-mix(in srgb, ${hex} 12%, ${bgPrimary})`,
-		"--accent-text": hex,
+		"--accent-hover": `color-mix(in srgb, ${hex} ${hoverAmount}%, ${bgSecondary})`,
+		"--accent-active": `color-mix(in srgb, ${hex} ${activeAmount}%, ${bgSecondary})`,
+		"--accent-subtle": accentSubtle,
+		"--accent-text": accentText,
+		"--bg-selected": accentSubtle,
 		"--border-focus": hex,
 		"--ring": hex,
 		"--tab-accent": hex,
 		"--sidebar-primary": hex,
+		"--sidebar-accent": accentSubtle,
+		"--sidebar-accent-foreground": accentText,
 		"--sidebar-ring": hex,
 		"--chart-1": hex,
 	}

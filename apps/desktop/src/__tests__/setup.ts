@@ -1,6 +1,15 @@
 import "@testing-library/jest-dom"
 import { vi } from "vitest"
 
+class MockResizeObserver {
+	observe() {}
+	unobserve() {}
+	disconnect() {}
+}
+
+vi.stubGlobal("ResizeObserver", MockResizeObserver)
+Element.prototype.scrollIntoView = vi.fn()
+
 vi.mock("@cortex/platform", () => ({
 	getPlatform: vi.fn(() => ({
 		fs: {

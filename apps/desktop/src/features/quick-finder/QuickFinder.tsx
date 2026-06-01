@@ -2,34 +2,71 @@ import type { OpenTabOptions } from "@cortex/core"
 import { useUIStore, useVaultStore, useWorkspaceStore } from "@cortex/core"
 import { useSearchStore } from "@cortex/search"
 import {
-	Button,
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogTitle,
-	InputGroup,
-	InputGroupAddon,
-	InputGroupInput,
-	Kbd,
+	CommandDialog,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+	CommandShortcut,
 } from "@cortex/ui"
-import { Search } from "lucide-react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Plus } from "lucide-react"
+import type { KeyboardEvent } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+
+interface QuickFinderOpenItem {
+	type: "recent" | "search"
+	value: string
+	title: string
+	folder: string
+	filePath: string
+}
+
+interface QuickFinderCreateItem {
+	type: "create"
+	value: string
+	title: string
+	query: string
+}
+
+type QuickFinderItem = QuickFinderOpenItem | QuickFinderCreateItem
 
 function titleFromPath(filePath: string): string {
 	const name = filePath.split("/").pop() ?? filePath
 	return name.endsWith(".md") ? name.slice(0, -3) : name
 }
 
+function folderFromPath(filePath: string, vaultPath: string): string {
+	const relativePath = filePath.startsWith(vaultPath) ? filePath.slice(vaultPath.length) : filePath
+	const folderParts = relativePath.split("/").filter(Boolean)
+	folderParts.pop()
+	return folderParts.join("/")
+}
+
+function normalizeTitle(value: string): string {
+	return value.trim().toLowerCase()
+}
+
+function buildOpenOptions(
+	activePaneId: string,
+	newTab: boolean,
+	split: boolean,
+): OpenTabOptions | undefined {
+	if (split) return { paneId: activePaneId, split: "horizontal" }
+	if (newTab) return { paneId: activePaneId }
+	return undefined
+}
+
 export function QuickFinder() {
 	const { quickFinderOpen, toggleQuickFinder } = useUIStore()
 	const { vault, createFile } = useVaultStore()
-	const { openTab, panes, recentlyClosed, splitPane } = useWorkspaceStore()
+	const { openTab, panes, recentlyClosed, activePaneId } = useWorkspaceStore()
 	const { searchTitles } = useSearchStore()
 
 	const [query, setQuery] = useState("")
-	const [selectedIndex, setSelectedIndex] = useState(0)
-	const inputRef = useRef<HTMLInputElement>(null)
-	const resultsRef = useRef<HTMLDivElement>(null)
+	const [selectedValue, setSelectedValue] = useState("")
+
+	const trimmedQuery = query.trim()
 
 	const recentFilePaths = useMemo(() => {
 		const paths: string[] = []
@@ -49,207 +86,180 @@ export function QuickFinder() {
 	}, [panes, recentlyClosed])
 
 	const searchResults = useMemo(() => {
-		if (!query.trim()) return []
-		return searchTitles(query.trim()).slice(0, 20)
-	}, [query, searchTitles])
+		if (!trimmedQuery) return []
+		return searchTitles(trimmedQuery).slice(0, 20)
+	}, [trimmedQuery, searchTitles])
 
-	const displayItems = useMemo(() => {
-		const items: Array<{
-			type: "recent" | "search"
-			id: string
-			title: string
-			folder: string
-			filePath: string
-		}> = []
+	const openItems = useMemo<QuickFinderOpenItem[]>(() => {
+		if (!vault) return []
 
-		if (!query.trim()) {
-			for (const filePath of recentFilePaths) {
-				const folderParts = filePath
-					.replace(vault?.path ?? "", "")
-					.split("/")
-					.filter(Boolean)
-				folderParts.pop()
-				items.push({
-					type: "recent",
-					id: filePath,
-					title: titleFromPath(filePath),
-					folder: folderParts.join("/"),
-					filePath,
-				})
-			}
-		} else {
-			for (const result of searchResults) {
-				items.push({
-					type: "search",
-					id: result.id,
-					title: result.title,
-					folder: result.folder,
-					filePath: `${vault?.path}/${result.id}`,
-				})
-			}
+		if (!trimmedQuery) {
+			return recentFilePaths.map((filePath) => ({
+				type: "recent",
+				value: `recent:${filePath}`,
+				title: titleFromPath(filePath),
+				folder: folderFromPath(filePath, vault.path),
+				filePath,
+			}))
 		}
 
-		return items
-	}, [query, recentFilePaths, searchResults, vault?.path])
+		return searchResults.map((result) => ({
+			type: "search",
+			value: `search:${result.id}`,
+			title: result.title,
+			folder: result.folder,
+			filePath: `${vault.path}/${result.id}`,
+		}))
+	}, [recentFilePaths, searchResults, trimmedQuery, vault])
+
+	const canCreateNote = useMemo(() => {
+		const normalizedQuery = normalizeTitle(trimmedQuery)
+		if (!normalizedQuery) return false
+
+		return !openItems.some((item) => {
+			const normalizedTitle = normalizeTitle(item.title)
+			const normalizedFileName = normalizeTitle(titleFromPath(item.filePath))
+			return normalizedTitle === normalizedQuery || normalizedFileName === normalizedQuery
+		})
+	}, [openItems, trimmedQuery])
+
+	const displayItems = useMemo<QuickFinderItem[]>(() => {
+		if (!canCreateNote) return openItems
+		return [
+			...openItems,
+			{
+				type: "create",
+				value: `create:${trimmedQuery}`,
+				title: `Create "${trimmedQuery}"`,
+				query: trimmedQuery,
+			},
+		]
+	}, [canCreateNote, openItems, trimmedQuery])
 
 	useEffect(() => {
 		if (quickFinderOpen) {
 			setQuery("")
-			setSelectedIndex(0)
-			setTimeout(() => inputRef.current?.focus(), 50)
 		}
 	}, [quickFinderOpen])
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: resetting selection when query changes
 	useEffect(() => {
-		setSelectedIndex(0)
-	}, [query])
+		setSelectedValue(displayItems[0]?.value ?? "")
+	}, [displayItems])
 
-	const handleCreateNote = useCallback(async () => {
-		if (!vault || !query.trim()) return
-		const filePath = await createFile(vault.path, query.trim())
-		openTab(filePath)
-		toggleQuickFinder()
-	}, [vault, query, createFile, openTab, toggleQuickFinder])
-
-	const handleSelect = useCallback(
-		(filePath: string, newTab: boolean = false, split: boolean = false) => {
-			if (split && vault) {
-				splitPane(useWorkspaceStore.getState().activePaneId ?? "", "horizontal")
-			}
-			const opts: OpenTabOptions | undefined =
-				newTab || split
-					? { paneId: useWorkspaceStore.getState().activePaneId ?? undefined }
-					: undefined
-			openTab(filePath, opts)
+	const handleCreateNote = useCallback(
+		async (noteTitle: string) => {
+			if (!vault || !noteTitle.trim()) return
+			const filePath = await createFile(vault.path, noteTitle.trim())
+			openTab(filePath)
 			toggleQuickFinder()
 		},
-		[openTab, splitPane, toggleQuickFinder, vault],
+		[vault, createFile, openTab, toggleQuickFinder],
+	)
+
+	const handleOpenItem = useCallback(
+		(item: QuickFinderOpenItem, newTab = false, split = false) => {
+			openTab(item.filePath, buildOpenOptions(activePaneId, newTab, split))
+			toggleQuickFinder()
+		},
+		[activePaneId, openTab, toggleQuickFinder],
+	)
+
+	const handleSelectItem = useCallback(
+		(item: QuickFinderItem, newTab = false, split = false) => {
+			if (item.type === "create") {
+				void handleCreateNote(item.query)
+				return
+			}
+			handleOpenItem(item, newTab, split)
+		},
+		[handleCreateNote, handleOpenItem],
 	)
 
 	const handleKeyDown = useCallback(
-		(e: React.KeyboardEvent) => {
-			if (e.key === "ArrowDown") {
-				e.preventDefault()
-				setSelectedIndex((i) => Math.min(i + 1, displayItems.length - 1))
-			} else if (e.key === "ArrowUp") {
-				e.preventDefault()
-				setSelectedIndex((i) => Math.max(i - 1, 0))
-			} else if (e.key === "Enter") {
-				e.preventDefault()
-				const item = displayItems[selectedIndex]
-				if (item) {
-					const newTab = e.metaKey || e.ctrlKey
-					const split = e.metaKey && e.shiftKey
-					handleSelect(item.filePath, newTab, split)
-				}
-			}
-		},
-		[displayItems, selectedIndex, handleSelect],
-	)
+		(event: KeyboardEvent) => {
+			if (event.key !== "Enter") return
 
-	const handleInputKeyDown = useCallback(
-		(e: React.KeyboardEvent) => {
-			if (e.key === "Enter" && e.shiftKey) {
-				e.preventDefault()
-				handleCreateNote()
-			} else {
-				handleKeyDown(e)
+			const newTab = event.metaKey || event.ctrlKey
+			if (event.shiftKey && !newTab) {
+				event.preventDefault()
+				void handleCreateNote(trimmedQuery)
+				return
 			}
-		},
-		[handleKeyDown, handleCreateNote],
-	)
 
-	const handleItemClick = useCallback(
-		(filePath: string) => {
-			handleSelect(filePath)
+			const selectedItem =
+				displayItems.find((item) => item.value === selectedValue) ?? displayItems[0]
+			if (!selectedItem) return
+
+			event.preventDefault()
+			handleSelectItem(selectedItem, newTab, newTab && event.shiftKey)
 		},
-		[handleSelect],
+		[displayItems, handleCreateNote, handleSelectItem, selectedValue, trimmedQuery],
 	)
 
 	if (!vault) return null
 
 	return (
-		<Dialog open={quickFinderOpen} onOpenChange={() => toggleQuickFinder()}>
-			<DialogContent
-				className="p-2 max-h-[900px] w-[1000px] gap-0"
-				showCloseButton={false}
-				onKeyDown={handleInputKeyDown}
-			>
-				<DialogTitle className="sr-only">Quick Finder</DialogTitle>
-				<DialogDescription className="sr-only">
-					Search and open files in your vault
-				</DialogDescription>
+		<CommandDialog
+			open={quickFinderOpen}
+			onOpenChange={(open) => {
+				if (!open) toggleQuickFinder()
+			}}
+			title="Quick Finder"
+			description="Search and open files in your vault"
+			showCloseButton={false}
+			className="sm:max-w-[720px]"
+			commandProps={{
+				loop: true,
+				shouldFilter: false,
+				value: selectedValue,
+				onValueChange: setSelectedValue,
+				onKeyDown: handleKeyDown,
+			}}
+		>
+			<CommandInput
+				autoFocus
+				placeholder="Search notes..."
+				value={query}
+				onValueChange={setQuery}
+			/>
+			<CommandList className="max-h-[min(430px,62vh)]">
+				{displayItems.length === 0 ? (
+					<CommandEmpty>No results found</CommandEmpty>
+				) : (
+					<CommandGroup heading={trimmedQuery ? "Notes" : "Recent"}>
+						{displayItems.map((item) => {
+							if (item.type === "create") {
+								return (
+									<CommandItem
+										key={item.value}
+										value={item.value}
+										onSelect={() => handleSelectItem(item)}
+									>
+										<Plus className="size-4 text-brand" />
+										<span className="min-w-0 flex-1 truncate">{item.title}</span>
+										<CommandShortcut className="tracking-normal">Shift Enter</CommandShortcut>
+									</CommandItem>
+								)
+							}
 
-				<div className="flex items-center border-b border-border px-1 pb-2">
-					<InputGroup className="w-full">
-						<InputGroupInput
-							ref={inputRef}
-							placeholder="Search..."
-							type="text"
-							value={query}
-							onChange={(e) => setQuery(e.target.value)}
-							className="w-full flex-1 bg-transparent ring-0 text-sm outline-none placeholder:text-muted-foreground"
-						/>
-						<InputGroupAddon>
-							<Search />
-						</InputGroupAddon>
-						<InputGroupAddon align="inline-end" onClick={() => toggleQuickFinder()}>
-							<Kbd>
-								<span>Esc</span>
-							</Kbd>
-						</InputGroupAddon>
-					</InputGroup>
-				</div>
-
-				<div ref={resultsRef} className="overflow-y-auto max-h-[350px] py-1">
-					{displayItems.length === 0 ? (
-						<div className="px-3 py-8 text-center text-sm text-muted-foreground">
-							No results found
-						</div>
-					) : (
-						displayItems.map((item, index) => (
-							<Button
-								variant="ghost"
-								key={`${item.type}-${item.id}`}
-								type="button"
-								onClick={() => handleItemClick(item.filePath)}
-								className={`flex items-center justify-between w-full px-3 py-2 text-left ${
-									index === selectedIndex ? "bg-accent/10" : "hover:bg-muted"
-								}`}
-							>
-								<div className="flex items-center gap-2 min-w-0">
-									<span className="truncate text-sm">{item.title}</span>
-								</div>
-								{item.folder && (
-									<span className="text-xs text-muted-foreground truncate ml-2">{item.folder}</span>
-								)}
-							</Button>
-						))
-					)}
-				</div>
-
-				<div className="flex items-center justify-between px-3 py-2 text-xs text-muted-foreground bg-muted/30">
-					<div className="flex items-center gap-1">
-						<Kbd className="px-1.5 py-0.5 text-[10px]">↑</Kbd>
-						<Kbd className="px-1.5 py-0.5 text-[10px]">↓</Kbd>
-						<span>to navigate</span>
-					</div>
-					<div className="flex items-center gap-1">
-						<Kbd className="px-1.5 py-0.5 text-[10px]">Enter</Kbd>
-						<span>open</span>
-					</div>
-					<div className="flex items-center gap-1">
-						<Kbd className="px-1.5 py-0.5 text-[10px]">Shift+Enter</Kbd>
-						<span>create</span>
-					</div>
-					<div className="flex items-center gap-1">
-						<Kbd className="px-1.5 py-0.5 text-[10px]">⌘</Kbd>
-						<Kbd className="px-1.5 py-0.5 text-[10px]">Enter</Kbd>
-						<span>new tab</span>
-					</div>
-				</div>
-			</DialogContent>
-		</Dialog>
+							return (
+								<CommandItem
+									key={item.value}
+									value={item.value}
+									onSelect={() => handleSelectItem(item)}
+								>
+									<span className="min-w-0 flex-1 truncate">{item.title}</span>
+									{item.folder && (
+										<CommandShortcut className="max-w-[220px] truncate tracking-normal">
+											{item.folder}
+										</CommandShortcut>
+									)}
+								</CommandItem>
+							)
+						})}
+					</CommandGroup>
+				)}
+			</CommandList>
+		</CommandDialog>
 	)
 }

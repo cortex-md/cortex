@@ -548,6 +548,68 @@ input[type="color"] {
 	cursor: default;
 }
 
+[data-command-surface] {
+	--command-selected-bg: color-mix(in srgb, var(--bg-active) 72%, transparent);
+	--command-selected-border: color-mix(in srgb, var(--border-strong) 24%, transparent);
+	--command-input-bg: color-mix(in srgb, var(--popover) 70%, transparent);
+}
+
+[data-command-surface] [data-slot="command-input-wrapper"] {
+	border-color: var(--border-subtle);
+	background: var(--command-input-bg);
+}
+
+[data-command-surface] [data-slot="command-list"] {
+	padding: 4px;
+}
+
+[data-command-surface] [cmdk-group-heading] {
+	letter-spacing: 0;
+}
+
+[data-command-surface] [data-slot="command-item"] {
+	min-height: 34px;
+	border: 1px solid transparent;
+	border-radius: 6px;
+}
+
+[data-command-surface] [data-slot="command-item"][data-selected="true"] {
+	background: var(--command-selected-bg);
+	border-color: var(--command-selected-border);
+	color: var(--text-primary);
+}
+
+[data-command-surface] [data-slot="command-item"][data-selected="true"] svg,
+[data-command-surface]
+	[data-slot="command-item"][data-selected="true"]
+	[data-slot="command-shortcut"] {
+	color: var(--text-secondary);
+}
+
+[data-command-surface] [data-slot="command-empty"] {
+	color: var(--text-muted);
+}
+
+.color-picker-swatch {
+	background: var(--color-picker-swatch);
+}
+
+body[data-platform="macos"] [data-command-surface] {
+	--command-selected-bg: color-mix(in srgb, var(--bg-active) 62%, transparent);
+	background: color-mix(in srgb, var(--popover) 84%, transparent);
+	border-color: color-mix(in srgb, var(--border) 58%, transparent);
+	box-shadow: 0 18px 48px rgba(0, 0, 0, 0.16);
+}
+
+body[data-platform="windows"] [data-command-surface] {
+	--command-selected-bg: var(--bg-hover);
+	background: var(--popover);
+	border-color: var(--border);
+	border-radius: 8px;
+	box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2);
+	backdrop-filter: none;
+}
+
 .cursor-col-resize {
 	cursor: col-resize;
 }

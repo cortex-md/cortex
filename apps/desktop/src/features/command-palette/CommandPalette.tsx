@@ -65,9 +65,10 @@ export function CommandPalette() {
 			title="Command Palette"
 			description="Search for a command to run..."
 			showCloseButton={false}
+			commandProps={{ loop: true }}
 		>
-			<CommandInput placeholder="Type a command..." />
-			<CommandList>
+			<CommandInput autoFocus placeholder="Type a command..." />
+			<CommandList className="max-h-[min(420px,60vh)]">
 				<CommandEmpty>No commands found</CommandEmpty>
 				{grouped.map((group) => (
 					<CommandGroup key={group.category} heading={group.category}>

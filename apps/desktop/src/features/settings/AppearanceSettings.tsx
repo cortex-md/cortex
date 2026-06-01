@@ -2,8 +2,16 @@ import { useUIStore } from "@cortex/core"
 import type { FontInfo } from "@cortex/platform"
 import { getPlatform } from "@cortex/platform"
 import type { AppearanceSettings } from "@cortex/settings"
-import { getThemeManager, type ThemeFamily } from "@cortex/theme"
-import { Button, Label, NativeSelect, NativeSelectOption, Slider } from "@cortex/ui"
+import { getThemeManager, type ThemeFamily, type ThemeTokens } from "@cortex/theme"
+import {
+	Button,
+	ColorPicker,
+	type ColorPickerOption,
+	Label,
+	NativeSelect,
+	NativeSelectOption,
+	Slider,
+} from "@cortex/ui"
 import { Store } from "lucide-react"
 import { useEffect, useState } from "react"
 import type { UpdateSettingFn } from "."
@@ -14,16 +22,51 @@ interface AppearanceSectionProps {
 	onUpdate: UpdateSettingFn
 }
 
+function uniqueColorOptions(options: ColorPickerOption[]): ColorPickerOption[] {
+	const seen = new Set<string>()
+	return options.filter((option) => {
+		const value = option.value.toLowerCase()
+		if (seen.has(value)) return false
+		seen.add(value)
+		return true
+	})
+}
+
+function buildAccentColorOptions(): ColorPickerOption[] {
+	const tokens = getThemeManager().getActiveTheme().tokens as Partial<ThemeTokens>
+	const semantic = tokens.semantic
+	const status = tokens.status
+
+	if (!semantic || !status) return [{ value: "#e8a83c", label: "Default accent" }]
+
+	return uniqueColorOptions([
+		{ value: semantic.accent.default, label: "Theme accent" },
+		{ value: status.success, label: "Success" },
+		{ value: status.warning, label: "Warning" },
+		{ value: status.error, label: "Error" },
+		{ value: semantic.syntax.string, label: "String" },
+		{ value: semantic.syntax.function, label: "Function" },
+		{ value: semantic.syntax.property, label: "Property" },
+		{ value: semantic.text.muted, label: "Muted" },
+	])
+}
+
 export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps) {
 	const [systemFonts, setSystemFonts] = useState<FontInfo[]>([])
 	const [themeFamilies, setThemeFamilies] = useState<ThemeFamily[]>([])
+	const [accentColorOptions, setAccentColorOptions] = useState<ColorPickerOption[]>([])
 	const openMarketplace = useUIStore((s) => s.openMarketplace)
 
 	useEffect(() => {
 		getPlatform().font.listSystemFonts().then(setSystemFonts)
-		setThemeFamilies(getThemeManager().getThemeFamilies())
-		const unsubscribe = getThemeManager().subscribe(() => {
-			setThemeFamilies(getThemeManager().getThemeFamilies())
+		const themeManager = getThemeManager()
+		const refreshThemeOptions = () => {
+			setThemeFamilies(themeManager.getThemeFamilies())
+			setAccentColorOptions(buildAccentColorOptions())
+		}
+		refreshThemeOptions()
+		const unsubscribe = themeManager.subscribe(() => {
+			refreshThemeOptions()
 		})
 		return unsubscribe
 	}, [])
@@ -35,11 +78,13 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 	const handleThemeChange = (theme: string) => {
 		onUpdate("appearance", "theme", theme)
 		applyAppearanceSettings({ ...settings, theme })
+		setAccentColorOptions(buildAccentColorOptions())
 	}
 
 	const handleColorschemeChange = (colorscheme: "light" | "dark" | "system") => {
 		onUpdate("appearance", "colorscheme", colorscheme)
 		applyAppearanceSettings({ ...settings, colorscheme })
+		setAccentColorOptions(buildAccentColorOptions())
 	}
 
 	const handleAccentColorChange = (hex: string) => {
@@ -118,18 +163,17 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 
 				<div className="flex items-center justify-between px-0 py-2 gap-4">
 					<Label htmlFor="accent-color">Accent Color</Label>
-					<div className="flex items-center gap-2">
-						<input
-							id="accent-color"
-							type="color"
-							value={settings.accentColor}
-							onChange={(e) => handleAccentColorChange(e.target.value)}
-							className="w-8 h-8 rounded-md border border-input bg-transparent p-0"
-						/>
-						<span className="text-[11px] text-text-muted font-family-mono min-w-[60px]">
-							{settings.accentColor}
-						</span>
-					</div>
+					<ColorPicker
+						customInputId="accent-color"
+						value={settings.accentColor}
+						options={accentColorOptions}
+						allowClear={false}
+						customLabel="Accent Color"
+						onChange={(color) => {
+							if (color) handleAccentColorChange(color)
+						}}
+						className="max-w-[240px] items-end"
+					/>
 				</div>
 			</div>
 

@@ -71,6 +71,14 @@ cortex/
 ### UI components 
 Aways use the components from `@cortex/ui` as needed instead of creating new things or using primitive components from html.
 
+### Command Surfaces
+Use `CommandDialog`, `CommandInput`, `CommandList`, `CommandGroup`, `CommandItem`, and
+`CommandShortcut` from `@cortex/ui` for command palettes, quick finders, tag pickers, and similar
+keyboard-first modal search surfaces. These surfaces are styled through `[data-command-surface]`
+in `apps/desktop/src/styles.css`; keep selection states subtle and token-driven, preserve
+`cursor: default`, use `cmdk` loop navigation for arrow keys, and prefer item-level actions over
+instructional footer text.
+
 ### Simplify
 After finishing any task run the /simplify command to clean up any leftover code that has over engineered.
 
