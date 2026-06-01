@@ -19,6 +19,7 @@ export interface VaultState {
 		path: string,
 		options?: { icon?: string; color?: string; name: string },
 	) => Promise<void>
+	loadVaultSnapshot: (path: string) => Promise<void>
 	closeVault: () => Promise<void>
 	refreshFiles: () => Promise<void>
 	loadRecentVaults: () => Promise<void>
@@ -70,6 +71,26 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 			})
 
 			await get().loadRecentVaults()
+		} catch (e) {
+			set({ loading: false, error: String(e) })
+		}
+	},
+
+	loadVaultSnapshot: async (path) => {
+		const platform = getPlatform()
+		set({ loading: true, error: null })
+		try {
+			const metadata = await platform.vault.openVault(path)
+			const files = await platform.vault.scanVault(path)
+
+			initSettingsManager()
+			await getSettingsManager().loadFromVault(path)
+
+			set({
+				vault: metadata,
+				files,
+				loading: false,
+			})
 		} catch (e) {
 			set({ loading: false, error: String(e) })
 		}

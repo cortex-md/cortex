@@ -72,7 +72,7 @@ export function BookmarksSidebar() {
 						>
 							<button
 								type="button"
-								className="flex-1 flex items-start gap-2 min-w-0 text-left cursor-pointer"
+								className="flex-1 flex items-start gap-2 min-w-0 text-left"
 								onClick={() => handleOpen(filePath)}
 							>
 								<FileIcon className="size-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />

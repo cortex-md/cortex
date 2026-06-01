@@ -17,7 +17,7 @@ export function MarketplaceCard({ entry, isInstalled, onClick }: MarketplaceCard
 		<button
 			type="button"
 			onClick={onClick}
-			className="flex h-full min-h-[150px] w-full cursor-pointer flex-col rounded-lg border border-border bg-bg-primary p-4 text-left transition-colors hover:bg-bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+			className="flex h-full min-h-[150px] w-full flex-col rounded-lg border border-border bg-bg-primary p-4 text-left transition-colors hover:bg-bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
 		>
 			<div className="flex min-w-0 items-start gap-3">
 				<div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-bg-tertiary">

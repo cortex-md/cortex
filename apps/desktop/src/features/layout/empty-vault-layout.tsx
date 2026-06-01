@@ -14,7 +14,7 @@ function AccountBadge() {
 		return (
 			<button
 				type="button"
-				className="absolute top-3 right-4 flex items-center gap-2 text-xs text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+				className="absolute top-3 right-4 flex items-center gap-2 text-xs text-text-muted hover:text-text-primary transition-colors"
 				onClick={() => openSettings("sync")}
 			>
 				<div className="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center">
@@ -28,7 +28,7 @@ function AccountBadge() {
 	return (
 		<button
 			type="button"
-			className="absolute top-3 right-4 flex items-center gap-2 text-[11px] text-text-disabled hover:text-text-muted transition-colors cursor-pointer"
+			className="absolute top-3 right-4 flex items-center gap-2 text-[11px] text-text-disabled hover:text-text-muted transition-colors"
 			onClick={() => openAuth("login")}
 		>
 			<span>Sign in</span>
@@ -91,7 +91,7 @@ export function EmptyVaultLayout() {
 					<ul className="space-y-0.5">
 						{recentVaults.map((vault) => (
 							<li
-								className="flex items-center gap-2.5 px-3 py-2 rounded hover:bg-bg-secondary cursor-pointer list-none"
+								className="flex items-center gap-2.5 px-3 py-2 rounded hover:bg-bg-secondary list-none"
 								key={vault.path}
 								onClick={() => openVault(vault.path)}
 								onKeyDown={(e) => e.key === "Enter" && openVault(vault.path)}

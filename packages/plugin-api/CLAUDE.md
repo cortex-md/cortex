@@ -48,6 +48,7 @@ The scoped API surface injected into each plugin. Sub-APIs:
 - `theme` — theme registration
 - `workspace` — open files, active file events
 - `bookmarks` — read/write bookmarks, subscribe to changes
+- `notifications` — native app notifications, gated by the `notifications` manifest capability
 
 ### LivePreviewDeclaration (type)
 Declarative API for creating CodeMirror live preview decorations without importing CM6:
@@ -62,7 +63,7 @@ Supports inline `onChange` callback for reactive settings — no need to call `a
 Supports `defaultHotkey` — auto-registers as a customizable hotkey binding when command is registered.
 
 ### Capabilities (PluginCapability)
-Declared permissions: `vault:read/write/delete/watch`, `editor:extensions`, `renderer:plugins`, `ui:views/sidebar/statusbar/contextmenu`, `commands`, `hotkeys`, `settings`, `themes`, `bookmarks:read`, `bookmarks:write`.
+Declared permissions: `vault:read/write/delete/watch`, `editor:extensions`, `renderer:plugins`, `ui:views/sidebar/statusbar/contextmenu`, `commands`, `hotkeys`, `settings`, `themes`, `bookmarks:read`, `bookmarks:write`, `notifications`.
 
 ### ViewDescriptor (type)
 Declarative UI tree (JSON-serializable). Plugins describe UI as `ViewNode` trees; the host renders per-platform. Plugins never touch DOM/CSS directly.

@@ -184,6 +184,7 @@ export interface VaultState {
   stopWatcher: (() => void) | null   // Function to stop file watcher
 
   openVault: (path: string, options?: { icon?: string; color?: string; name: string }) => Promise<void>
+  loadVaultSnapshot: (path: string) => Promise<void> // Load metadata/files/settings without a watcher
   closeVault: () => Promise<void>
   refreshFiles: () => Promise<void>
   loadRecentVaults: () => Promise<void>  // Also refreshes macOS menu recents

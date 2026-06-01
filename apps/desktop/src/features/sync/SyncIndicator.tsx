@@ -61,7 +61,7 @@ export function SyncIndicator() {
 			<>
 				<button
 					type="button"
-					className="statusbar-item flex items-center gap-1.5 cursor-pointer text-status-warning hover:opacity-80"
+					className="statusbar-item flex items-center gap-1.5 text-status-warning hover:opacity-80"
 					onClick={() => setUnlockModalOpen(true)}
 				>
 					<LockIcon className="w-3 h-3" />
@@ -76,7 +76,7 @@ export function SyncIndicator() {
 		return (
 			<button
 				type="button"
-				className="statusbar-item flex items-center gap-1.5 cursor-pointer text-text-muted hover:text-text-primary"
+				className="statusbar-item flex items-center gap-1.5 text-text-muted hover:text-text-primary"
 				onClick={() => openSettings("sync")}
 			>
 				<LinkIcon className="w-3 h-3" />
@@ -104,7 +104,7 @@ export function SyncIndicator() {
 				<DropdownMenuTrigger asChild>
 					<button
 						type="button"
-						className={`statusbar-item flex items-center gap-1.5 cursor-pointer hover:opacity-80 ${statusContent.className ?? ""}`}
+						className={`statusbar-item flex items-center gap-1.5 hover:opacity-80 ${statusContent.className ?? ""}`}
 					>
 						{statusContent.content}
 					</button>

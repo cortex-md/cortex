@@ -285,8 +285,28 @@ origin inside the titlebar. The React shell uses `app-shell`, `app-titlebar`, `a
 layout styling. The macOS sidebar toggle is rendered in the titlebar with `app-sidebar-toggle`
 and drives the existing `leftSidebarCollapsed` state with width-based native-style animation.
 
+### Native Desktop Shell
+Keep `apps/desktop/src-tauri/tauri.conf.json` platform-neutral. macOS-only chrome belongs in
+`tauri.macos.conf.json`; Windows-only chrome belongs in `tauri.windows.conf.json`. Window-level
+materials should come from Tauri/window effects, not CSS blur layered over opaque web surfaces.
+Settings opens through `getPlatform().window.openSettings(...)` as a dedicated Tauri webview
+window when a vault is active; `SettingsModal` is only a fallback. Shared settings layout lives
+in `SettingsContent`.
+
+### Native Notifications
+All app and plugin notifications must go through `getPlatform().notifications`, never DOM toasts
+or browser notification APIs. Desktop delivery is implemented by `@cortex/ipc` through Tauri's
+notification plugin; future mobile adapters should implement the same `Platform.notifications`
+interface and no-op unsupported feature fields instead of throwing. Core app notifications bypass
+plugin permission checks but still respect OS permission and platform support.
+
+Plugins must declare `"notifications"` in `PluginManifest.capabilities` before calling
+`api.notifications.send(...)` or `api.ui.showNotice(...)`. `@cortex/plugin-runtime` validates
+unknown capabilities during discovery and enforces the notification capability at call time. Plugins
+cannot request OS notification permission directly; permission prompts are owned by the host app.
+
 ### Settings Marketplace
-`SettingsModal` owns the Marketplace tab. Community plugin/theme browse buttons should call `useUIStore().openMarketplace(tab)` so Settings opens directly on Marketplace with the requested tab selected. The Marketplace search view should occupy the full Settings content area; selecting a plugin or theme replaces search with the detail view and a back button returns to search.
+Settings owns the Marketplace tab. Community plugin/theme browse buttons should call `useUIStore().openMarketplace(tab)` so Settings opens directly on Marketplace with the requested tab selected. The Marketplace search view should occupy the full Settings content area; selecting a plugin or theme replaces search with the detail view and a back button returns to search.
 
 ### Editor Setup
 - CodeMirror 6 via `@cortex/editor`

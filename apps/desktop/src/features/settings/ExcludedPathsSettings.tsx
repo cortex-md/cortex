@@ -54,7 +54,7 @@ export function ExcludedPathsSettings() {
 							<button
 								type="button"
 								onClick={() => toggleExcludedPath(path, false)}
-								className="ml-0.5 p-0.5 rounded-sm hover:bg-bg-hover cursor-pointer"
+								className="ml-0.5 p-0.5 rounded-sm hover:bg-bg-hover"
 							>
 								<XIcon className="size-3" />
 							</button>

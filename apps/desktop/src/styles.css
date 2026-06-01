@@ -508,6 +508,73 @@ body {
 	line-height: 1.5;
 	background: transparent;
 	color: var(--text-primary);
+	user-select: none;
+	-webkit-user-select: none;
+	cursor: default;
+}
+
+button,
+[role="button"],
+[role="tab"],
+[role="treeitem"],
+.cursor-pointer {
+	cursor: default;
+}
+
+a[href] {
+	cursor: pointer;
+}
+
+input,
+textarea,
+[contenteditable="true"],
+.cm-editor,
+.cm-editor *,
+.reading-view,
+.reading-view *,
+.user-content,
+.user-content * {
+	user-select: text;
+	-webkit-user-select: text;
+}
+
+input,
+textarea {
+	cursor: text;
+}
+
+input[type="range"],
+input[type="color"] {
+	cursor: default;
+}
+
+.cursor-col-resize {
+	cursor: col-resize;
+}
+
+.cursor-e-resize {
+	cursor: e-resize;
+}
+
+.cursor-w-resize {
+	cursor: w-resize;
+}
+
+.native-text-prewarm {
+	position: absolute;
+	top: 0;
+	left: -9999px;
+	opacity: 0;
+	pointer-events: none;
+}
+
+body[data-reduced-motion="true"] *,
+body[data-reduced-motion="true"] *::before,
+body[data-reduced-motion="true"] *::after {
+	animation-duration: 1ms;
+	animation-iteration-count: 1;
+	scroll-behavior: auto;
+	transition-duration: 1ms;
 }
 
 ::-webkit-scrollbar {
@@ -526,6 +593,54 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
 	background: var(--scrollbar-hover);
+}
+
+body[data-scrollbar-style="thin"] {
+	scrollbar-width: thin;
+}
+
+body[data-platform="windows"] ::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+
+body[data-platform="windows"] ::-webkit-scrollbar-thumb {
+	border: 2px solid transparent;
+	border-radius: 9999px;
+	background-clip: content-box;
+}
+
+body[data-platform="windows"] .app-shell {
+	background: var(--bg-primary);
+}
+
+body[data-platform="windows"] .app-sidebar {
+	border-radius: 0;
+	background: var(--sidebar);
+}
+
+body[data-platform="windows"] .sidebar-nav-item,
+body[data-platform="windows"] .file-tree-item,
+body[data-platform="windows"] .vault-switcher-button {
+	border-radius: 4px;
+}
+
+body[data-platform="windows"] .sidebar-nav-item.bg-accent,
+body[data-platform="windows"] .file-tree-item.active {
+	box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.settings-window {
+	overflow: hidden;
+}
+
+.settings-content {
+	width: 100%;
+	height: 100%;
+}
+
+.settings-window .settings-main {
+	background: var(--bg-primary);
 }
 
 /* ─── Tab Bar ─────────────────────────────────────────────────────────────── */

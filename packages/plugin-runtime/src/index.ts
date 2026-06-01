@@ -13,6 +13,7 @@ export {
 } from "./apis/EditorAPI"
 export { setDynamicBindingFunctions, setHotkeyHandlerFunctions } from "./apis/HotkeysAPI"
 export { setMetadataFunctions } from "./apis/MetadataAPI"
+export { resetNotificationRateLimits, setNotificationFunctions } from "./apis/NotificationsAPI"
 export { getRegisteredRendererPlugins } from "./apis/RendererAPI"
 export { setThemeManagerRef } from "./apis/ThemeAPI"
 export { setWorkspaceFunctions } from "./apis/WorkspaceAPI"

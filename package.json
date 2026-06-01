@@ -16,9 +16,9 @@
 		"check": "biome check .",
 		"check:fix": "biome check --fix .",
 		"typecheck": "tsc -b",
-		"test": "bun run --cwd packages/core vitest run && bun run --cwd packages/settings vitest run && bun run --cwd apps/desktop vitest run",
+		"test": "bun run --cwd packages/core vitest run && bun run --cwd packages/settings vitest run && bun run --cwd packages/plugin-runtime vitest run && bun run --cwd packages/marketplace vitest run && bun run --cwd apps/desktop vitest run",
 		"test:watch": "vitest",
-		"test:coverage": "bun run --cwd packages/core vitest run --coverage && bun run --cwd packages/settings vitest run --coverage && bun run --cwd apps/desktop vitest run --coverage"
+		"test:coverage": "bun run --cwd packages/core vitest run --coverage && bun run --cwd packages/settings vitest run --coverage && bun run --cwd packages/plugin-runtime vitest run --coverage && bun run --cwd packages/marketplace vitest run --coverage && bun run --cwd apps/desktop vitest run --coverage"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.4.6",

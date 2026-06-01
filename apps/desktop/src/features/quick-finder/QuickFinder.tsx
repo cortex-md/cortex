@@ -214,7 +214,7 @@ export function QuickFinder() {
 								key={`${item.type}-${item.id}`}
 								type="button"
 								onClick={() => handleItemClick(item.filePath)}
-								className={`flex items-center justify-between w-full px-3 py-2 cursor-pointer text-left ${
+								className={`flex items-center justify-between w-full px-3 py-2 text-left ${
 									index === selectedIndex ? "bg-accent/10" : "hover:bg-muted"
 								}`}
 							>

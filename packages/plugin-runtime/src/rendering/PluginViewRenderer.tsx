@@ -97,7 +97,7 @@ function ViewNodeRenderer({ node, dispatch }: { node: ViewNode; dispatch: ViewDi
 					type="button"
 					role="switch"
 					aria-checked={props.checked as boolean}
-					className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${(props.checked as boolean) ? "bg-brand" : "bg-muted"}`}
+					className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${(props.checked as boolean) ? "bg-brand" : "bg-muted"}`}
 					onClick={() => {
 						if (props.action) dispatch(props.action as string, !(props.checked as boolean))
 					}}

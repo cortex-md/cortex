@@ -243,7 +243,7 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 				{tab.isSuspended ? (
 					<Button
 						variant="ghost"
-						className="flex-1 flex items-center justify-center text-xs text-text-muted cursor-pointer bg-bg-primary border-none font-family-ui w-full hover:bg-bg-secondary"
+						className="flex-1 flex items-center justify-center text-xs text-text-muted bg-bg-primary border-none font-family-ui w-full hover:bg-bg-secondary"
 						onClick={() => {
 							useWorkspaceStore.getState().activateTab(tab.id, paneId)
 						}}

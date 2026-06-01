@@ -1,6 +1,7 @@
 import { getPlatform } from "@cortex/platform"
 import type { PluginManifest } from "cortex-plugin-api"
 import { CortexPlugin } from "cortex-plugin-api"
+import { validatePluginManifestCapabilities } from "./manifestCapabilities"
 import { createPluginAPI } from "./PluginAPIFactory"
 import { usePluginStore } from "./pluginStore"
 
@@ -21,6 +22,7 @@ const bundledPlugins = new Map<string, PluginModule>()
 const communityPluginLoadErrors = new Map<string, string>()
 
 export function registerBundledPlugin(manifest: PluginManifest, module: PluginModule): void {
+	validatePluginManifestCapabilities(manifest)
 	bundledPlugins.set(manifest.id, module)
 	usePluginStore.getState().registerPlugin(manifest)
 }
@@ -116,6 +118,7 @@ export async function discoverCommunityPlugins(pluginsDir: string): Promise<void
 				communityPluginLoadErrors.set(pluginId, "manifest.json is missing main")
 				continue
 			}
+			validatePluginManifestCapabilities(manifest)
 
 			const mainPath = resolvePluginMainPath(dir.path, manifest.main)
 			if (!mainPath) {

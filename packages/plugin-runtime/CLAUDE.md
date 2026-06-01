@@ -21,6 +21,7 @@ packages/plugin-runtime/
       ThemeAPI.ts        # Theme registration + active theme queries
       WorkspaceAPI.ts    # Open files, active file subscriptions
       BookmarksAPI.ts    # Bookmark read/write/subscribe via bridge
+      NotificationsAPI.ts # Native notification bridge with capability enforcement
     rendering/
       PluginSettingsRenderer.tsx  # Renders plugin settings forms from injected controls
       PluginViewRenderer.tsx      # Maps ViewDescriptor → React components
@@ -61,6 +62,7 @@ packages/plugin-runtime/
 - `setThemeManagerRef(manager)` — wires to ThemeManager instance
 - `setWorkspaceFunctions({...})` — wires to workspace/editor stores
 - `setBookmarksFunctions({...})` — wires to bookmarksStore
+- `setNotificationFunctions({...})` — wires plugin notifications to the host platform notification service
 - `setSettingsControls(components)` — injects platform-specific UI controls for settings renderer
 
 ### Settings Renderer (platform-agnostic)
@@ -84,6 +86,7 @@ packages/plugin-runtime/
 | `theme` | Done | Theme registration + active theme queries via ThemeManager bridge |
 | `workspace` | Done | Open files, active file subscriptions via bridge functions |
 | `bookmarks` | Done | Read/write/subscribe bookmarks via bridge to bookmarksStore |
+| `notifications` | Done | Native notifications via bridge, manifest capability check, permission/no-op handling |
 
 ## Bridge Pattern
 

@@ -372,7 +372,7 @@ export function VaultLinkModal({ open, onOpenChange, unlockMode }: VaultLinkModa
 									<button
 										type="button"
 										key={rv.id}
-										className="flex items-center gap-2 p-2 rounded-md hover:bg-accent/10 cursor-pointer text-left w-full"
+										className="flex items-center gap-2 p-2 rounded-md hover:bg-accent/10 text-left w-full"
 										onClick={() => handleLink(rv.id)}
 									>
 										<Cloud size={14} className="text-text-muted shrink-0" />

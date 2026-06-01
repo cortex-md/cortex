@@ -7,18 +7,6 @@ const RECENTS_SUBMENU_ID: &str = "recents-submenu";
 pub fn build_menu<R: Runtime>(app: &AppHandle<R>) -> Result<Menu<R>, tauri::Error> {
     let recents_submenu = build_recents_submenu(app)?;
 
-    let app_menu = SubmenuBuilder::new(app, "Cortex")
-        .about(None)
-        .separator()
-        .services()
-        .separator()
-        .hide()
-        .hide_others()
-        .show_all()
-        .separator()
-        .quit()
-        .build()?;
-
     let new_note = MenuItemBuilder::with_id("menu-new-note", "New Note")
         .accelerator("CmdOrCtrl+N")
         .build(app)?;
@@ -29,6 +17,26 @@ pub fn build_menu<R: Runtime>(app: &AppHandle<R>) -> Result<Menu<R>, tauri::Erro
 
     let close_vault = MenuItemBuilder::with_id("menu-close-vault", "Close Vault").build(app)?;
 
+    let settings = MenuItemBuilder::with_id("menu-open-settings", "Settings...")
+        .accelerator("CmdOrCtrl+,")
+        .build(app)?;
+
+    let command_palette = MenuItemBuilder::with_id("menu-command-palette", "Command Palette")
+        .accelerator("CmdOrCtrl+Shift+P")
+        .build(app)?;
+
+    let search_vault = MenuItemBuilder::with_id("menu-search-vault", "Search in Vault")
+        .accelerator("CmdOrCtrl+F")
+        .build(app)?;
+
+    let toggle_sidebar = MenuItemBuilder::with_id("menu-toggle-sidebar", "Toggle Sidebar")
+        .accelerator("CmdOrCtrl+B")
+        .build(app)?;
+
+    let toggle_theme = MenuItemBuilder::with_id("menu-toggle-theme", "Toggle Colorscheme")
+        .accelerator("CmdOrCtrl+Shift+L")
+        .build(app)?;
+
     let file_menu = SubmenuBuilder::new(app, "File")
         .item(&new_note)
         .separator()
@@ -36,6 +44,20 @@ pub fn build_menu<R: Runtime>(app: &AppHandle<R>) -> Result<Menu<R>, tauri::Erro
         .item(&recents_submenu)
         .separator()
         .item(&close_vault)
+        .build()?;
+
+    let app_menu = SubmenuBuilder::new(app, "Cortex")
+        .about(None)
+        .separator()
+        .item(&settings)
+        .separator()
+        .services()
+        .separator()
+        .hide()
+        .hide_others()
+        .show_all()
+        .separator()
+        .quit()
         .build()?;
 
     let edit_menu = SubmenuBuilder::new(app, "Edit")
@@ -48,7 +70,18 @@ pub fn build_menu<R: Runtime>(app: &AppHandle<R>) -> Result<Menu<R>, tauri::Erro
         .select_all()
         .build()?;
 
-    let view_menu = SubmenuBuilder::new(app, "View").fullscreen().build()?;
+    let navigate_menu = SubmenuBuilder::new(app, "Navigate")
+        .item(&command_palette)
+        .separator()
+        .item(&search_vault)
+        .build()?;
+
+    let view_menu = SubmenuBuilder::new(app, "View")
+        .item(&toggle_sidebar)
+        .item(&toggle_theme)
+        .separator()
+        .fullscreen()
+        .build()?;
 
     let window_menu = SubmenuBuilder::new(app, "Window")
         .minimize()
@@ -58,7 +91,14 @@ pub fn build_menu<R: Runtime>(app: &AppHandle<R>) -> Result<Menu<R>, tauri::Erro
 
     let menu = Menu::with_items(
         app,
-        &[&app_menu, &file_menu, &edit_menu, &view_menu, &window_menu],
+        &[
+            &app_menu,
+            &file_menu,
+            &edit_menu,
+            &navigate_menu,
+            &view_menu,
+            &window_menu,
+        ],
     )?;
 
     Ok(menu)
@@ -104,6 +144,31 @@ pub fn setup_menu_event_handler<R: Runtime>(app: &AppHandle<R>) {
 
         if id == "menu-close-vault" {
             let _ = handle.emit("menu-close-vault", ());
+            return;
+        }
+
+        if id == "menu-open-settings" {
+            let _ = handle.emit("menu-open-settings", ());
+            return;
+        }
+
+        if id == "menu-toggle-sidebar" {
+            let _ = handle.emit("menu-toggle-sidebar", ());
+            return;
+        }
+
+        if id == "menu-search-vault" {
+            let _ = handle.emit("menu-search-vault", ());
+            return;
+        }
+
+        if id == "menu-command-palette" {
+            let _ = handle.emit("menu-command-palette", ());
+            return;
+        }
+
+        if id == "menu-toggle-theme" {
+            let _ = handle.emit("menu-toggle-theme", ());
             return;
         }
 

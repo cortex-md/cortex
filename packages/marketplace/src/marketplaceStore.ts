@@ -21,6 +21,16 @@ export interface MarketplaceCallbacks {
 	reloadThemes: (dir: string) => Promise<void>
 	isPluginInstalled: (id: string) => boolean
 	isThemeInstalled: (id: string) => boolean
+	notify?: (event: MarketplaceNotificationEvent) => void | Promise<void>
+}
+
+export interface MarketplaceNotificationEvent {
+	action: "install" | "update" | "uninstall"
+	kind: MarketplaceTab
+	entryId: string
+	title: string
+	body?: string
+	level: "success" | "error"
 }
 
 let callbacks: MarketplaceCallbacks | null = null
@@ -185,6 +195,10 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 			installEntry: async (entry) => {
 				if (!callbacks) return
 				const { activeTab } = get()
+				const wasInstalled =
+					activeTab === "plugins"
+						? callbacks.isPluginInstalled(entry.id)
+						: callbacks.isThemeInstalled(entry.id)
 				set((s) => {
 					s.loadingEntryId = entry.id
 					s.installError = null
@@ -203,9 +217,26 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 						delete s.availableUpdates[entry.id]
 						s.installError = null
 					})
+					void callbacks.notify?.({
+						action: wasInstalled ? "update" : "install",
+						kind: activeTab,
+						entryId: entry.id,
+						title: wasInstalled ? "Update installed" : "Install complete",
+						body: entry.name,
+						level: "success",
+					})
 				} catch (error) {
+					const message = getErrorMessage(error)
 					set((s) => {
-						s.installError = getErrorMessage(error)
+						s.installError = message
+					})
+					void callbacks.notify?.({
+						action: wasInstalled ? "update" : "install",
+						kind: activeTab,
+						entryId: entry.id,
+						title: wasInstalled ? "Update failed" : "Install failed",
+						body: message,
+						level: "error",
 					})
 				} finally {
 					set((s) => {
@@ -230,6 +261,24 @@ export const useMarketplaceStore = create<MarketplaceState>()(
 						if (!dir) return
 						await uninstallTheme(entry.id, dir)
 					}
+					void callbacks.notify?.({
+						action: "uninstall",
+						kind: activeTab,
+						entryId: entry.id,
+						title: "Uninstall complete",
+						body: entry.name,
+						level: "success",
+					})
+				} catch (error) {
+					void callbacks.notify?.({
+						action: "uninstall",
+						kind: activeTab,
+						entryId: entry.id,
+						title: "Uninstall failed",
+						body: getErrorMessage(error),
+						level: "error",
+					})
+					throw error
 				} finally {
 					set((s) => {
 						s.loadingEntryId = null

@@ -1,4 +1,4 @@
-import { useUIStore, useVaultStore } from "@cortex/core"
+import { type MarketplaceTab, useUIStore, useVaultStore } from "@cortex/core"
 import { getPluginInstance, PluginSettingsRenderer, usePluginStore } from "@cortex/plugin-runtime"
 import { useSettingsStore } from "@cortex/settings"
 import type { FolderPickerOption } from "@cortex/ui"
@@ -48,10 +48,20 @@ interface SettingsModalProps {
 	onOpenChange: (open: boolean) => void
 }
 
-export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
-	const settingsInitialSection = useUIStore((s) => s.settingsInitialSection)
-	const marketplaceInitialTab = useUIStore((s) => s.marketplaceInitialTab)
-	const [activeSectionId, setActiveSectionId] = useState<string>("general")
+interface SettingsContentProps {
+	initialSection?: string | null
+	initialMarketplaceTab?: MarketplaceTab
+	fullHeight?: boolean
+}
+
+export function SettingsContent({
+	initialSection = null,
+	initialMarketplaceTab,
+	fullHeight = false,
+}: SettingsContentProps) {
+	const storeSettingsInitialSection = useUIStore((s) => s.settingsInitialSection)
+	const storeMarketplaceInitialTab = useUIStore((s) => s.marketplaceInitialTab)
+	const [activeSectionId, setActiveSectionId] = useState<string>(initialSection ?? "general")
 	const { settings, updateSetting } = useSettingsStore()
 	const pluginSettingsTabs = usePluginStore((s) => s.settingsTabs)
 	const pluginSettingsSchemas = usePluginStore((s) => s.settingsSchemas)
@@ -71,11 +81,14 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 			})
 	}, [files, vault?.path])
 
+	const requestedSection = initialSection ?? storeSettingsInitialSection
+	const marketplaceTab = initialMarketplaceTab ?? storeMarketplaceInitialTab
+
 	useEffect(() => {
-		if (open && settingsInitialSection) {
-			setActiveSectionId(settingsInitialSection)
+		if (requestedSection) {
+			setActiveSectionId(requestedSection)
 		}
-	}, [open, settingsInitialSection])
+	}, [requestedSection])
 
 	const coreSection = coreSections.find((s) => s.id === activeSectionId)
 	const pluginTab = pluginSettingsTabs.find((t) => t.id === activeSectionId)
@@ -96,103 +109,117 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 	}, [])
 
 	return (
+		<SidebarProvider className="settings-content items-start">
+			<Sidebar collapsible="none" className="hidden md:flex min-h-full">
+				<SidebarContent>
+					<SidebarGroup>
+						<SidebarGroupContent>
+							<SidebarMenu>
+								{coreSections.map((item) => (
+									<SidebarMenuItem key={item.id}>
+										<SidebarMenuButton
+											onClick={() => setActiveSectionId(item.id)}
+											isActive={activeSectionId === item.id}
+										>
+											<item.icon />
+											<span>{item.name}</span>
+										</SidebarMenuButton>
+									</SidebarMenuItem>
+								))}
+							</SidebarMenu>
+						</SidebarGroupContent>
+					</SidebarGroup>
+					{pluginSettingsTabs.length > 0 && (
+						<SidebarGroup>
+							<SidebarGroupLabel>Plugin Settings</SidebarGroupLabel>
+							<SidebarGroupContent>
+								<SidebarMenu>
+									{pluginSettingsTabs.map((tab) => (
+										<SidebarMenuItem key={tab.id}>
+											<SidebarMenuButton
+												onClick={() => setActiveSectionId(tab.id)}
+												isActive={activeSectionId === tab.id}
+											>
+												<LucideIcon name={tab.icon} size={16} />
+												<span>{tab.label}</span>
+											</SidebarMenuButton>
+										</SidebarMenuItem>
+									))}
+								</SidebarMenu>
+							</SidebarGroupContent>
+						</SidebarGroup>
+					)}
+				</SidebarContent>
+			</Sidebar>
+			<main
+				className={`settings-main flex flex-1 flex-col overflow-hidden ${
+					fullHeight ? "h-screen" : "h-[580px]"
+				}`}
+			>
+				<header className="flex h-12 shrink-0 items-center gap-2 border-b border-border">
+					<div className="flex items-center gap-2 px-4">
+						<Breadcrumb>
+							<BreadcrumbList>
+								<BreadcrumbItem className="hidden md:block">Settings</BreadcrumbItem>
+								<BreadcrumbSeparator className="hidden md:block" />
+								<BreadcrumbItem>
+									<BreadcrumbPage>{activeName}</BreadcrumbPage>
+								</BreadcrumbItem>
+							</BreadcrumbList>
+						</Breadcrumb>
+					</div>
+				</header>
+				<div
+					className={
+						activeSectionId === "marketplace"
+							? "flex min-h-0 flex-1 flex-col overflow-hidden"
+							: "flex flex-1 flex-col gap-4 overflow-y-auto p-4"
+					}
+				>
+					{activeSectionId === "general" && (
+						<GeneralSection settings={settings.general} onUpdate={updateSetting} />
+					)}
+					{activeSectionId === "appearance" && (
+						<AppearanceSection settings={settings.appearance} onUpdate={updateSetting} />
+					)}
+					{activeSectionId === "editor" && (
+						<EditorSection
+							settings={settings.editor}
+							onUpdate={updateSetting}
+							vaultFolders={vaultFolders}
+						/>
+					)}
+					{activeSectionId === "hotkeys" && <HotkeysSection />}
+					{activeSectionId === "sync" && <SyncSection />}
+					{activeSectionId === "plugins" && <PluginsSection />}
+					{activeSectionId === "marketplace" && <MarketplaceSection initialTab={marketplaceTab} />}
+					{pluginTab && (
+						<PluginSettingsRenderer
+							pluginId={pluginTab.id}
+							settings={pluginSettingsSchemas[pluginTab.id] ?? pluginTab.settings}
+							values={pluginSettingsValues}
+							onUpdate={(key, value) => handlePluginSettingUpdate(pluginTab.id, key, value)}
+						/>
+					)}
+				</div>
+			</main>
+		</SidebarProvider>
+	)
+}
+
+export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
+	const settingsInitialSection = useUIStore((s) => s.settingsInitialSection)
+	const marketplaceInitialTab = useUIStore((s) => s.marketplaceInitialTab)
+
+	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="overflow-hidden p-0 md:max-h-[700px] md:max-w-[1100px] lg:max-w-[1000px]">
 				<DialogTitle className="sr-only">Settings</DialogTitle>
 				<DialogDescription className="sr-only">Customize your settings here.</DialogDescription>
-				<SidebarProvider className="items-start">
-					<Sidebar collapsible="none" className="hidden md:flex min-h-full">
-						<SidebarContent>
-							<SidebarGroup>
-								<SidebarGroupContent>
-									<SidebarMenu>
-										{coreSections.map((item) => (
-											<SidebarMenuItem key={item.id}>
-												<SidebarMenuButton
-													onClick={() => setActiveSectionId(item.id)}
-													isActive={activeSectionId === item.id}
-												>
-													<item.icon />
-													<span>{item.name}</span>
-												</SidebarMenuButton>
-											</SidebarMenuItem>
-										))}
-									</SidebarMenu>
-								</SidebarGroupContent>
-							</SidebarGroup>
-							{pluginSettingsTabs.length > 0 && (
-								<SidebarGroup>
-									<SidebarGroupLabel>Plugin Settings</SidebarGroupLabel>
-									<SidebarGroupContent>
-										<SidebarMenu>
-											{pluginSettingsTabs.map((tab) => (
-												<SidebarMenuItem key={tab.id}>
-													<SidebarMenuButton
-														onClick={() => setActiveSectionId(tab.id)}
-														isActive={activeSectionId === tab.id}
-													>
-														<LucideIcon name={tab.icon} size={16} />
-														<span>{tab.label}</span>
-													</SidebarMenuButton>
-												</SidebarMenuItem>
-											))}
-										</SidebarMenu>
-									</SidebarGroupContent>
-								</SidebarGroup>
-							)}
-						</SidebarContent>
-					</Sidebar>
-					<main className="flex h-[580px] flex-1 flex-col overflow-hidden">
-						<header className="flex h-12 shrink-0 items-center gap-2 border-b border-border">
-							<div className="flex items-center gap-2 px-4">
-								<Breadcrumb>
-									<BreadcrumbList>
-										<BreadcrumbItem className="hidden md:block">Settings</BreadcrumbItem>
-										<BreadcrumbSeparator className="hidden md:block" />
-										<BreadcrumbItem>
-											<BreadcrumbPage>{activeName}</BreadcrumbPage>
-										</BreadcrumbItem>
-									</BreadcrumbList>
-								</Breadcrumb>
-							</div>
-						</header>
-						<div
-							className={
-								activeSectionId === "marketplace"
-									? "flex min-h-0 flex-1 flex-col overflow-hidden"
-									: "flex flex-1 flex-col gap-4 overflow-y-auto p-4"
-							}
-						>
-							{activeSectionId === "general" && (
-								<GeneralSection settings={settings.general} onUpdate={updateSetting} />
-							)}
-							{activeSectionId === "appearance" && (
-								<AppearanceSection settings={settings.appearance} onUpdate={updateSetting} />
-							)}
-							{activeSectionId === "editor" && (
-								<EditorSection
-									settings={settings.editor}
-									onUpdate={updateSetting}
-									vaultFolders={vaultFolders}
-								/>
-							)}
-							{activeSectionId === "hotkeys" && <HotkeysSection />}
-							{activeSectionId === "sync" && <SyncSection />}
-							{activeSectionId === "plugins" && <PluginsSection />}
-							{activeSectionId === "marketplace" && (
-								<MarketplaceSection initialTab={marketplaceInitialTab} />
-							)}
-							{pluginTab && (
-								<PluginSettingsRenderer
-									pluginId={pluginTab.id}
-									settings={pluginSettingsSchemas[pluginTab.id] ?? pluginTab.settings}
-									values={pluginSettingsValues}
-									onUpdate={(key, value) => handlePluginSettingUpdate(pluginTab.id, key, value)}
-								/>
-							)}
-						</div>
-					</main>
-				</SidebarProvider>
+				<SettingsContent
+					initialSection={settingsInitialSection}
+					initialMarketplaceTab={marketplaceInitialTab}
+				/>
 			</DialogContent>
 		</Dialog>
 	)

@@ -1,6 +1,12 @@
 import type { FileEntry } from "@cortex/platform"
+import { CortexPlugin } from "cortex-plugin-api"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { discoverCommunityPlugins, getCommunityPluginLoadError, usePluginStore } from "./index"
+import {
+	discoverCommunityPlugins,
+	getCommunityPluginLoadError,
+	registerBundledPlugin,
+	usePluginStore,
+} from "./index"
 
 const testState = vi.hoisted(() => ({
 	files: new Map<string, string>(),
@@ -26,6 +32,10 @@ vi.mock("@cortex/platform", () => ({
 }))
 
 const pluginsDir = "/vault/.cortex/plugins"
+
+class BadBundledPlugin extends CortexPlugin {
+	onload() {}
+}
 
 function registerPluginFiles(pluginId: string, main: string) {
 	const pluginDir = `${pluginsDir}/${pluginId}`
@@ -91,5 +101,49 @@ describe("discoverCommunityPlugins", () => {
 		expect(getCommunityPluginLoadError("bad-plugin")).toContain(
 			"Plugin bundle must export a default plugin class",
 		)
+	})
+
+	it("stores the loader error when a manifest declares an unknown capability", async () => {
+		registerPluginFiles("unknown-capability-plugin", "module.exports = class TestPlugin {}")
+		testState.files.set(
+			`${pluginsDir}/unknown-capability-plugin/manifest.json`,
+			JSON.stringify({
+				id: "unknown-capability-plugin",
+				name: "Unknown Capability Plugin",
+				version: "0.1.0",
+				minAppVersion: "0.1.0",
+				author: "Tester",
+				description: "Test plugin",
+				icon: "puzzle",
+				main: "main.js",
+				capabilities: ["notifications", "native:everything"],
+			}),
+		)
+
+		await discoverCommunityPlugins(pluginsDir)
+
+		expect(usePluginStore.getState().plugins["unknown-capability-plugin"]).toBeUndefined()
+		expect(getCommunityPluginLoadError("unknown-capability-plugin")).toContain(
+			'Unknown plugin capability "native:everything"',
+		)
+	})
+
+	it("rejects bundled plugins with unknown capabilities", () => {
+		expect(() =>
+			registerBundledPlugin(
+				{
+					id: "bad-bundled-plugin",
+					name: "Bad Bundled Plugin",
+					version: "0.1.0",
+					minAppVersion: "0.1.0",
+					author: "Tester",
+					description: "Test plugin",
+					icon: "puzzle",
+					main: "main.js",
+					capabilities: ["native:everything" as never],
+				},
+				{ default: BadBundledPlugin },
+			),
+		).toThrow('Unknown plugin capability "native:everything"')
 	})
 })

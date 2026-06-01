@@ -25,7 +25,7 @@ function TagRow({
 			<Button
 				size={"sm"}
 				variant={"ghost"}
-				className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-accent/50 transition-colors cursor-pointer"
+				className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-accent/50 transition-colors"
 				onClick={() => onToggle(tag)}
 			>
 				<ChevronRightIcon
@@ -54,7 +54,7 @@ function TagRow({
 								size={"sm"}
 								variant={"ghost"}
 								key={filePath}
-								className="w-full flex items-center justify-start! gap-2 pl-20 pr-3 py-1 text-left hover:bg-accent/50 transition-colors cursor-pointer"
+								className="w-full flex items-center justify-start! gap-2 pl-20 pr-3 py-1 text-left hover:bg-accent/50 transition-colors"
 								onClick={() => onOpenFile(filePath)}
 							>
 								<FileIcon className="size-3 text-muted-foreground flex-shrink-0" />

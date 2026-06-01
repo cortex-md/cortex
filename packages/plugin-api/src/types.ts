@@ -19,6 +19,7 @@ export type PluginCapability =
 	| "themes"
 	| "bookmarks:read"
 	| "bookmarks:write"
+	| "notifications"
 
 export interface PluginManifest {
 	id: string
@@ -48,6 +49,48 @@ export interface PluginHotkeyBinding {
 	label: string
 	defaultBinding: string
 	execute: () => void | Promise<void>
+}
+
+export type PluginNotificationPermissionState = "granted" | "denied" | "prompt" | "unsupported"
+
+export type PluginNotificationKind = "info" | "success" | "warning" | "error"
+
+export type PluginNotificationUrgency = "low" | "normal" | "high"
+
+export type PluginNotificationIcon =
+	| { type: "app" }
+	| { type: "lucide"; name: string }
+	| { type: "asset"; path: string }
+
+export type PluginNotificationSound =
+	| { type: "default" }
+	| { type: "system"; name: string }
+	| { type: "asset"; path: string }
+
+export interface PluginNotification {
+	id?: string
+	title: string
+	body?: string
+	kind?: PluginNotificationKind
+	icon?: PluginNotificationIcon
+	sound?: PluginNotificationSound
+	tag?: string
+	silent?: boolean
+	urgency?: PluginNotificationUrgency
+	metadata?: Record<string, string | number | boolean | null>
+}
+
+export type PluginNotificationFailureReason =
+	| "missing-capability"
+	| "unsupported"
+	| "permission-denied"
+	| "rate-limited"
+	| "invalid"
+	| "failed"
+
+export interface PluginNotificationResult {
+	delivered: boolean
+	reason?: PluginNotificationFailureReason
 }
 
 export interface FileEntry {
@@ -254,6 +297,12 @@ export interface PluginAPI {
 		registerSettingsTab(tab: SettingsTabRegistration): Disposable
 		registerRibbonAction(action: RibbonActionRegistration): Disposable
 		showNotice(message: string, duration?: number): void
+	}
+
+	notifications: {
+		isSupported(): boolean
+		getPermission(): Promise<PluginNotificationPermissionState>
+		send(notification: PluginNotification): Promise<PluginNotificationResult>
 	}
 
 	hotkeys: {

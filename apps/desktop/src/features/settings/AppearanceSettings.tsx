@@ -124,7 +124,7 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 							type="color"
 							value={settings.accentColor}
 							onChange={(e) => handleAccentColorChange(e.target.value)}
-							className="w-8 h-8 rounded-md border border-input cursor-pointer bg-transparent p-0"
+							className="w-8 h-8 rounded-md border border-input bg-transparent p-0"
 						/>
 						<span className="text-[11px] text-text-muted font-family-mono min-w-[60px]">
 							{settings.accentColor}
@@ -162,7 +162,7 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 							max={20}
 							defaultValue={[settings.uiFontSize]}
 							onValueChange={(value: number[]) => handleUIFontSizeChange(value[0])}
-							className="flex-1 h-1 cursor-pointer accent-color-accent"
+							className="flex-1 h-1 accent-color-accent"
 						/>
 						<span className="text-[11px] text-text-muted min-w-[36px] text-right font-family-mono">
 							{settings.uiFontSize}px
@@ -200,7 +200,7 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 							max={24}
 							defaultValue={[settings.editorFontSize]}
 							onValueChange={(value: number[]) => handleEditorFontSizeChange(value[0])}
-							className="flex-1 h-1 cursor-pointer accent-color-accent"
+							className="flex-1 h-1 accent-color-accent"
 						/>
 						<span className="text-[11px] text-text-muted min-w-[36px] text-right font-family-mono">
 							{settings.editorFontSize}px
@@ -218,7 +218,7 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 							step={0.1}
 							defaultValue={[settings.lineHeight]}
 							onValueChange={(value: number[]) => handleLineHeightChange(value[0])}
-							className="flex-1 h-1 cursor-pointer accent-color-accent"
+							className="flex-1 h-1 accent-color-accent"
 						/>
 						<span className="text-[11px] text-text-muted min-w-[36px] text-right font-family-mono">
 							{settings.lineHeight}x

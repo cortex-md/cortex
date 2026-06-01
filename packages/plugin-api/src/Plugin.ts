@@ -6,6 +6,8 @@ import type {
 	PluginAPI,
 	PluginCommand,
 	PluginManifest,
+	PluginNotification,
+	PluginNotificationResult,
 	RendererPlugin,
 	RibbonActionRegistration,
 	SettingsTabRegistration,
@@ -96,6 +98,10 @@ export abstract class CortexPlugin {
 		const disposable = this.api.ui.registerRibbonAction(action)
 		this._disposables.add(disposable)
 		return disposable
+	}
+
+	notify(notification: PluginNotification): Promise<PluginNotificationResult> {
+		return this.api.notifications.send(notification)
 	}
 
 	_disposeAll(): void {

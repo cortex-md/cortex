@@ -28,6 +28,7 @@ import {
 	setDynamicBindingFunctions,
 	setHotkeyHandlerFunctions,
 	setLivePreviewBuilder,
+	setNotificationFunctions,
 	setReconfigurePluginExtensions,
 	setSettingsControls,
 	setWorkspaceFunctions,
@@ -70,7 +71,9 @@ import { TagPicker } from "./features/tags/TagPicker"
 import { TagsSidebar } from "./features/tags/TagsSidebar"
 import { loadCommunityThemes, unloadCommunityThemes } from "./features/themes/communityThemeLoader"
 import { VaultSwitcher } from "./features/vault/VaultSwitcher"
+import { useNativeNotifications } from "./hooks/useNativeNotifications"
 import { useSyncLifecycle } from "./hooks/useSyncLifecycle"
+import { sendCoreNotification } from "./utils/nativeNotifications"
 
 const CORE_NAV_ITEMS: NavItem[] = [
 	{ id: "files", icon: FolderClosed, label: "Files" },
@@ -94,6 +97,19 @@ setDynamicBindingFunctions(
 	useHotkeysStore.getState().addDynamicBinding,
 	useHotkeysStore.getState().removeDynamicBinding,
 )
+
+setNotificationFunctions({
+	isSupported: () => getPlatform().capabilities.includes("notifications"),
+	getPermission: () => getPlatform().notifications.getPermission(),
+	send: (notification) =>
+		getPlatform().notifications.send({
+			...notification,
+			id: notification.id ? `${notification.pluginId}:${notification.id}` : undefined,
+			tag: notification.tag ? `${notification.pluginId}:${notification.tag}` : undefined,
+			source: "plugin",
+			pluginId: notification.pluginId,
+		}),
+})
 
 setBookmarksFunctions({
 	getAll: () => useBookmarksStore.getState().bookmarks,
@@ -150,6 +166,16 @@ setMarketplaceCallbacks({
 		getThemeManager()
 			.getThemeFamilies()
 			.some((f) => f.name === id),
+	notify: (event) => {
+		void sendCoreNotification({
+			id: `marketplace:${event.action}:${event.kind}:${event.entryId}`,
+			tag: `marketplace:${event.kind}:${event.entryId}`,
+			title: event.title,
+			body: event.body,
+			kind: event.level,
+			urgency: event.level === "error" ? "high" : "normal",
+		})
+	},
 })
 
 registerBundledPlugin(
@@ -213,6 +239,8 @@ export default function App() {
 		toggleCommandPalette,
 		toggleTagPicker,
 		settingsOpen,
+		settingsInitialSection,
+		marketplaceInitialTab,
 		openSettings,
 		closeSettings,
 	} = useUIStore()
@@ -227,6 +255,7 @@ export default function App() {
 	const pluginSidebarItems = usePluginStore((s) => s.sidebarItems)
 	const pluginViews = usePluginStore((s) => s.views)
 	const [communityThemesLoaded, setCommunityThemesLoaded] = useState(false)
+	const [settingsModalOpen, setSettingsModalOpen] = useState(false)
 
 	const navItems = useMemo<NavItem[]>(() => {
 		const pluginNavItems: NavItem[] = pluginSidebarItems.map((item) => ({
@@ -243,6 +272,7 @@ export default function App() {
 
 	useHotkeyListener()
 	useSyncLifecycle()
+	useNativeNotifications()
 
 	useHotkey(
 		"file.new",
@@ -586,6 +616,28 @@ export default function App() {
 		}
 	}, [vault, communityThemesLoaded, settings.appearance])
 
+	useEffect(() => {
+		if (!settingsOpen) {
+			setSettingsModalOpen(false)
+			return
+		}
+
+		if (!vault) {
+			setSettingsModalOpen(true)
+			return
+		}
+
+		getPlatform()
+			.window.openSettings({
+				section: settingsInitialSection,
+				marketplaceTab: marketplaceInitialTab,
+				vaultPath: vault.path,
+				vaultName: vault.name,
+			})
+			.then(() => closeSettings())
+			.catch(() => setSettingsModalOpen(true))
+	}, [settingsOpen, settingsInitialSection, marketplaceInitialTab, vault, closeSettings])
+
 	// biome-ignore lint/correctness/useExhaustiveDependencies: persist when workspace state changes
 	useEffect(() => {
 		if (!vault) return
@@ -642,6 +694,26 @@ export default function App() {
 			listen("menu-close-vault", () => {
 				closeVault()
 			}),
+			listen("menu-open-settings", () => {
+				openSettings("general")
+			}),
+			listen("menu-toggle-sidebar", () => {
+				toggleLeftSidebar()
+			}),
+			listen("menu-search-vault", () => {
+				if (leftSidebarCollapsed) toggleLeftSidebar()
+				setLeftSidebarView("search")
+			}),
+			listen("menu-command-palette", () => {
+				toggleCommandPalette()
+			}),
+			listen("menu-toggle-theme", () => {
+				const tm = getThemeManager()
+				const currentIsDark = tm.getActiveTheme().isDark
+				const familyName = settings.appearance.theme
+				const resolved = tm.resolveTheme(familyName, currentIsDark ? "light" : "dark")
+				tm.setActiveTheme(resolved)
+			}),
 			listen<string>("menu-recent-vault", (event) => {
 				const path = event.payload
 				if (path && path !== vault?.path) {
@@ -655,7 +727,20 @@ export default function App() {
 				unlistener.then((fn) => fn())
 			}
 		}
-	}, [vault, recentVaults, createFile, openTab, closeVault, openVault])
+	}, [
+		vault,
+		recentVaults,
+		createFile,
+		openTab,
+		closeVault,
+		openVault,
+		openSettings,
+		toggleLeftSidebar,
+		leftSidebarCollapsed,
+		setLeftSidebarView,
+		toggleCommandPalette,
+		settings.appearance.theme,
+	])
 
 	const handleSidebarNavSelect = (id: string) => {
 		if (id === "settings") {
@@ -774,7 +859,7 @@ export default function App() {
 				)}
 			</div>
 
-			<SettingsModal open={settingsOpen} onOpenChange={(open) => !open && closeSettings()} />
+			<SettingsModal open={settingsModalOpen} onOpenChange={(open) => !open && closeSettings()} />
 			<AuthModal />
 			<QuickFinder />
 			<CommandPalette />

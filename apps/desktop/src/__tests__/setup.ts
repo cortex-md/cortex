@@ -12,6 +12,18 @@ vi.mock("@cortex/platform", () => ({
 			getAppDataDir: vi.fn().mockResolvedValue("/mock"),
 			getVaultConfigDir: vi.fn().mockResolvedValue("/mock/.cortex"),
 		},
+		notifications: {
+			getCapabilities: vi.fn(() => ({
+				supported: true,
+				icons: false,
+				sounds: true,
+				actions: false,
+			})),
+			getPermission: vi.fn().mockResolvedValue("granted"),
+			requestPermission: vi.fn().mockResolvedValue("granted"),
+			send: vi.fn().mockResolvedValue({ delivered: true }),
+		},
+		capabilities: ["notifications"],
 	})),
 	initPlatform: vi.fn(),
 }))

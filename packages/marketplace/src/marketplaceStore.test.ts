@@ -7,6 +7,7 @@ const testState = vi.hoisted(() => ({
 	installTheme: vi.fn(),
 	uninstallPlugin: vi.fn(),
 	uninstallTheme: vi.fn(),
+	notify: vi.fn(),
 }))
 
 vi.mock("./installService", () => ({
@@ -61,6 +62,7 @@ beforeEach(() => {
 		reloadThemes: vi.fn(),
 		isPluginInstalled: () => false,
 		isThemeInstalled: () => false,
+		notify: testState.notify,
 	})
 })
 
@@ -74,5 +76,62 @@ describe("marketplaceStore installEntry", () => {
 		expect(state.installError).toBe("download failed")
 		expect(state.loadingEntryId).toBeNull()
 		expect(state.availableUpdates["test-plugin"]).toBe("1.1.0")
+		expect(testState.notify).toHaveBeenCalledWith({
+			action: "install",
+			kind: "plugins",
+			entryId: "test-plugin",
+			title: "Install failed",
+			body: "download failed",
+			level: "error",
+		})
+	})
+
+	it("notifies when an install succeeds", async () => {
+		await useMarketplaceStore.getState().installEntry(entry)
+
+		expect(testState.notify).toHaveBeenCalledWith({
+			action: "install",
+			kind: "plugins",
+			entryId: "test-plugin",
+			title: "Install complete",
+			body: "Test Plugin",
+			level: "success",
+		})
+	})
+
+	it("notifies when an update succeeds", async () => {
+		setMarketplaceCallbacks({
+			getPluginsDir: () => "/vault/.cortex/plugins",
+			getThemesDir: () => "/vault/.cortex/themes",
+			reloadPlugins: vi.fn(),
+			reloadThemes: vi.fn(),
+			isPluginInstalled: () => true,
+			isThemeInstalled: () => false,
+			notify: testState.notify,
+		})
+
+		await useMarketplaceStore.getState().installEntry(entry)
+
+		expect(testState.notify).toHaveBeenCalledWith({
+			action: "update",
+			kind: "plugins",
+			entryId: "test-plugin",
+			title: "Update installed",
+			body: "Test Plugin",
+			level: "success",
+		})
+	})
+
+	it("notifies when an uninstall succeeds", async () => {
+		await useMarketplaceStore.getState().uninstallEntry(entry)
+
+		expect(testState.notify).toHaveBeenCalledWith({
+			action: "uninstall",
+			kind: "plugins",
+			entryId: "test-plugin",
+			title: "Uninstall complete",
+			body: "Test Plugin",
+			level: "success",
+		})
 	})
 })

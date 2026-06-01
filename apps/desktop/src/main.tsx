@@ -1,8 +1,9 @@
 import { tauriPlatform } from "@cortex/ipc"
-import { initPlatform } from "@cortex/platform"
+import { initPlatform, type NativeAppearanceSnapshot } from "@cortex/platform"
 import { initThemeManager } from "@cortex/theme"
 import ReactDOM from "react-dom/client"
 import App from "./App"
+import { SettingsWindow } from "./features/settings/SettingsWindow"
 import { generateCSSString, generateCSSVariables } from "./features/themes/cssGenerator"
 import { WebThemeAdapter } from "./features/themes/webThemeAdapter"
 import "./styles.css"
@@ -10,8 +11,42 @@ import "./styles.css"
 initPlatform(tauriPlatform)
 initThemeManager("ink", new WebThemeAdapter(), { generateCSSString, generateCSSVariables })
 
-const ua = navigator.userAgent.toLowerCase()
-const platform = ua.includes("macintosh") ? "macos" : ua.includes("windows") ? "windows" : "linux"
-document.body.setAttribute("data-platform", platform)
+function applyNativeAppearance(snapshot: NativeAppearanceSnapshot) {
+	document.body.dataset.platform = snapshot.platform
+	document.body.dataset.colorScheme = snapshot.colorScheme
+	document.body.dataset.reducedMotion = String(snapshot.reducedMotion)
+	document.body.dataset.highContrast = String(snapshot.highContrast)
+	document.body.dataset.scrollbarStyle = snapshot.scrollbarStyle
+	if (snapshot.accentColor) {
+		document.body.style.setProperty("--system-accent", snapshot.accentColor)
+	}
+}
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(<App />)
+function refreshNativeAppearance() {
+	tauriPlatform.appearance.getSnapshot().then(applyNativeAppearance)
+}
+
+function prewarmTextRendering() {
+	const span = document.createElement("span")
+	span.setAttribute("aria-hidden", "true")
+	span.className = "native-text-prewarm"
+	span.textContent = "😀✨✓✗中文日本語한국어"
+	document.body.appendChild(span)
+	requestAnimationFrame(() => requestAnimationFrame(() => span.remove()))
+}
+
+const initialAppearance = window.navigator.userAgent.toLowerCase().includes("macintosh")
+	? "macos"
+	: window.navigator.userAgent.toLowerCase().includes("windows")
+		? "windows"
+		: "linux"
+document.body.dataset.platform = initialAppearance
+refreshNativeAppearance()
+const unsubscribeNativeAppearance = tauriPlatform.appearance.subscribe(applyNativeAppearance)
+window.addEventListener("beforeunload", unsubscribeNativeAppearance, { once: true })
+prewarmTextRendering()
+
+const params = new URLSearchParams(window.location.search)
+const Root = params.get("window") === "settings" ? SettingsWindow : App
+
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(<Root />)

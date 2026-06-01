@@ -5,6 +5,7 @@ import { createDataAPI } from "./apis/DataAPI"
 import { createEditorAPI } from "./apis/EditorAPI"
 import { createHotkeysAPI } from "./apis/HotkeysAPI"
 import { createMetadataAPI } from "./apis/MetadataAPI"
+import { createNotificationsAPI } from "./apis/NotificationsAPI"
 import { createRendererAPI } from "./apis/RendererAPI"
 import { createSettingsAPI } from "./apis/SettingsAPI"
 import { createThemeAPI } from "./apis/ThemeAPI"
@@ -27,6 +28,7 @@ export function createPluginAPI(pluginId: string, getVaultPath: () => string | n
 	const theme = createThemeAPI()
 	const workspace = createWorkspaceAPI()
 	const bookmarks = createBookmarksAPI()
+	const notifications = createNotificationsAPI(pluginId)
 
 	const settingsWithSchema: PluginAPI["settings"] = {
 		...settings,
@@ -48,6 +50,7 @@ export function createPluginAPI(pluginId: string, getVaultPath: () => string | n
 		theme,
 		workspace,
 		bookmarks,
+		notifications,
 
 		ui: {
 			registerView(registration) {
@@ -98,7 +101,10 @@ export function createPluginAPI(pluginId: string, getVaultPath: () => string | n
 					},
 				}
 			},
-			showNotice(_message, _duration) {},
+			showNotice(message, _duration) {
+				const pluginName = usePluginStore.getState().plugins[pluginId]?.manifest.name ?? pluginId
+				void notifications.send({ title: pluginName, body: message })
+			},
 		},
 	}
 }

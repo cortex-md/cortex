@@ -133,7 +133,7 @@ export function TagPicker() {
 									<span className="flex-1">{entry.tag}</span>
 									<button
 										type="button"
-										className="size-4 rounded-sm border border-border/60 flex-shrink-0 cursor-pointer hover:border-border"
+										className="size-4 rounded-sm border border-border/60 flex-shrink-0 hover:border-border"
 										style={{ backgroundColor: entry.color ?? "transparent" }}
 										title="Set tag color"
 										onClick={(e) => {
@@ -158,7 +158,7 @@ export function TagPicker() {
 							onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
 								handleColorChange(editingColorFor, e.target.value)
 							}
-							className="w-8 h-6 p-0 border-none cursor-pointer rounded-sm"
+							className="w-8 h-6 p-0 border-none rounded-sm"
 						/>
 						<button
 							type="button"
