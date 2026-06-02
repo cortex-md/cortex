@@ -57,6 +57,11 @@ export async function loadCommunityThemes(themesDir: string): Promise<void> {
 	}
 }
 
+export async function reloadCommunityThemes(themesDir: string): Promise<void> {
+	unloadCommunityThemes()
+	await loadCommunityThemes(themesDir)
+}
+
 export function unloadCommunityThemes(): void {
 	const themeManager = getThemeManager()
 	for (const family of themeManager.getThemeFamilies()) {

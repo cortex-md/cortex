@@ -271,11 +271,15 @@ export async function installTheme(
 	const colorschemes = parsedManifest.colorschemes ?? {}
 
 	for (const [key, cssFile] of Object.entries(colorschemes)) {
-		const cssAsset = findAsset(release.assets, cssFile) ?? findAsset(release.assets, `${key}.css`)
+		const normalizedCssFile = normalizeRelativePath(cssFile)
+		const cssAsset =
+			findAsset(release.assets, normalizedCssFile) ??
+			findAsset(release.assets, getPathBasename(normalizedCssFile)) ??
+			findAsset(release.assets, `${key}.css`)
 		if (!cssAsset) {
 			throw new Error(`Release for ${entry.id} is missing colorscheme asset: ${key}.css`)
 		}
-		await downloadAsset(cssAsset, `${destDir}/${cssFile}`)
+		await downloadAsset(cssAsset, joinPath(destDir, normalizedCssFile))
 	}
 
 	await reloadCommunityThemes(themesDir)

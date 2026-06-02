@@ -22,6 +22,7 @@ import {
 	PluginViewRenderer,
 	registerBundledPlugin,
 	registerCommand,
+	reloadCommunityPlugins,
 	setBookmarksFunctions,
 	setCommunityPluginExternal,
 	setCommunityPluginsDir,
@@ -69,7 +70,11 @@ import { PaneView } from "./features/split-view/PaneView"
 import { StatusBar } from "./features/statusbar/StatusBar"
 import { TagPicker } from "./features/tags/TagPicker"
 import { TagsSidebar } from "./features/tags/TagsSidebar"
-import { loadCommunityThemes, unloadCommunityThemes } from "./features/themes/communityThemeLoader"
+import {
+	loadCommunityThemes,
+	reloadCommunityThemes,
+	unloadCommunityThemes,
+} from "./features/themes/communityThemeLoader"
 import { VaultSwitcher } from "./features/vault/VaultSwitcher"
 import { useNativeNotifications } from "./hooks/useNativeNotifications"
 import { useSyncLifecycle } from "./hooks/useSyncLifecycle"
@@ -160,7 +165,7 @@ setMarketplaceCallbacks({
 		return vault ? `${vault.path}/.cortex/themes` : null
 	},
 	reloadPlugins: (dir) => discoverCommunityPlugins(dir),
-	reloadThemes: loadCommunityThemes,
+	reloadThemes: reloadCommunityThemes,
 	isPluginInstalled: (id) => id in usePluginStore.getState().plugins,
 	isThemeInstalled: (id) =>
 		getThemeManager()
@@ -488,6 +493,9 @@ export default function App() {
 			disableAllPlugins()
 			return
 		}
+		let cancelled = false
+		let stopPluginsWatcher: (() => void) | null = null
+		let pluginReloadTimer: number | null = null
 		const getVaultPath = () => vault?.path ?? null
 		const initPlugins = async () => {
 			const [cmState, cmView] = await Promise.all([
@@ -497,10 +505,33 @@ export default function App() {
 			setCommunityPluginExternal("@codemirror/state", cmState)
 			setCommunityPluginExternal("@codemirror/view", cmView)
 			setCommunityPluginsDir(`${vault.path}/.cortex/plugins`)
+			await getPlatform().fs.createDir(getCommunityPluginsDir())
 			await discoverCommunityPlugins(getCommunityPluginsDir())
 			await loadEnabledPlugins(vault.path, getVaultPath)
+			if (cancelled) return
+			const stopWatching = await getPlatform().fs.startWatching(
+				getCommunityPluginsDir(),
+				() => {
+					if (pluginReloadTimer) window.clearTimeout(pluginReloadTimer)
+					pluginReloadTimer = window.setTimeout(() => {
+						void reloadCommunityPlugins(getCommunityPluginsDir(), getVaultPath)
+					}, 300)
+				},
+				{ includeHidden: true, followSymlinks: true },
+			)
+			if (cancelled) {
+				stopWatching()
+				return
+			}
+			stopPluginsWatcher = stopWatching
 		}
-		initPlugins()
+		initPlugins().catch(() => {})
+		return () => {
+			cancelled = true
+			if (pluginReloadTimer) window.clearTimeout(pluginReloadTimer)
+			stopPluginsWatcher?.()
+			disableAllPlugins()
+		}
 	}, [vault])
 
 	useEffect(() => {
@@ -593,10 +624,41 @@ export default function App() {
 			setCommunityThemesLoaded(false)
 			return
 		}
-		loadCommunityThemes(`${vault.path}/.cortex/themes`).then(() => {
-			setCommunityThemesLoaded(true)
+		let cancelled = false
+		let stopThemesWatcher: (() => void) | null = null
+		let themeReloadTimer: number | null = null
+		const themesDir = `${vault.path}/.cortex/themes`
+		const loadThemes = async () => {
+			await getPlatform().fs.createDir(themesDir)
+			await loadCommunityThemes(themesDir)
+			if (!cancelled) setCommunityThemesLoaded(true)
+			if (cancelled) return
+			const stopWatching = await getPlatform().fs.startWatching(
+				themesDir,
+				() => {
+					if (themeReloadTimer) window.clearTimeout(themeReloadTimer)
+					themeReloadTimer = window.setTimeout(() => {
+						setCommunityThemesLoaded(false)
+						reloadCommunityThemes(themesDir).then(() => {
+							if (!cancelled) setCommunityThemesLoaded(true)
+						})
+					}, 300)
+				},
+				{ includeHidden: true, followSymlinks: true },
+			)
+			if (cancelled) {
+				stopWatching()
+				return
+			}
+			stopThemesWatcher = stopWatching
+		}
+		loadThemes().catch(() => {
+			if (!cancelled) setCommunityThemesLoaded(false)
 		})
 		return () => {
+			cancelled = true
+			if (themeReloadTimer) window.clearTimeout(themeReloadTimer)
+			stopThemesWatcher?.()
 			unloadCommunityThemes()
 			setCommunityThemesLoaded(false)
 		}

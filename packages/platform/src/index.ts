@@ -38,7 +38,7 @@ export type {
 	FileDialogOptions,
 	FolderDialogOptions,
 } from "./interfaces/Dialog"
-export type { FileEntry, FileSystem, WatchEvent } from "./interfaces/FileSystem"
+export type { FileEntry, FileSystem, WatchEvent, WatchOptions } from "./interfaces/FileSystem"
 export type { Font, FontInfo } from "./interfaces/Font"
 export type { Http } from "./interfaces/Http"
 export type { Keychain } from "./interfaces/Keychain"

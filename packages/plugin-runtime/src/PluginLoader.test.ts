@@ -2,9 +2,12 @@ import type { FileEntry } from "@cortex/platform"
 import { CortexPlugin } from "cortex-plugin-api"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
+	disableAllPlugins,
 	discoverCommunityPlugins,
+	enablePlugin,
 	getCommunityPluginLoadError,
 	registerBundledPlugin,
+	reloadCommunityPlugins,
 	usePluginStore,
 } from "./index"
 
@@ -62,12 +65,14 @@ function registerPluginFiles(pluginId: string, main: string) {
 	testState.files.set(`${pluginDir}/main.js`, main)
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+	await disableAllPlugins()
 	testState.files.clear()
 	testState.dirs.clear()
 	testState.platform.fs.listDir.mockClear()
 	testState.platform.fs.readFile.mockClear()
 	usePluginStore.getState().reset()
+	delete (globalThis as typeof globalThis & { reloadEvents?: string[] }).reloadEvents
 })
 
 describe("discoverCommunityPlugins", () => {
@@ -145,5 +150,40 @@ describe("discoverCommunityPlugins", () => {
 				{ default: BadBundledPlugin },
 			),
 		).toThrow('Unknown plugin capability "native:everything"')
+	})
+
+	it("reloads enabled community plugins from the latest bundle", async () => {
+		registerPluginFiles(
+			"reload-plugin",
+			[
+				`const { CortexPlugin } = require("cortex-plugin-api")`,
+				`module.exports = class ReloadPlugin extends CortexPlugin {`,
+				`	onload() { globalThis.reloadEvents = [...(globalThis.reloadEvents ?? []), "load-v1"] }`,
+				`	onunload() { globalThis.reloadEvents = [...(globalThis.reloadEvents ?? []), "unload-v1"] }`,
+				`}`,
+			].join("\n"),
+		)
+
+		await discoverCommunityPlugins(pluginsDir)
+		await enablePlugin("reload-plugin", () => null)
+
+		testState.files.set(
+			`${pluginsDir}/reload-plugin/main.js`,
+			[
+				`const { CortexPlugin } = require("cortex-plugin-api")`,
+				`module.exports = class ReloadPlugin extends CortexPlugin {`,
+				`	onload() { globalThis.reloadEvents = [...(globalThis.reloadEvents ?? []), "load-v2"] }`,
+				`}`,
+			].join("\n"),
+		)
+
+		await reloadCommunityPlugins(pluginsDir, () => null)
+
+		expect((globalThis as typeof globalThis & { reloadEvents?: string[] }).reloadEvents).toEqual([
+			"load-v1",
+			"unload-v1",
+			"load-v2",
+		])
+		expect(usePluginStore.getState().plugins["reload-plugin"].status).toBe("enabled")
 	})
 })

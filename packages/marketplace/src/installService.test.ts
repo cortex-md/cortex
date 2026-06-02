@@ -1,6 +1,6 @@
 import type { FileEntry } from "@cortex/platform"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { installPlugin } from "./installService"
+import { installPlugin, installTheme } from "./installService"
 import type { GitHubRelease, GitHubReleaseAsset, RegistryEntry } from "./types"
 
 const testState = vi.hoisted(() => ({
@@ -38,6 +38,7 @@ vi.mock("./registryService", () => ({
 }))
 
 const pluginsDir = "/vault/.cortex/plugins"
+const themesDir = "/vault/.cortex/themes"
 const entry: RegistryEntry = {
 	id: "test-plugin",
 	name: "Test Plugin",
@@ -45,6 +46,14 @@ const entry: RegistryEntry = {
 	description: "A plugin",
 	coverImageUrl: "",
 	repo: "owner/test-plugin",
+}
+const themeEntry: RegistryEntry = {
+	id: "test-theme",
+	name: "Test Theme",
+	author: "Tester",
+	description: "A theme",
+	coverImageUrl: "",
+	repo: "owner/test-theme",
 }
 
 function createManifest(partial: Record<string, unknown> = {}) {
@@ -215,6 +224,10 @@ function hasInstalledPath(path: string) {
 	return testState.files.has(`${pluginsDir}/test-plugin/${path}`)
 }
 
+function hasInstalledThemePath(path: string) {
+	return testState.files.has(`${themesDir}/test-theme/${path}`)
+}
+
 function hasPartialInstallWorkspace() {
 	return [...testState.files.keys(), ...testState.dirs.keys()].some((path) =>
 		path.includes(".test-plugin-install-"),
@@ -237,6 +250,7 @@ beforeEach(() => {
 		createAsset("styles.css"),
 	])
 	ensureDir(pluginsDir)
+	ensureDir(themesDir)
 	registerDownloads({
 		"manifest.json": createManifest(),
 		"main.js": "module.exports = class TestPlugin {}",
@@ -323,5 +337,38 @@ describe("installPlugin", () => {
 
 		expect(hasInstalledPath("manifest.json")).toBe(false)
 		expect(testState.pluginState.plugins["test-plugin"]).toBeUndefined()
+	})
+})
+
+describe("installTheme", () => {
+	it("downloads colorscheme assets when manifest paths start with dot slash", async () => {
+		testState.release = createRelease([
+			createAsset("manifest.json"),
+			createAsset("theme-dark.css"),
+			createAsset("theme-light.css"),
+		])
+		registerDownloads({
+			"manifest.json": JSON.stringify({
+				id: "test-theme",
+				name: "test-theme",
+				displayName: "Test Theme",
+				author: "Tester",
+				version: "1.0.0",
+				colorschemes: {
+					dark: "./theme-dark.css",
+					light: "./theme-light.css",
+				},
+			}),
+			"theme-dark.css": ".theme-test-dark {}",
+			"theme-light.css": ".theme-test-light {}",
+		})
+		const reloadThemes = vi.fn(async () => {})
+
+		await installTheme(themeEntry, themesDir, reloadThemes)
+
+		expect(hasInstalledThemePath("manifest.json")).toBe(true)
+		expect(hasInstalledThemePath("theme-dark.css")).toBe(true)
+		expect(hasInstalledThemePath("theme-light.css")).toBe(true)
+		expect(reloadThemes).toHaveBeenCalledWith(themesDir)
 	})
 })

@@ -124,7 +124,7 @@ pub fn list_dir(path: String) -> Result<Vec<FileEntry>, String> {
     let dir = fs::read_dir(&path).map_err(|e| e.to_string())?;
     for entry in dir {
         let entry = entry.map_err(|e| e.to_string())?;
-        let metadata = entry.metadata().map_err(|e| e.to_string())?;
+        let metadata = fs::metadata(entry.path()).map_err(|e| e.to_string())?;
         let name = entry.file_name().to_string_lossy().to_string();
         if name.starts_with('.') {
             continue;

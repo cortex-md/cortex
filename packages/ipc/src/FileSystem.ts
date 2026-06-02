@@ -1,4 +1,9 @@
-import type { FileEntry, FileSystem as IFileSystem, WatchEvent } from "@cortex/platform"
+import type {
+	FileEntry,
+	FileSystem as IFileSystem,
+	WatchEvent,
+	WatchOptions,
+} from "@cortex/platform"
 import { invoke } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
 
@@ -35,14 +40,23 @@ export class FileSystem implements IFileSystem {
 		return await invoke<string>("hash_file", { path })
 	}
 
-	async startWatching(path: string, callback: (event: WatchEvent) => void): Promise<() => void> {
-		await invoke<void>("start_watching", { path })
+	async startWatching(
+		path: string,
+		callback: (event: WatchEvent) => void,
+		options: WatchOptions = {},
+	): Promise<() => void> {
+		const watcherId = await invoke<string>("start_watching", {
+			path,
+			includeHidden: options.includeHidden ?? false,
+			followSymlinks: options.followSymlinks ?? false,
+		})
 		const unlisten = await listen<WatchEvent>("vault-file-changed", (e) => {
+			if (e.payload.watcherId !== watcherId) return
 			callback(e.payload)
 		})
 		return async () => {
 			unlisten()
-			await invoke<void>("stop_watching")
+			await invoke<void>("stop_watching", { watcherId })
 		}
 	}
 

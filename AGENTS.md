@@ -316,6 +316,12 @@ cannot request OS notification permission directly; permission prompts are owned
 ### Settings Marketplace
 Settings owns the Marketplace tab. Community plugin/theme browse buttons should call `useUIStore().openMarketplace(tab)` so Settings opens directly on Marketplace with the requested tab selected. The Marketplace search view should occupy the full Settings content area; selecting a plugin or theme replaces search with the detail view and a back button returns to search.
 
+Community plugins and themes are vault-scoped. The desktop app loads plugins from
+`<vault>/.cortex/plugins` and themes from `<vault>/.cortex/themes`; the CLI should link development
+plugins/themes into those vault directories with `--vault`, `CORTEX_VAULT`, or vault ancestor
+detection. Marketplace release assets must include `manifest.json` plus the installable bundle/CSS
+assets as individual GitHub Release assets, not only a ZIP archive.
+
 ### Editor Setup
 - CodeMirror 6 via `@cortex/editor`
 - Syntax highlighting colors resolved from CSS variables at EditorView mount
@@ -349,6 +355,12 @@ Sync logs follow a **single-source-of-truth** model — Rust is the authority fo
 - Rust `notify` crate emits `vault-file-changed` events
 - `vaultStore.refreshFiles()` polls vault on file changes
 - Prevents editor from overwriting external changes
+- `FileSystem.startWatching` supports multiple watcher IDs plus `includeHidden` and
+  `followSymlinks` options; keep the main vault watcher hidden-path-safe, and use dedicated hidden
+  watchers for community plugin/theme hot reload.
+- `list_dir` follows symlink metadata so vault-scoped CLI links are discoverable as plugin/theme
+  directories. CLI dev/link writes `.reload-<id>` marker files in the hidden plugin/theme directory
+  to trigger immediate desktop rediscovery.
 
 ### Workspace Persistence
 - Tracks open tabs, pane splits, and positions

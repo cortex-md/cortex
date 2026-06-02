@@ -28,6 +28,7 @@ export {
 	getPluginInstance,
 	loadEnabledPlugins,
 	registerBundledPlugin,
+	reloadCommunityPlugins,
 	saveEnabledPlugins,
 	setCommunityPluginExternal,
 	setCommunityPluginsDir,

@@ -20,6 +20,7 @@ interface PluginModule {
 
 const bundledPlugins = new Map<string, PluginModule>()
 const communityPluginLoadErrors = new Map<string, string>()
+const communityPluginDirs = new Map<string, string>()
 
 export function registerBundledPlugin(manifest: PluginManifest, module: PluginModule): void {
 	validatePluginManifestCapabilities(manifest)
@@ -100,6 +101,7 @@ export async function discoverCommunityPlugins(pluginsDir: string): Promise<void
 	}
 
 	const pluginDirs = entries.filter((e) => e.isDir)
+	const discoveredPluginIds = new Set<string>()
 	for (const dir of pluginDirs) {
 		let pluginId = dir.name
 		try {
@@ -108,7 +110,10 @@ export async function discoverCommunityPlugins(pluginsDir: string): Promise<void
 			const manifest = JSON.parse(manifestContent) as PluginManifest
 
 			if (manifest.id) pluginId = manifest.id
+			discoveredPluginIds.add(pluginId)
 			communityPluginLoadErrors.delete(pluginId)
+			bundledPlugins.delete(pluginId)
+			communityPluginDirs.delete(pluginId)
 
 			if (!manifest.id) {
 				communityPluginLoadErrors.set(pluginId, "manifest.json is missing id")
@@ -131,12 +136,56 @@ export async function discoverCommunityPlugins(pluginsDir: string): Promise<void
 			const loadedModule = await loadCommunityModule(moduleCode, manifest.id)
 			if (loadedModule) {
 				bundledPlugins.set(manifest.id, loadedModule)
+				communityPluginDirs.set(manifest.id, dir.path)
 				usePluginStore.getState().registerPlugin(manifest)
 			}
 		} catch (error) {
 			communityPluginLoadErrors.set(pluginId, getErrorMessage(error))
+			usePluginStore.getState().unregisterPlugin(pluginId)
 		}
 	}
+
+	for (const [pluginId, pluginDir] of Array.from(communityPluginDirs)) {
+		if (!isPluginDirInside(pluginDir, pluginsDir) || discoveredPluginIds.has(pluginId)) continue
+		await disablePlugin(pluginId)
+		bundledPlugins.delete(pluginId)
+		communityPluginDirs.delete(pluginId)
+		communityPluginLoadErrors.delete(pluginId)
+		usePluginStore.getState().unregisterPlugin(pluginId)
+	}
+}
+
+export async function reloadCommunityPlugins(
+	pluginsDir: string,
+	getVaultPath: () => string | null,
+): Promise<void> {
+	const enabledPluginIds = Array.from(instances.keys()).filter((pluginId) => {
+		const pluginDir = communityPluginDirs.get(pluginId)
+		return pluginDir ? isPluginDirInside(pluginDir, pluginsDir) : false
+	})
+
+	for (const pluginId of enabledPluginIds) {
+		await disablePlugin(pluginId)
+	}
+
+	await discoverCommunityPlugins(pluginsDir)
+
+	const store = usePluginStore.getState()
+	for (const pluginId of enabledPluginIds) {
+		if (!store.plugins[pluginId]) continue
+		try {
+			await enablePlugin(pluginId, getVaultPath)
+		} catch {}
+	}
+}
+
+function isPluginDirInside(pluginDir: string, pluginsDir: string): boolean {
+	const normalizedPluginDir = pluginDir.replaceAll("\\", "/").replace(/\/+$/g, "")
+	const normalizedPluginsDir = pluginsDir.replaceAll("\\", "/").replace(/\/+$/g, "")
+	return (
+		normalizedPluginDir === normalizedPluginsDir ||
+		normalizedPluginDir.startsWith(`${normalizedPluginsDir}/`)
+	)
 }
 
 function resolvePluginMainPath(pluginDir: string, mainPath: string): string | null {

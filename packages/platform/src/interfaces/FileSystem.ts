@@ -9,6 +9,12 @@ export interface FileEntry {
 export interface WatchEvent {
 	path: string
 	kind: "created" | "modified" | "deleted" | "renamed"
+	watcherId?: string
+}
+
+export interface WatchOptions {
+	includeHidden?: boolean
+	followSymlinks?: boolean
 }
 
 export interface FileSystem {
@@ -20,7 +26,11 @@ export interface FileSystem {
 	createDir(path: string): Promise<void>
 	listDir(path: string): Promise<FileEntry[]>
 	hashFile(path: string): Promise<string>
-	startWatching(path: string, callback: (event: WatchEvent) => void): Promise<() => void>
+	startWatching(
+		path: string,
+		callback: (event: WatchEvent) => void,
+		options?: WatchOptions,
+	): Promise<() => void>
 	downloadFile(url: string, destPath: string): Promise<void>
 	downloadAndExtract(url: string, destDir: string): Promise<void>
 }

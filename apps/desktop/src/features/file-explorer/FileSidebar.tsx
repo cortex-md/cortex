@@ -20,7 +20,6 @@ import {
 	CloudOffIcon,
 	CopyIcon,
 	ExternalLinkIcon,
-	FileIcon,
 	FilePlusIcon,
 	FolderIcon,
 	FolderPlusIcon,
@@ -228,17 +227,14 @@ function TreeNodeRow({
 				if (e.key === "F2") onStartRename(node.path)
 			}}
 		>
-			{node.isDir ? (
-				<ChevronRightIcon
-					size={12}
-					strokeWidth={2.5}
-					className={`text-text-muted flex-shrink-0 transition-transform duration-100 ${
-						isExpanded ? "rotate-90" : ""
-					}`}
-				/>
-			) : (
-				<FileIcon size={12} className="text-text-muted flex-shrink-0" />
-			)}
+      {node.isDir && (
+        <ChevronRightIcon
+          size={12}
+          strokeWidth={2.5}
+          className={`text-text-muted flex-shrink-0 transition-transform duration-100 ${isExpanded ? "rotate-90" : ""
+            }`}
+        />
+      )}
 			{isRenaming ? (
 				<InlineInput
 					defaultValue={node.name}
