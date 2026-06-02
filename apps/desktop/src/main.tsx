@@ -1,9 +1,8 @@
 import { tauriPlatform } from "@cortex/ipc"
 import { initPlatform, type NativeAppearanceSnapshot } from "@cortex/platform"
 import { initThemeManager } from "@cortex/theme"
+import { lazy, Suspense } from "react"
 import ReactDOM from "react-dom/client"
-import App from "./App"
-import { SettingsWindow } from "./features/settings/SettingsWindow"
 import { generateCSSString, generateCSSVariables } from "./features/themes/cssGenerator"
 import { WebThemeAdapter } from "./features/themes/webThemeAdapter"
 import "./styles.css"
@@ -19,6 +18,8 @@ function applyNativeAppearance(snapshot: NativeAppearanceSnapshot) {
 	document.body.dataset.scrollbarStyle = snapshot.scrollbarStyle
 	if (snapshot.accentColor) {
 		document.body.style.setProperty("--system-accent", snapshot.accentColor)
+	} else {
+		document.body.style.removeProperty("--system-accent")
 	}
 }
 
@@ -35,18 +36,22 @@ function prewarmTextRendering() {
 	requestAnimationFrame(() => requestAnimationFrame(() => span.remove()))
 }
 
-const initialAppearance = window.navigator.userAgent.toLowerCase().includes("macintosh")
-	? "macos"
-	: window.navigator.userAgent.toLowerCase().includes("windows")
-		? "windows"
-		: "linux"
-document.body.dataset.platform = initialAppearance
 refreshNativeAppearance()
 const unsubscribeNativeAppearance = tauriPlatform.appearance.subscribe(applyNativeAppearance)
 window.addEventListener("beforeunload", unsubscribeNativeAppearance, { once: true })
 prewarmTextRendering()
 
 const params = new URLSearchParams(window.location.search)
-const Root = params.get("window") === "settings" ? SettingsWindow : App
+const Root = lazy(async () => {
+	if (params.get("window") === "settings") {
+		const module = await import("./features/settings/SettingsWindow")
+		return { default: module.SettingsWindow }
+	}
+	return import("./App")
+})
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(<Root />)
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+	<Suspense fallback={null}>
+		<Root />
+	</Suspense>,
+)

@@ -1,8 +1,48 @@
 use crate::commands::registry::read_vault_registry;
-use tauri::menu::{Menu, MenuItemBuilder, SubmenuBuilder};
-use tauri::{AppHandle, Emitter, Runtime};
+use serde::{Deserialize, Serialize};
+use tauri::menu::{
+    CheckMenuItemBuilder, IsMenuItem, Menu, MenuBuilder, MenuItemBuilder, MenuItemKind,
+    PredefinedMenuItem, SubmenuBuilder,
+};
+use tauri::{AppHandle, Emitter, Runtime, Window};
 
 const RECENTS_SUBMENU_ID: &str = "recents-submenu";
+const CONTEXT_MENU_ID_PREFIX: &str = "native-context:";
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContextMenuOptions {
+    request_id: String,
+    items: Vec<ContextMenuItem>,
+    position: Option<ContextMenuPosition>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContextMenuPosition {
+    x: f64,
+    y: f64,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContextMenuItem {
+    id: Option<String>,
+    text: Option<String>,
+    enabled: Option<bool>,
+    accelerator: Option<String>,
+    #[serde(rename = "type")]
+    item_type: Option<String>,
+    checked: Option<bool>,
+    items: Option<Vec<ContextMenuItem>>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ContextMenuSelectionPayload {
+    request_id: String,
+    item_id: String,
+}
 
 pub fn build_menu<R: Runtime>(app: &AppHandle<R>) -> Result<Menu<R>, tauri::Error> {
     let recents_submenu = build_recents_submenu(app)?;
@@ -132,6 +172,19 @@ pub fn setup_menu_event_handler<R: Runtime>(app: &AppHandle<R>) {
     app.on_menu_event(move |_app, event| {
         let id = event.id().0.as_str();
 
+        if let Some(raw) = id.strip_prefix(CONTEXT_MENU_ID_PREFIX) {
+            if let Some((request_id, item_id)) = raw.split_once(':') {
+                let _ = handle.emit(
+                    "native-context-menu-selected",
+                    ContextMenuSelectionPayload {
+                        request_id: request_id.to_string(),
+                        item_id: item_id.to_string(),
+                    },
+                );
+            }
+            return;
+        }
+
         if id == "menu-new-note" {
             let _ = handle.emit("menu-new-note", ());
             return;
@@ -176,6 +229,77 @@ pub fn setup_menu_event_handler<R: Runtime>(app: &AppHandle<R>) {
             let _ = handle.emit("menu-recent-vault", path.to_string());
         }
     });
+}
+
+fn build_context_menu_id(request_id: &str, item_id: &str) -> String {
+    format!("{CONTEXT_MENU_ID_PREFIX}{request_id}:{item_id}")
+}
+
+fn build_context_menu_item<R: Runtime>(
+    app: &AppHandle<R>,
+    request_id: &str,
+    item: &ContextMenuItem,
+) -> Result<MenuItemKind<R>, tauri::Error> {
+    if item.item_type.as_deref() == Some("separator") {
+        return Ok(PredefinedMenuItem::separator(app)?.kind());
+    }
+
+    let item_id = item.id.as_deref().unwrap_or("item");
+    let text = item.text.as_deref().unwrap_or("");
+    let menu_id = build_context_menu_id(request_id, item_id);
+    let enabled = item.enabled.unwrap_or(true);
+
+    if item.item_type.as_deref() == Some("checkbox") {
+        let mut builder = CheckMenuItemBuilder::with_id(menu_id, text)
+            .enabled(enabled)
+            .checked(item.checked.unwrap_or(false));
+        if let Some(accelerator) = &item.accelerator {
+            builder = builder.accelerator(accelerator);
+        }
+        return Ok(builder.build(app)?.kind());
+    }
+
+    if item.item_type.as_deref() == Some("submenu") {
+        let mut builder = SubmenuBuilder::with_id(app, menu_id, text).enabled(enabled);
+        for child in item.items.as_deref().unwrap_or(&[]) {
+            let child_item = build_context_menu_item(app, request_id, child)?;
+            builder = builder.item(&child_item);
+        }
+        return Ok(builder.build()?.kind());
+    }
+
+    let mut builder = MenuItemBuilder::with_id(menu_id, text).enabled(enabled);
+    if let Some(accelerator) = &item.accelerator {
+        builder = builder.accelerator(accelerator);
+    }
+    Ok(builder.build(app)?.kind())
+}
+
+#[tauri::command]
+pub fn show_context_menu(
+    app: AppHandle,
+    window: Window,
+    options: ContextMenuOptions,
+) -> Result<(), String> {
+    let mut builder = MenuBuilder::new(&app);
+
+    for item in &options.items {
+        let menu_item =
+            build_context_menu_item(&app, &options.request_id, item).map_err(|e| e.to_string())?;
+        builder = builder.item(&menu_item);
+    }
+
+    let menu = builder.build().map_err(|e| e.to_string())?;
+
+    if let Some(position) = options.position {
+        window
+            .popup_menu_at(&menu, tauri::LogicalPosition::new(position.x, position.y))
+            .map_err(|e| e.to_string())?;
+    } else {
+        window.popup_menu(&menu).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
 }
 
 #[tauri::command]

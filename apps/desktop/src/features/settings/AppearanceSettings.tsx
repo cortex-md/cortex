@@ -32,7 +32,7 @@ function uniqueColorOptions(options: ColorPickerOption[]): ColorPickerOption[] {
 	})
 }
 
-function buildAccentColorOptions(): ColorPickerOption[] {
+function buildAccentColorOptions(systemAccentColor: string | null = null): ColorPickerOption[] {
 	const tokens = getThemeManager().getActiveTheme().tokens as Partial<ThemeTokens>
 	const semantic = tokens.semantic
 	const status = tokens.status
@@ -40,6 +40,7 @@ function buildAccentColorOptions(): ColorPickerOption[] {
 	if (!semantic || !status) return [{ value: "#e8a83c", label: "Default accent" }]
 
 	return uniqueColorOptions([
+		...(systemAccentColor ? [{ value: systemAccentColor, label: "System accent" }] : []),
 		{ value: semantic.accent.default, label: "Theme accent" },
 		{ value: status.success, label: "Success" },
 		{ value: status.warning, label: "Warning" },
@@ -55,21 +56,36 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 	const [systemFonts, setSystemFonts] = useState<FontInfo[]>([])
 	const [themeFamilies, setThemeFamilies] = useState<ThemeFamily[]>([])
 	const [accentColorOptions, setAccentColorOptions] = useState<ColorPickerOption[]>([])
+	const [systemAccentColor, setSystemAccentColor] = useState<string | null>(null)
 	const openMarketplace = useUIStore((s) => s.openMarketplace)
 
 	useEffect(() => {
 		getPlatform().font.listSystemFonts().then(setSystemFonts)
+	}, [])
+
+	useEffect(() => {
+		getPlatform()
+			.appearance.getSnapshot()
+			.then((snapshot) => setSystemAccentColor(snapshot.accentColor))
+			.catch(() => setSystemAccentColor(null))
+		const unsubscribeAppearance = getPlatform().appearance.subscribe((snapshot) => {
+			setSystemAccentColor(snapshot.accentColor)
+		})
+		return unsubscribeAppearance
+	}, [])
+
+	useEffect(() => {
 		const themeManager = getThemeManager()
 		const refreshThemeOptions = () => {
 			setThemeFamilies(themeManager.getThemeFamilies())
-			setAccentColorOptions(buildAccentColorOptions())
+			setAccentColorOptions(buildAccentColorOptions(systemAccentColor))
 		}
 		refreshThemeOptions()
 		const unsubscribe = themeManager.subscribe(() => {
 			refreshThemeOptions()
 		})
 		return unsubscribe
-	}, [])
+	}, [systemAccentColor])
 
 	const applyOverrides = (partial: Partial<AppearanceSettings>) => {
 		getThemeManager().applyOverrides(buildAppearanceOverrides({ ...settings, ...partial }))
@@ -78,13 +94,13 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 	const handleThemeChange = (theme: string) => {
 		onUpdate("appearance", "theme", theme)
 		applyAppearanceSettings({ ...settings, theme })
-		setAccentColorOptions(buildAccentColorOptions())
+		setAccentColorOptions(buildAccentColorOptions(systemAccentColor))
 	}
 
 	const handleColorschemeChange = (colorscheme: "light" | "dark" | "system") => {
 		onUpdate("appearance", "colorscheme", colorscheme)
 		applyAppearanceSettings({ ...settings, colorscheme })
-		setAccentColorOptions(buildAccentColorOptions())
+		setAccentColorOptions(buildAccentColorOptions(systemAccentColor))
 	}
 
 	const handleAccentColorChange = (hex: string) => {

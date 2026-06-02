@@ -4,6 +4,7 @@ import type {
 	NativePlatform,
 	NativeScrollbarStyle,
 } from "@cortex/platform"
+import { invoke } from "@tauri-apps/api/core"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 
 function detectPlatform(): NativePlatform {
@@ -31,13 +32,24 @@ function readSnapshot(): NativeAppearanceSnapshot {
 	}
 }
 
+function readWebPreferences(
+	snapshot: NativeAppearanceSnapshot,
+): Pick<NativeAppearanceSnapshot, "colorScheme" | "reducedMotion" | "highContrast"> {
+	return {
+		colorScheme: window.matchMedia("(prefers-color-scheme: dark)").matches
+			? "dark"
+			: snapshot.colorScheme,
+		reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+		highContrast: window.matchMedia("(forced-colors: active)").matches,
+	}
+}
+
 export class Appearance implements IAppearance {
 	async getSnapshot(): Promise<NativeAppearanceSnapshot> {
-		const snapshot = readSnapshot()
-		const theme = await getCurrentWindow()
-			.theme()
-			.catch(() => null)
-		return theme ? { ...snapshot, colorScheme: theme } : snapshot
+		const nativeSnapshot = await invoke<NativeAppearanceSnapshot>("get_native_appearance").catch(
+			() => readSnapshot(),
+		)
+		return { ...nativeSnapshot, ...readWebPreferences(nativeSnapshot) }
 	}
 
 	subscribe(listener: (snapshot: NativeAppearanceSnapshot) => void): () => void {

@@ -10,6 +10,7 @@ import type { Font } from "./interfaces/Font"
 import type { Http } from "./interfaces/Http"
 import type { Keychain } from "./interfaces/Keychain"
 import type { Members } from "./interfaces/Members"
+import type { Menu } from "./interfaces/Menu"
 import type { NativeWindow } from "./interfaces/NativeWindow"
 import type { Notifications } from "./interfaces/Notifications"
 import type { RemoteVault } from "./interfaces/RemoteVault"
@@ -43,6 +44,18 @@ export type { Font, FontInfo } from "./interfaces/Font"
 export type { Http } from "./interfaces/Http"
 export type { Keychain } from "./interfaces/Keychain"
 export type { AcceptInviteResult, Members, VaultInvite, VaultMember } from "./interfaces/Members"
+export type {
+	Menu,
+	NativeCheckboxMenuItem,
+	NativeContextMenuOptions,
+	NativeMenuItem,
+	NativeMenuItemBase,
+	NativeMenuItemType,
+	NativeMenuPosition,
+	NativeNormalMenuItem,
+	NativeSeparatorMenuItem,
+	NativeSubmenuMenuItem,
+} from "./interfaces/Menu"
 export type { NativeWindow, OpenSettingsWindowOptions } from "./interfaces/NativeWindow"
 export type {
 	NativeNotificationCapabilities,
@@ -93,6 +106,7 @@ export interface Platform {
 	members: Members
 	devices: Devices
 	notifications: Notifications
+	menu: Menu
 	capabilities: Capabilities[]
 }
 

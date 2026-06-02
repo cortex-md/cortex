@@ -203,13 +203,14 @@ registerBundledPlugin(
 export default function App() {
 	const {
 		vault,
-		files,
+		fileEvents,
 		recentVaults,
 		openVault,
 		closeVault,
 		loadRecentVaults,
 		createFile,
 		openDailyNote,
+		consumeFileEvents,
 	} = useVaultStore()
 	const { loadAppInfo } = useAppStore()
 	const { flushActive } = useEditorStore()
@@ -247,8 +248,12 @@ export default function App() {
 	const { settings, loadSettings } = useSettingsStore()
 	const loadOverrides = useHotkeysStore((s) => s.loadOverrides)
 	const indexVault = useSearchStore((s) => s.indexVault)
+	const indexFile = useSearchStore((s) => s.indexFile)
+	const removeSearchFile = useSearchStore((s) => s.removeFile)
 	const resetSearch = useSearchStore((s) => s.reset)
 	const buildTagIndex = useTagsStore((s) => s.buildIndex)
+	const updateFileInTagIndex = useTagsStore((s) => s.updateFileInIndex)
+	const removeFileFromTagIndex = useTagsStore((s) => s.removeFileFromIndex)
 	const loadTagColors = useTagsStore((s) => s.loadTagColors)
 	const loadBookmarks = useBookmarksStore((s) => s.loadBookmarks)
 	const resetBookmarks = useBookmarksStore((s) => s.reset)
@@ -269,6 +274,7 @@ export default function App() {
 	const sidebarResizing = useRef(false)
 	const sidebarResizeStart = useRef({ x: 0, width: 0 })
 	const autoOpenAttempted = useRef(false)
+	const vaultPath = vault?.path
 
 	useHotkeyListener()
 	useSyncLifecycle()
@@ -286,7 +292,11 @@ export default function App() {
 		useCallback(() => {
 			const pane = panes[activePaneId]
 			const activeTabId = pane?.activeTabId
-			if (activeTabId) closeTab(activeTabId, activePaneId)
+			if (activeTabId) {
+				closeTab(activeTabId, activePaneId)
+			} else {
+				getPlatform().window.closeCurrent()
+			}
 		}, [panes, activePaneId, closeTab]),
 	)
 
@@ -582,11 +592,46 @@ export default function App() {
 	])
 
 	useEffect(() => {
-		if (!vault || files.length === 0) return
-		indexVault(vault.path, files)
-		const filePaths = files.filter((f) => !f.isDir).map((f) => f.path)
-		buildTagIndex(vault.path, filePaths)
-	}, [vault, files, indexVault, buildTagIndex])
+		if (!vaultPath) return
+		const currentFiles = useVaultStore.getState().files
+		if (currentFiles.length === 0) return
+		indexVault(vaultPath, currentFiles)
+		const filePaths = currentFiles.filter((f) => !f.isDir).map((f) => f.path)
+		buildTagIndex(vaultPath, filePaths)
+	}, [vaultPath, indexVault, buildTagIndex])
+
+	useEffect(() => {
+		if (!vaultPath || fileEvents.length === 0) return
+		const events = consumeFileEvents()
+		if (events.length === 0) return
+
+		for (const event of events) {
+			if (event.kind === "deleted") {
+				removeSearchFile(vaultPath, event.path)
+				removeFileFromTagIndex(event.path)
+				continue
+			}
+
+			if (!event.path.endsWith(".md")) continue
+
+			indexFile(vaultPath, event.path)
+			getPlatform()
+				.fs.readFile(event.path)
+				.then((content) => updateFileInTagIndex(event.path, content))
+				.catch(() => {
+					removeSearchFile(vaultPath, event.path)
+					removeFileFromTagIndex(event.path)
+				})
+		}
+	}, [
+		vaultPath,
+		fileEvents,
+		consumeFileEvents,
+		indexFile,
+		removeSearchFile,
+		updateFileInTagIndex,
+		removeFileFromTagIndex,
+	])
 
 	useEffect(() => {
 		if (!vault) {
@@ -656,14 +701,23 @@ export default function App() {
 	}, [suspendInactiveTabs])
 
 	useEffect(() => {
-		const preventDefaultDrag = (e: DragEvent) => {
-			e.preventDefault()
-			if (e.dataTransfer) e.dataTransfer.dropEffect = "move"
+		const shouldHandleDrag = (event: DragEvent) => {
+			return !Array.from(event.dataTransfer?.types ?? []).includes("Files")
+		}
+		const preventDefaultDrag = (event: DragEvent) => {
+			if (!shouldHandleDrag(event)) return
+			event.preventDefault()
+			if (event.dataTransfer) event.dataTransfer.dropEffect = "move"
+		}
+		const preventDefaultDrop = (event: DragEvent) => {
+			if (!shouldHandleDrag(event)) return
+			event.preventDefault()
 		}
 		document.addEventListener("dragover", preventDefaultDrag)
-		document.addEventListener("drop", (e) => e.preventDefault())
+		document.addEventListener("drop", preventDefaultDrop)
 		return () => {
 			document.removeEventListener("dragover", preventDefaultDrag)
+			document.removeEventListener("drop", preventDefaultDrop)
 		}
 	}, [])
 

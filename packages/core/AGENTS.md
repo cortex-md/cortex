@@ -111,8 +111,8 @@ openVault: async (path: string) => {
   try {
     const metadata = await platform.vault.openVault(path)
     const files = await platform.vault.scanVault(path)
-    const stopWatcher = await platform.fs.startWatching(path, () => {
-      get().refreshFiles() // Call another action via get()
+    const stopWatcher = await platform.fs.startWatching(path, (event) => {
+      get().applyFileEvent(event)
     })
     set((state) => {
       state.vault = metadata
@@ -178,6 +178,7 @@ Manages the current vault (folder), its file tree, and the vault registry (recen
 export interface VaultState {
   vault: VaultMetadata | null        // Current vault metadata
   files: FileEntry[]                 // Files in vault
+  fileEvents: WatchEvent[]           // Queued per-file changes for app-level incremental indexes
   recentVaults: VaultRegistryEntry[] // Recent vaults from registry
   loading: boolean
   error: string | null
@@ -187,6 +188,8 @@ export interface VaultState {
   loadVaultSnapshot: (path: string) => Promise<void> // Load metadata/files/settings without a watcher
   closeVault: () => Promise<void>
   refreshFiles: () => Promise<void>
+  applyFileEvent: (event: WatchEvent) => Promise<void>
+  consumeFileEvents: () => WatchEvent[]
   loadRecentVaults: () => Promise<void>  // Also refreshes macOS menu recents
   removeRecentVault: (uuid: string) => Promise<void>
   createFile: (parentPath: string, name: string) => Promise<string>
@@ -232,11 +235,12 @@ export interface WorkspaceState {
   closeTab: (paneId: PaneId, tabIndex: number) => void
   goToTabIndex: (paneId: PaneId, tabIndex: number) => void
   loadWorkspace: (vaultPath: string) => Promise<void>
-  persistWorkspace: (vaultPath: string) => void
+  persistWorkspace: (vaultPath: string) => Promise<void>
 }
 ```
 
-**Usage**: Complex layout operations. See `apps/desktop/src/App.tsx` for examples.
+**Usage**: Complex layout operations. `persistWorkspace()` debounces writes to
+`.cortex/workspace.json` by 500ms; see `apps/desktop/src/App.tsx` for examples.
 
 ### uiStore
 Manages UI chrome, app-level overlays, and settings entry points:
@@ -397,6 +401,7 @@ Stores **should not directly depend on each other**, but may read state via `get
 ```
 vaultStore (file operations)
   ├─ uses getPlatform() → platform abstraction
+  ├─ applyFileEvent() updates files incrementally from watcher/local operations
   └─ createFile() auto-generates default frontmatter (created + tags)
 
 editorStore (editor state)

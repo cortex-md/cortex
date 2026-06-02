@@ -90,6 +90,16 @@ export interface WorkspaceState {
 const ROOT_PANE_ID = "root"
 const MAX_RECENT_CLOSED = 10
 const SUSPENSION_IDLE_MS = 30 * 60 * 1000
+const WORKSPACE_PERSIST_DEBOUNCE_MS = 500
+
+let workspacePersistTimer: ReturnType<typeof setTimeout> | null = null
+
+function clearWorkspacePersistTimer() {
+	if (workspacePersistTimer) {
+		clearTimeout(workspacePersistTimer)
+		workspacePersistTimer = null
+	}
+}
 
 function titleFromPath(filePath: string): string {
 	const name = filePath.split("/").pop() ?? filePath
@@ -581,15 +591,20 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
 			persistWorkspace: async (vaultPath) => {
 				const { panes, splitTree, activePaneId } = get()
-				const platform = getPlatform()
 				const configPath = `${vaultPath}/.cortex/workspace.json`
-				await platform.fs.writeFile(
-					configPath,
-					JSON.stringify({ panes, splitTree, activePaneId }, null, 2),
-				)
+				const snapshot = JSON.stringify({ panes, splitTree, activePaneId }, null, 2)
+
+				clearWorkspacePersistTimer()
+				workspacePersistTimer = setTimeout(() => {
+					getPlatform()
+						.fs.writeFile(configPath, snapshot)
+						.catch(() => {})
+					workspacePersistTimer = null
+				}, WORKSPACE_PERSIST_DEBOUNCE_MS)
 			},
 
 			loadWorkspace: async (vaultPath) => {
+				clearWorkspacePersistTimer()
 				const platform = getPlatform()
 				const configPath = `${vaultPath}/.cortex/workspace.json`
 				try {
@@ -612,12 +627,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 							s.activePaneId = data.activePaneId ?? ROOT_PANE_ID
 						})
 					}
-				} catch {
-					// No workspace file yet
-				}
+				} catch {}
 			},
 
 			reset: () => {
+				clearWorkspacePersistTimer()
 				set((s) => {
 					Object.assign(s, buildInitialState())
 				})

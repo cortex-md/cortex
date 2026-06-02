@@ -77,6 +77,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![
+            commands::appearance::get_native_appearance,
             commands::fs::read_file,
             commands::fs::write_file,
             commands::fs::write_binary_file,
@@ -146,6 +147,8 @@ pub fn run() {
             commands::devices::device_rename,
             commands::devices::device_revoke,
             commands::devices::device_update_sync_cursor,
+            commands::window::open_settings_window,
+            commands::menu::show_context_menu,
         ])
         .setup(|app| {
             commands::watcher::init(app);
@@ -159,6 +162,10 @@ pub fn run() {
 
             let engine = sync::engine::SyncEngine::new(app.handle().clone());
             tauri::async_runtime::spawn(engine.run(rx));
+
+            let menu = commands::menu::build_menu(app.handle()).expect("Failed to build menu");
+            app.set_menu(menu).expect("Failed to set menu");
+            commands::menu::setup_menu_event_handler(app.handle());
 
             #[cfg(target_os = "macos")]
             {
@@ -174,9 +181,6 @@ pub fn run() {
                     }
                 });
 
-                let menu = commands::menu::build_menu(app.handle()).expect("Failed to build menu");
-                app.set_menu(menu).expect("Failed to set menu");
-                commands::menu::setup_menu_event_handler(app.handle());
                 dock_menu::setup_dock_menu(app.handle());
             }
 

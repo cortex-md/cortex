@@ -10,6 +10,7 @@ import { Font } from "./Font"
 import { Http } from "./Http"
 import { Keychain } from "./Keychain"
 import { Members } from "./Members"
+import { Menu } from "./Menu"
 import { NativeWindow } from "./NativeWindow"
 import { Notifications } from "./Notifications"
 import { RemoteVault } from "./RemoteVault"
@@ -42,5 +43,6 @@ export const tauriPlatform: Platform = {
 	members: new Members(),
 	devices: new Devices(),
 	notifications: new Notifications(),
+	menu: new Menu(),
 	capabilities: ["menu", "hotkeys", "notifications", "notifications:sounds"],
 }

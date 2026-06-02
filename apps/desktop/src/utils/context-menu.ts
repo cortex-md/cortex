@@ -1,10 +1,5 @@
-import { LogicalPosition } from "@tauri-apps/api/dpi"
-import {
-	CheckMenuItem,
-	Menu,
-	MenuItem as NativeMenuItem,
-	PredefinedMenuItem,
-} from "@tauri-apps/api/menu"
+import type { NativeContextMenuOptions, NativeMenuItem, NativeMenuPosition } from "@cortex/platform"
+import { getPlatform } from "@cortex/platform"
 
 export type MenuItemType = "normal" | "separator" | "checkbox" | "submenu"
 
@@ -38,10 +33,7 @@ export interface SubmenuMenuItem extends MenuItemBase {
 	items: MenuItem[]
 }
 
-export interface MenuPosition {
-	x: number
-	y: number
-}
+export interface MenuPosition extends NativeMenuPosition {}
 
 export interface ContextMenuOptions {
 	items: MenuItem[]
@@ -59,83 +51,66 @@ export class NativeMenuActions {
 		this.isShowingMenu = true
 
 		try {
-			const menuItems = await this.buildMenuItems(options.items)
-
-			const menu = await Menu.new({
-				items: menuItems,
-			})
-
-			if (options.position) {
-				await menu.popup(new LogicalPosition(options.position.x, options.position.y))
-			} else {
-				await menu.popup()
+			const nativeOptions: NativeContextMenuOptions = {
+				items: this.serializeItems(options.items),
+				position: options.position,
 			}
+			const selectedId = await getPlatform().menu.showContextMenu(nativeOptions)
+			if (!selectedId) return
+
+			const selected = this.findItem(options.items, selectedId)
+			await selected?.action?.()
 		} finally {
 			this.isShowingMenu = false
 		}
 	}
 
-	// biome-ignore lint/suspicious/noExplicitAny: Tauri menu API returns heterogeneous item types
-	private async buildMenuItems(items: MenuItem[]): Promise<any[]> {
-		// biome-ignore lint/suspicious/noExplicitAny: Tauri menu API returns heterogeneous item types
-		const result: any[] = []
+	private serializeItems(items: MenuItem[]): NativeMenuItem[] {
+		return items.map((item) => {
+			if (item.type === "separator") return { type: "separator" }
+			if (item.type === "submenu") {
+				return {
+					id: item.id,
+					type: "submenu",
+					text: item.text,
+					enabled: item.enabled,
+					accelerator: item.accelerator,
+					items: this.serializeItems(item.items),
+				}
+			}
+			if (item.type === "checkbox") {
+				return {
+					id: item.id,
+					type: "checkbox",
+					text: item.text,
+					enabled: item.enabled,
+					accelerator: item.accelerator,
+					checked: item.checked,
+				}
+			}
+			return {
+				id: item.id,
+				type: item.type,
+				text: item.text,
+				enabled: item.enabled,
+				accelerator: item.accelerator,
+			}
+		})
+	}
 
+	private findItem(
+		items: MenuItem[],
+		selectedId: string,
+	): NormalMenuItem | CheckboxMenuItem | null {
 		for (const item of items) {
-			if (item.type === "separator") {
-				result.push(await PredefinedMenuItem.new({ item: "Separator" }))
-			} else if (item.type === "checkbox") {
-				result.push(await this.buildCheckMenuItem(item))
-			} else if (item.type === "submenu") {
-				result.push(await this.buildSubmenu(item))
-			} else {
-				// Normal item
-				result.push(await this.buildMenuItem(item as NormalMenuItem))
+			if (item.type === "separator") continue
+			if (item.id === selectedId && item.type !== "submenu") return item
+			if (item.type === "submenu") {
+				const child = this.findItem(item.items, selectedId)
+				if (child) return child
 			}
 		}
 
-		return result
-	}
-
-	private async buildMenuItem(item: NormalMenuItem): Promise<NativeMenuItem> {
-		return NativeMenuItem.new({
-			id: item.id,
-			text: item.text,
-			enabled: item.enabled !== false,
-			accelerator: item.accelerator,
-			action: item.action
-				? () => {
-						item.action?.()
-					}
-				: undefined,
-		})
-	}
-
-	private async buildCheckMenuItem(item: CheckboxMenuItem): Promise<CheckMenuItem> {
-		return CheckMenuItem.new({
-			id: item.id,
-			text: item.text,
-			enabled: item.enabled !== false,
-			checked: item.checked,
-			accelerator: item.accelerator,
-			action: item.action
-				? () => {
-						item.action?.()
-					}
-				: undefined,
-		})
-	}
-
-	// biome-ignore lint/suspicious/noExplicitAny: Tauri Submenu type from dynamic import
-	private async buildSubmenu(item: SubmenuMenuItem): Promise<any> {
-		const { Submenu } = await import("@tauri-apps/api/menu")
-
-		const submenuItems = await this.buildMenuItems(item.items)
-
-		return Submenu.new({
-			id: item.id,
-			text: item.text,
-			enabled: item.enabled !== false,
-			items: submenuItems,
-		})
+		return null
 	}
 }

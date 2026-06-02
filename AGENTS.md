@@ -21,12 +21,13 @@ cortex/
 │   │   │   │   │   ├── vault.rs    # open_vault, close_vault, scan_vault, get_vault_metadata
 │   │   │   │   │   ├── fs.rs       # read_file, write_file, delete_file, rename_file, hash_file
 │   │   │   │   │   ├── watcher.rs  # start_watching, stop_watching (emite eventos Tauri)
-│   │   │   │   │   ├── window.rs   # open_vault_in_new_window, get_window_label
+│   │   │   │   │   ├── window.rs   # open_settings_window e futuras operações nativas de janela
+│   │   │   │   │   ├── appearance.rs # get_native_appearance: plataforma, tema, accent color e scrollbar
 │   │   │   │   │   ├── dialog.rs   # pick_folder, show_confirm_dialog
 │   │   │   │   │   ├── shell.rs    # open_in_system_explorer, reveal_file
 │   │   │   │   │   ├── registry.rs # update_vault_registry, read_vault_registry, remove_from_vault_registry
 │   │   │   │   │   ├── auth.rs     # keychain read/write para tokens e device identity
-│   │   │   │   │   └── menu.rs     # macOS native menubar: build_menu, refresh_menu_recents, File > Recents submenu
+│   │   │   │   │   └── menu.rs     # Menubar nativo + show_context_menu serializável
 │   │   │   │   ├── sync/           # Engine de sync — roda em thread Rust separada
 │   │   │   │   │   ├── engine.rs   # Loop principal: detecta mudanças, enfileira ops, executa
 │   │   │   │   │   ├── uploader.rs # Upload de arquivos via HTTP POST com retry e backoff
@@ -298,8 +299,18 @@ Keep `apps/desktop/src-tauri/tauri.conf.json` platform-neutral. macOS-only chrom
 `tauri.macos.conf.json`; Windows-only chrome belongs in `tauri.windows.conf.json`. Window-level
 materials should come from Tauri/window effects, not CSS blur layered over opaque web surfaces.
 Settings opens through `getPlatform().window.openSettings(...)` as a dedicated Tauri webview
-window when a vault is active; `SettingsModal` is only a fallback. Shared settings layout lives
-in `SettingsContent`.
+window when a vault is active; creation/focus is owned by Rust command `open_settings_window`,
+not `WebviewWindow` in the frontend. `SettingsModal` is only a fallback. Shared settings layout
+lives in `SettingsContent`.
+
+### Native Appearance And Menus
+System appearance comes from `getPlatform().appearance.getSnapshot()`, backed by Rust
+`get_native_appearance`; avoid inferring platform from `navigator.userAgent` in app code. The
+snapshot owns platform, color scheme, scrollbar style, and OS accent color when available.
+
+Context menus go through `getPlatform().menu.showContextMenu(spec)`. Frontend menu specs must be
+serializable; action closures stay in React and run after the native menu returns the selected item
+id. Do not import `@tauri-apps/api/menu` from UI code.
 
 ### Native Notifications
 All app and plugin notifications must go through `getPlatform().notifications`, never DOM toasts
@@ -347,7 +358,9 @@ Sync logs follow a **single-source-of-truth** model — Rust is the authority fo
 
 ### File Watching
 - Rust `notify` crate emits `vault-file-changed` events
-- `vaultStore.refreshFiles()` polls vault on file changes
+- `vaultStore.applyFileEvent()` applies per-path updates and queues file events for incremental
+  search/tag indexing
+- `vaultStore.refreshFiles()` is a fallback/manual rescan, not the normal watcher path
 - Prevents editor from overwriting external changes
 
 ### Workspace Persistence

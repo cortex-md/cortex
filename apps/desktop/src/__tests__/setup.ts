@@ -32,6 +32,20 @@ vi.mock("@cortex/platform", () => ({
 			requestPermission: vi.fn().mockResolvedValue("granted"),
 			send: vi.fn().mockResolvedValue({ delivered: true }),
 		},
+		appearance: {
+			getSnapshot: vi.fn().mockResolvedValue({
+				platform: "macos",
+				colorScheme: "light",
+				reducedMotion: false,
+				highContrast: false,
+				accentColor: "#0a84ff",
+				scrollbarStyle: "overlay",
+			}),
+			subscribe: vi.fn(() => () => {}),
+		},
+		menu: {
+			showContextMenu: vi.fn().mockResolvedValue(null),
+		},
 		capabilities: ["notifications"],
 	})),
 	initPlatform: vi.fn(),

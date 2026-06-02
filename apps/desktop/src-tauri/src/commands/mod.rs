@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod appearance;
 pub mod device;
 pub mod devices;
 pub mod dialog;
@@ -12,3 +13,4 @@ pub mod remote_vault;
 pub mod sync;
 pub mod vault;
 pub mod watcher;
+pub mod window;
