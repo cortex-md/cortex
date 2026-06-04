@@ -15,8 +15,8 @@ const MACOS_TRAFFIC_LIGHT_Y: f64 = 6.0;
 
 #[cfg(target_os = "macos")]
 fn position_macos_traffic_lights<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>) {
-    use objc2::runtime::AnyObject;
     use objc2::msg_send;
+    use objc2::runtime::AnyObject;
     use objc2_foundation::{CGPoint, CGRect};
 
     let Ok(ns_window) = window.ns_window() else {
@@ -168,7 +168,8 @@ pub fn run() {
                 window.on_window_event(move |event| {
                     if matches!(
                         event,
-                        tauri::WindowEvent::Resized(_) | tauri::WindowEvent::ScaleFactorChanged { .. }
+                        tauri::WindowEvent::Resized(_)
+                            | tauri::WindowEvent::ScaleFactorChanged { .. }
                     ) {
                         position_macos_traffic_lights(&traffic_light_window);
                     }

@@ -15,62 +15,165 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  publish-tauri:
-    permissions:
-      contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: "macos-latest"
-            os: "macos"
-            args: "--target aarch64-apple-darwin"
-            target: "aarch64-apple-darwin"
-          - platform: "macos-latest"
-            os: "macos"
-            args: "--target x86_64-apple-darwin"
-            target: "x86_64-apple-darwin"
-          - platform: "ubuntu-22.04"
-            os: "linux"
-            args: ""
-            target: ""
-          - platform: "windows-latest"
-            os: "windows"
-            args: ""
-            target: ""
-
-    runs-on: ${{ matrix.platform }}
-    timeout-minutes: 40
+  release-metadata:
+    name: Release metadata
+    runs-on: ubuntu-22.04
+    outputs:
+      tag_name: ${{ steps.version.outputs.tag_name }}
+      version: ${{ steps.version.outputs.version }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Extract version
+      - name: Resolve release version
         id: version
         shell: bash
         run: |
           if [ "${{ github.event.inputs.version }}" != "" ]; then
             VERSION="${{ github.event.inputs.version }}"
+            VERSION="${VERSION#v}"
+            TAG_NAME="v${VERSION}"
           else
-            VERSION="${GITHUB_REF_NAME#v}"
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          
-          if [[ "$VERSION" == *-* ]]; then
-            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
+            TAG_NAME="${GITHUB_REF_NAME}"
+            VERSION="${TAG_NAME#v}"
           fi
 
-      - name: Free disk space (Linux only)
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid release version: $VERSION"
+            echo "Use a semver version such as 0.1.0 or 0.2.0-beta.1."
+            exit 1
+          fi
+
+          if [[ "$VERSION" == *-* ]]; then
+            IS_PRERELEASE=true
+          else
+            IS_PRERELEASE=false
+          fi
+
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
+
+  wait-for-ci:
+    name: Wait for CI
+    needs: release-metadata
+    runs-on: ubuntu-22.04
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Wait for CI workflow to pass
+        uses: actions/github-script@v7
+        env:
+          RELEASE_TAG: ${{ needs.release-metadata.outputs.tag_name }}
+        with:
+          script: |
+            const owner = context.repo.owner
+            const repo = context.repo.repo
+            const workflow_id = "ci.yml"
+            const head_sha = context.sha
+            const tagName = process.env.RELEASE_TAG
+            const pollMs = 30000
+            const attempts = 120
+            const shouldUseRecentCiRun = context.eventName === "push" && context.ref.startsWith("refs/tags/")
+            const currentRun = await github.rest.actions.getWorkflowRun({
+              owner,
+              repo,
+              run_id: context.runId,
+            })
+            const currentRunStartedAt = new Date(currentRun.data.created_at).getTime()
+            const earliestRunCreatedAt = shouldUseRecentCiRun ? currentRunStartedAt - 5 * 60 * 1000 : 0
+
+            for (let attempt = 1; attempt <= attempts; attempt += 1) {
+              const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+                owner,
+                repo,
+                workflow_id,
+                head_sha,
+                event: "push",
+                per_page: 100,
+              })
+              const candidates = runs
+                .filter((run) => run.id !== context.runId)
+                .filter((run) => new Date(run.created_at).getTime() >= earliestRunCreatedAt)
+                .sort((first, second) => new Date(second.created_at) - new Date(first.created_at))
+              const ciRun = candidates.find((run) => run.head_branch === tagName) ?? candidates[0]
+
+              if (ciRun) {
+                core.info(`CI run: ${ciRun.html_url}`)
+                core.info(`CI status: ${ciRun.status}/${ciRun.conclusion ?? "pending"}`)
+
+                if (ciRun.status === "completed") {
+                  if (ciRun.conclusion === "success") {
+                    return
+                  }
+
+                  core.setFailed(`CI finished with conclusion: ${ciRun.conclusion}`)
+                  return
+                }
+              } else {
+                core.info(`No CI run found for ${head_sha} yet.`)
+              }
+
+              if (attempt < attempts) {
+                await new Promise((resolve) => setTimeout(resolve, pollMs))
+              }
+            }
+
+            core.setFailed("Timed out waiting for CI to pass.")
+
+  build-tauri:
+    name: Build ${{ matrix.name }}
+    needs:
+      - release-metadata
+      - wait-for-ci
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS Apple Silicon
+            artifact_name: cortex-macos-apple-silicon
+            platform: macos-15
+            os: macos
+            rust_target: aarch64-apple-darwin
+            args: --target aarch64-apple-darwin --bundles dmg
+            artifact_paths: |
+              apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/**/*.dmg
+          - name: Windows
+            artifact_name: cortex-windows
+            platform: windows-latest
+            os: windows
+            rust_target: ""
+            args: --bundles msi
+            artifact_paths: |
+              apps/desktop/src-tauri/target/release/bundle/**/*.msi
+          - name: Ubuntu
+            artifact_name: cortex-ubuntu
+            platform: ubuntu-22.04
+            os: linux
+            rust_target: ""
+            args: --bundles deb,appimage
+            artifact_paths: |
+              apps/desktop/src-tauri/target/release/bundle/**/*.deb
+              apps/desktop/src-tauri/target/release/bundle/**/*.AppImage
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
         if: matrix.os == 'linux'
+        shell: bash
         run: |
-          echo "Cleaning up disk..."
           df -h
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL || true
           sudo docker system prune -af || true
           sudo apt-get clean
-          echo "Disk usage after cleanup:"
           df -h
 
       - name: Setup Bun
@@ -80,62 +183,194 @@ jobs:
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
 
-      - name: Ensure Rust target is installed
-        if: matrix.target != ''
-        run: rustup target add ${{ matrix.target }}
+      - name: Install Rust target
+        if: matrix.rust_target != ''
+        shell: bash
+        run: rustup target add ${{ matrix.rust_target }}
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          workdir: apps/desktop/src-tauri
+          workspaces: apps/desktop/src-tauri -> target
           cache-on-failure: true
 
       - name: Cache Bun dependencies
         uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-bun-
 
-      - name: Install dependencies (Linux only)
+      - name: Install Linux dependencies
         if: matrix.os == 'linux'
+        shell: bash
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y \
+            build-essential \
+            curl \
+            file \
+            libappindicator3-dev \
+            libayatana-appindicator3-dev \
+            libfuse2 \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            libxdo-dev \
+            librsvg2-dev \
+            patchelf \
+            wget
 
       - name: Install frontend dependencies
         run: bun install
 
-      - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
+      - name: Apply release version
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ needs.release-metadata.outputs.version }}
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs")
+
+          const version = process.env.RELEASE_VERSION
+          const updateJsonVersion = (filePath) => {
+            const packageJson = JSON.parse(fs.readFileSync(filePath, "utf8"))
+            packageJson.version = version
+            fs.writeFileSync(filePath, `${JSON.stringify(packageJson, null, "\t")}\n`)
+          }
+
+          updateJsonVersion("apps/desktop/package.json")
+          updateJsonVersion("apps/desktop/src-tauri/tauri.conf.json")
+
+          const cargoPath = "apps/desktop/src-tauri/Cargo.toml"
+          const cargoToml = fs.readFileSync(cargoPath, "utf8")
+          fs.writeFileSync(cargoPath, cargoToml.replace(/^version = ".*"$/m, `version = "${version}"`))
+          NODE
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v1
         with:
           projectPath: apps/desktop
-          tagName: v${{ steps.version.outputs.version }}
-          releaseName: Cortex v${{ steps.version.outputs.version }}
-          releaseBody: |
-            ## Cortex v${{ steps.version.outputs.version }}
-            
-            Desktop markdown editor with powerful plugin system.
-            
-            ### Installation
-            
-            - **macOS**: Download the `.dmg` file
-            - **Windows**: Download the `.msi` installer
-            - **Linux**: Download the `.deb` or `.AppImage` file
-            
-            ### What's New
-            
-            See the [CHANGELOG](https://github.com/cortex-md/cortex/blob/main/CHANGELOG.md) for detailed changes.
-            
-            ---
-            
-            Full changelog: https://github.com/cortex-md/cortex/compare/v${{ steps.version.outputs.previous }}...v${{ steps.version.outputs.version }}
-          releaseDraft: false
-          prerelease: ${{ steps.version.outputs.is_prerelease }}
           args: ${{ matrix.args }}
+
+      - name: Upload platform artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_paths }}
+          if-no-files-found: error
+          retention-days: 14
+
+  publish-release:
+    name: Publish GitHub Release
+    needs:
+      - release-metadata
+      - build-tauri
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download platform artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Prepare release assets
+        shell: bash
+        run: |
+          mkdir -p dist/release
+          while IFS= read -r -d '' asset; do
+            cp "$asset" "dist/release/$(basename "$asset")"
+          done < <(find release-artifacts -type f -print0)
+          cd dist/release
+          shasum -a 256 * > SHASUMS256.txt
+
+      - name: Generate release body
+        env:
+          RELEASE_TAG: ${{ needs.release-metadata.outputs.tag_name }}
+          RELEASE_VERSION: ${{ needs.release-metadata.outputs.version }}
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs")
+          const path = require("node:path")
+
+          const releaseDirectory = "dist/release"
+          const files = fs
+            .readdirSync(releaseDirectory)
+            .filter((fileName) => fs.statSync(path.join(releaseDirectory, fileName)).isFile())
+            .sort((first, second) => first.localeCompare(second))
+          const repo = process.env.GITHUB_REPOSITORY
+          const tag = process.env.RELEASE_TAG
+          const version = process.env.RELEASE_VERSION
+          const shortSha = process.env.GITHUB_SHA.slice(0, 7)
+          const releaseAssetUrl = (fileName) =>
+            `https://github.com/${repo}/releases/download/${tag}/${encodeURIComponent(fileName)}`
+          const matchingFiles = (pattern) => files.filter((fileName) => pattern.test(fileName))
+          const macosFiles = matchingFiles(/\.(dmg)$/i)
+          const windowsFiles = matchingFiles(/\.(msi)$/i)
+          const debFiles = matchingFiles(/\.deb$/i)
+          const appImageFiles = matchingFiles(/\.AppImage$/i)
+          const linkList = (groupFiles) =>
+            groupFiles.length > 0
+              ? groupFiles.map((fileName) => `- [${fileName}](${releaseAssetUrl(fileName)})`).join("\n")
+              : "- Artifact unavailable"
+          const commandFor = (fileName, command) =>
+            fileName ? `\`${command.replace("{{file}}", fileName)}\`` : "`Arquivo indisponivel`"
+          const lines = [
+            `## Cortex v${version}`,
+            "",
+            "Release gerada automaticamente depois do workflow de CI concluir com sucesso.",
+            "",
+            `- Tag: \`${tag}\``,
+            `- Commit: \`${shortSha}\``,
+            `- Checksums: [SHASUMS256.txt](${releaseAssetUrl("SHASUMS256.txt")})`,
+            "",
+            "### Downloads",
+            "",
+            "#### macOS Apple Silicon",
+            "",
+            "Baixe o DMG e arraste o Cortex para Applications.",
+            "",
+            linkList(macosFiles),
+            "",
+            "#### Windows",
+            "",
+            "Baixe o instalador MSI e execute normalmente.",
+            "",
+            linkList(windowsFiles),
+            "",
+            "#### Ubuntu/Debian (APT)",
+            "",
+            `Baixe o pacote DEB e instale com ${commandFor(debFiles[0], "sudo apt install ./{{file}}")}.`,
+            "",
+            linkList(debFiles),
+            "",
+            "#### Linux (AppImage)",
+            "",
+            `Baixe a AppImage, rode ${commandFor(appImageFiles[0], "chmod +x {{file}}")} e execute o arquivo.`,
+            "",
+            linkList(appImageFiles),
+            "",
+            "### Integridade",
+            "",
+            "Verifique os arquivos baixados comparando com `SHASUMS256.txt`.",
+          ]
+
+          fs.writeFileSync("release-body.md", `${lines.join("\n")}\n`)
+          NODE
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release-metadata.outputs.tag_name }}
+          name: Cortex v${{ needs.release-metadata.outputs.version }}
+          body_path: release-body.md
+          files: dist/release/*
+          draft: false
+          prerelease: ${{ needs.release-metadata.outputs.is_prerelease }}
+          fail_on_unmatched_files: true
+          overwrite_files: true

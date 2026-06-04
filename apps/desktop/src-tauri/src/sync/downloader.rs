@@ -257,8 +257,7 @@ impl<'a> Downloader<'a> {
             return Err(format!("List files failed: {}", body));
         }
 
-        let entries: Vec<RemoteFileListEntry> =
-            response.json().await.map_err(|e| e.to_string())?;
+        let entries: Vec<RemoteFileListEntry> = response.json().await.map_err(|e| e.to_string())?;
 
         let deleted = entries
             .into_iter()

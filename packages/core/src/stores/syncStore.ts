@@ -14,6 +14,254 @@ import { devtools } from "zustand/middleware"
 import { immer } from "zustand/middleware/immer"
 import { useSyncLogStore } from "./syncLogStore"
 
+const syncImageExtensions = new Set([
+	"png",
+	"jpg",
+	"jpeg",
+	"gif",
+	"webp",
+	"avif",
+	"bmp",
+	"tif",
+	"tiff",
+	"heic",
+	"heif",
+	"ico",
+	"svg",
+])
+
+interface SyncPathPattern {
+	negated: boolean
+	anchored: boolean
+	directoryOnly: boolean
+	hasSlash: boolean
+	segments: string[]
+}
+
+export function createDefaultSyncPreferences(): SyncPreferences {
+	return {
+		syncSettings: false,
+		syncHotkeys: false,
+		syncWorkspace: false,
+		syncPluginMetadata: false,
+		syncThemeMetadata: false,
+		ignoreImages: false,
+		excludedPaths: [],
+	}
+}
+
+export function isSyncImagePath(relativePath: string): boolean {
+	const normalized = relativePath.replaceAll("\\", "/")
+	const filename = normalized.split("/").at(-1) ?? normalized
+	const dotIndex = filename.lastIndexOf(".")
+	if (dotIndex < 0 || dotIndex === filename.length - 1) return false
+	return syncImageExtensions.has(filename.slice(dotIndex + 1).toLowerCase())
+}
+
+export function normalizeSyncPathPattern(pattern: string): string {
+	let normalized = pattern.replaceAll("\\", "/").trim()
+	const negated = normalized.startsWith("!")
+	if (negated) {
+		normalized = normalized.slice(1).trim()
+	}
+	normalized = normalized.replace(/^\.\/+/, "").replace(/\/+/g, "/")
+	if (!normalized || normalized === "/") return ""
+	return `${negated ? "!" : ""}${normalized}`
+}
+
+function parseSyncPathPattern(pattern: string): SyncPathPattern | null {
+	const normalized = normalizeSyncPathPattern(pattern)
+	if (!normalized || normalized.startsWith("#")) return null
+
+	const negated = normalized.startsWith("!")
+	let value = negated ? normalized.slice(1) : normalized
+	const anchored = value.startsWith("/")
+	value = value.replace(/^\/+/, "")
+	const directoryOnly = value.endsWith("/")
+	value = value.replace(/\/+$/, "")
+	if (!value) return null
+
+	return {
+		negated,
+		anchored,
+		directoryOnly,
+		hasSlash: value.includes("/"),
+		segments: value.split("/").filter(Boolean),
+	}
+}
+
+function splitSyncPathSegments(path: string): string[] {
+	const normalized = path.replaceAll("\\", "/").replace(/^\/+/, "").replace(/\/+$/, "")
+	if (!normalized) return []
+	return normalized.split("/").filter(Boolean)
+}
+
+function segmentMatchesPattern(pattern: string, segment: string): boolean {
+	const patternChars = Array.from(pattern)
+	const segmentChars = Array.from(segment)
+	const memo = new Map<string, boolean>()
+
+	const matches = (patternIndex: number, segmentIndex: number): boolean => {
+		const key = `${patternIndex}:${segmentIndex}`
+		const cached = memo.get(key)
+		if (cached !== undefined) return cached
+
+		let result = false
+		if (patternIndex === patternChars.length) {
+			result = segmentIndex === segmentChars.length
+		} else if (patternChars[patternIndex] === "*") {
+			result =
+				matches(patternIndex + 1, segmentIndex) ||
+				(segmentIndex < segmentChars.length && matches(patternIndex, segmentIndex + 1))
+		} else if (patternChars[patternIndex] === "?") {
+			result = segmentIndex < segmentChars.length && matches(patternIndex + 1, segmentIndex + 1)
+		} else {
+			result =
+				segmentIndex < segmentChars.length &&
+				patternChars[patternIndex] === segmentChars[segmentIndex] &&
+				matches(patternIndex + 1, segmentIndex + 1)
+		}
+
+		memo.set(key, result)
+		return result
+	}
+
+	return matches(0, 0)
+}
+
+function syncPathSegmentsMatch(
+	patternSegments: string[],
+	pathSegments: string[],
+	startIndex: number,
+	allowDescendants: boolean,
+): boolean {
+	const memo = new Map<string, boolean>()
+
+	const matches = (patternIndex: number, pathIndex: number): boolean => {
+		const key = `${patternIndex}:${pathIndex}`
+		const cached = memo.get(key)
+		if (cached !== undefined) return cached
+
+		let result = false
+		if (patternIndex === patternSegments.length) {
+			result = allowDescendants || pathIndex === pathSegments.length
+		} else if (patternSegments[patternIndex] === "**") {
+			for (let nextPathIndex = pathIndex; nextPathIndex <= pathSegments.length; nextPathIndex++) {
+				if (matches(patternIndex + 1, nextPathIndex)) {
+					result = true
+					break
+				}
+			}
+		} else if (pathIndex < pathSegments.length) {
+			result =
+				segmentMatchesPattern(patternSegments[patternIndex], pathSegments[pathIndex]) &&
+				matches(patternIndex + 1, pathIndex + 1)
+		}
+
+		memo.set(key, result)
+		return result
+	}
+
+	return matches(0, startIndex)
+}
+
+export function syncPathPatternMatches(relativePath: string, pattern: string): boolean {
+	const parsed = parseSyncPathPattern(pattern)
+	if (!parsed) return false
+
+	const pathSegments = splitSyncPathSegments(relativePath)
+	if (pathSegments.length === 0) return false
+
+	const allowDescendants = parsed.directoryOnly || !parsed.hasSlash
+	if (parsed.anchored || parsed.hasSlash) {
+		return syncPathSegmentsMatch(parsed.segments, pathSegments, 0, allowDescendants)
+	}
+
+	for (let startIndex = 0; startIndex < pathSegments.length; startIndex++) {
+		if (syncPathSegmentsMatch(parsed.segments, pathSegments, startIndex, allowDescendants)) {
+			return true
+		}
+	}
+
+	return false
+}
+
+function shouldIgnoreByExcludedPatterns(relativePath: string, patterns: string[]): boolean {
+	let ignored = false
+	for (const pattern of patterns) {
+		const parsed = parseSyncPathPattern(pattern)
+		if (parsed && syncPathPatternMatches(relativePath, pattern)) {
+			ignored = !parsed.negated
+		}
+	}
+	return ignored
+}
+
+export function normalizeSyncPreferences(preferences: Partial<SyncPreferences>): SyncPreferences {
+	const excludedPaths = Array.isArray(preferences.excludedPaths)
+		? Array.from(
+				new Set(
+					preferences.excludedPaths
+						.map((pattern) => normalizeSyncPathPattern(pattern))
+						.filter(Boolean),
+				),
+			)
+		: []
+
+	return {
+		...createDefaultSyncPreferences(),
+		syncSettings: preferences.syncSettings ?? false,
+		syncHotkeys: preferences.syncHotkeys ?? false,
+		syncWorkspace: preferences.syncWorkspace ?? false,
+		syncPluginMetadata: preferences.syncPluginMetadata ?? false,
+		syncThemeMetadata: preferences.syncThemeMetadata ?? false,
+		ignoreImages: preferences.ignoreImages ?? false,
+		excludedPaths,
+	}
+}
+
+export function shouldIgnoreSyncPath(relativePath: string, preferences: SyncPreferences): boolean {
+	const normalized = relativePath.replaceAll("\\", "/")
+	const filename = normalized.split("/").at(-1) ?? normalized
+	if (filename === ".DS_Store" || filename === "Thumbs.db" || filename === "desktop.ini") {
+		return true
+	}
+
+	const isCortex =
+		normalized.includes("/.cortex/") ||
+		normalized.endsWith("/.cortex") ||
+		normalized.startsWith(".cortex/") ||
+		normalized === ".cortex"
+
+	if (!isCortex) {
+		if (shouldIgnoreByExcludedPatterns(normalized, preferences.excludedPaths)) return true
+		return preferences.ignoreImages && isSyncImagePath(normalized)
+	}
+
+	const cortexFile = normalized.includes("/.cortex/")
+		? (normalized.split("/.cortex/").at(-1) ?? normalized)
+		: normalized.startsWith(".cortex/")
+			? normalized.slice(".cortex/".length)
+			: normalized
+
+	if (
+		cortexFile === "sync-preferences.json" ||
+		cortexFile === "sync.db" ||
+		cortexFile === "sync.db-wal" ||
+		cortexFile === "sync.db-journal" ||
+		cortexFile === "sync.db-shm"
+	) {
+		return true
+	}
+
+	if (cortexFile === "app.json") return !preferences.syncSettings
+	if (cortexFile === "hotkeys.json") return !preferences.syncHotkeys
+	if (cortexFile === "workspace.json") return !preferences.syncWorkspace
+	if (cortexFile === "sync-plugins.json") return !preferences.syncPluginMetadata
+	if (cortexFile === "sync-themes.json") return !preferences.syncThemeMetadata
+	return true
+}
+
 export interface SyncState {
 	engineState: SyncEngineState
 	syncingFiles: Record<string, string>
@@ -27,6 +275,7 @@ export interface SyncState {
 	syncPreferences: SyncPreferences
 
 	loadSyncPreferences: (vaultPath: string) => Promise<void>
+	saveSyncPreferences: (vaultPath: string, preferences: SyncPreferences) => Promise<void>
 	updateSyncPreference: (
 		key: keyof Omit<SyncPreferences, "excludedPaths">,
 		value: boolean,
@@ -76,14 +325,7 @@ export const useSyncStore = create<SyncState>()(
 			initialSyncProgress: null,
 			initialSyncComplete: false,
 			vekRequired: false,
-			syncPreferences: {
-				syncSettings: false,
-				syncHotkeys: false,
-				syncWorkspace: false,
-				syncPluginMetadata: false,
-				syncThemeMetadata: false,
-				excludedPaths: [],
-			},
+			syncPreferences: createDefaultSyncPreferences(),
 
 			loadSyncPreferences: async (vaultPath) => {
 				const platform = getPlatform()
@@ -91,32 +333,29 @@ export const useSyncStore = create<SyncState>()(
 				try {
 					const content = await platform.fs.readFile(filePath)
 					const parsed = JSON.parse(content) as Partial<SyncPreferences>
-					const prefs: SyncPreferences = {
-						syncSettings: parsed.syncSettings ?? false,
-						syncHotkeys: parsed.syncHotkeys ?? false,
-						syncWorkspace: parsed.syncWorkspace ?? false,
-						syncPluginMetadata: parsed.syncPluginMetadata ?? false,
-						syncThemeMetadata: parsed.syncThemeMetadata ?? false,
-						excludedPaths: Array.isArray(parsed.excludedPaths) ? parsed.excludedPaths : [],
-					}
+					const prefs = normalizeSyncPreferences(parsed)
 					set((state) => {
 						state.syncPreferences = prefs
 					})
 					await platform.sync.updateSyncPreferences(prefs)
 				} catch {
-					const defaults: SyncPreferences = {
-						syncSettings: false,
-						syncHotkeys: false,
-						syncWorkspace: false,
-						syncPluginMetadata: false,
-						syncThemeMetadata: false,
-						excludedPaths: [],
-					}
+					const defaults = createDefaultSyncPreferences()
 					set((state) => {
 						state.syncPreferences = defaults
 					})
 					await platform.sync.updateSyncPreferences(defaults)
 				}
+			},
+
+			saveSyncPreferences: async (vaultPath, preferences) => {
+				const platform = getPlatform()
+				const prefs = normalizeSyncPreferences(preferences)
+				const filePath = `${vaultPath}/.cortex/sync-preferences.json`
+				await platform.fs.writeFile(filePath, JSON.stringify(prefs, null, "\t"))
+				set((state) => {
+					state.syncPreferences = prefs
+				})
+				await platform.sync.updateSyncPreferences(prefs)
 			},
 
 			updateSyncPreference: async (key, value) => {
@@ -134,15 +373,17 @@ export const useSyncStore = create<SyncState>()(
 			},
 
 			toggleExcludedPath: async (relativePath, excluded) => {
+				const pattern = normalizeSyncPathPattern(relativePath)
+				if (!pattern) return
 				const platform = getPlatform()
 				set((state) => {
 					const paths = state.syncPreferences.excludedPaths
 					if (excluded) {
-						if (!paths.includes(relativePath)) {
-							paths.push(relativePath)
+						if (!paths.includes(pattern)) {
+							paths.push(pattern)
 						}
 					} else {
-						state.syncPreferences.excludedPaths = paths.filter((p) => p !== relativePath)
+						state.syncPreferences.excludedPaths = paths.filter((p) => p !== pattern)
 					}
 				})
 				const prefs = get().syncPreferences
@@ -155,15 +396,7 @@ export const useSyncStore = create<SyncState>()(
 			},
 
 			isPathExcluded: (relativePath) => {
-				const { excludedPaths } = get().syncPreferences
-				for (const excluded of excludedPaths) {
-					if (excluded.endsWith("/")) {
-						if (relativePath.startsWith(excluded)) return true
-					} else if (relativePath === excluded) {
-						return true
-					}
-				}
-				return false
+				return shouldIgnoreSyncPath(relativePath, get().syncPreferences)
 			},
 
 			startSync: async (vaultId, vaultPath, serverUrl) => {
@@ -176,9 +409,9 @@ export const useSyncStore = create<SyncState>()(
 						state.error = null
 					})
 					const platform = getPlatform()
+					await get().loadSyncPreferences(vaultPath)
 					await get().subscribeEvents()
 					await platform.sync.start(vaultId, vaultPath, serverUrl)
-					await get().loadSyncPreferences(vaultPath)
 				} catch (e) {
 					set((state) => {
 						state.error = String(e)

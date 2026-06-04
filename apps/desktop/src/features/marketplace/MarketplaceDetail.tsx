@@ -25,7 +25,7 @@ import {
 	Trash2,
 	TriangleAlert,
 } from "lucide-react"
-import { useEffect } from "react"
+import { useEffect, useLayoutEffect, useRef } from "react"
 
 interface MarketplaceDetailProps {
 	tab: MarketplaceTab
@@ -59,6 +59,7 @@ export function MarketplaceDetail({ tab, onBack }: MarketplaceDetailProps) {
 	const installEntry = useMarketplaceStore((s) => s.installEntry)
 	const uninstallEntry = useMarketplaceStore((s) => s.uninstallEntry)
 	const loadReadme = useMarketplaceStore((s) => s.loadReadme)
+	const readmeScrollRef = useRef<HTMLDivElement>(null)
 
 	const allEntries = tab === "plugins" ? pluginEntries : themeEntries
 	const entry = allEntries.find((e) => e.id === selectedEntryId)
@@ -73,10 +74,23 @@ export function MarketplaceDetail({ tab, onBack }: MarketplaceDetailProps) {
 	const hasUpdate = isInstalled && Boolean(latestVersion)
 	const authorUrl = entry?.authorUrl ? getExternalUrl(entry.authorUrl) : null
 	const repositoryUrl = entry?.repo ? getRepositoryUrl(entry.repo) : null
+	const readmeScrollKey = entry?.id ?? ""
 
 	useEffect(() => {
 		if (entry && readme === undefined) loadReadme(entry)
 	}, [entry, readme, loadReadme])
+
+	useLayoutEffect(() => {
+		if (!readmeScrollKey) return
+
+		const viewport = readmeScrollRef.current?.querySelector<HTMLElement>(
+			'[data-slot="scroll-area-viewport"]',
+		)
+		if (!viewport) return
+
+		viewport.scrollTop = 0
+		viewport.scrollLeft = 0
+	}, [readmeScrollKey])
 
 	if (!entry) {
 		return (
@@ -236,25 +250,27 @@ export function MarketplaceDetail({ tab, onBack }: MarketplaceDetailProps) {
 				)}
 			</div>
 
-			<ScrollArea className="flex-1">
-				{readmeLoading && readme === undefined ? (
-					<div className="p-5 flex flex-col gap-3">
-						<Skeleton className="h-4 w-2/3" />
-						<Skeleton className="h-3 w-full" />
-						<Skeleton className="h-3 w-4/5" />
-						<Skeleton className="h-3 w-full" />
-						<Skeleton className="h-3 w-3/4" />
-					</div>
-				) : readme ? (
-					<div className="p-5">
-						<ReadingView content={readme} />
-					</div>
-				) : (
-					<Empty className="py-8 border-none">
-						<EmptyDescription>No README available.</EmptyDescription>
-					</Empty>
-				)}
-			</ScrollArea>
+			<div ref={readmeScrollRef} className="min-h-0 flex-1 overflow-hidden">
+				<ScrollArea key={entry.id} className="h-full">
+					{readmeLoading && readme === undefined ? (
+						<div className="flex flex-col gap-3 p-5">
+							<Skeleton className="h-4 w-2/3" />
+							<Skeleton className="h-3 w-full" />
+							<Skeleton className="h-3 w-4/5" />
+							<Skeleton className="h-3 w-full" />
+							<Skeleton className="h-3 w-3/4" />
+						</div>
+					) : readme ? (
+						<div className="marketplace-readme">
+							<ReadingView content={readme} />
+						</div>
+					) : (
+						<Empty className="border-none py-8">
+							<EmptyDescription>No README available.</EmptyDescription>
+						</Empty>
+					)}
+				</ScrollArea>
+			</div>
 		</div>
 	)
 }

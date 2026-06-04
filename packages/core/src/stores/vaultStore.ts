@@ -4,6 +4,7 @@ import { getSettingsManager, initSettingsManager } from "@cortex/settings"
 import { create } from "zustand"
 import { noteCache } from "../noteCache"
 import { createDefaultFrontmatter } from "../utils/frontmatter"
+import { useSyncStore } from "./syncStore"
 
 export type { VaultMetadata, VaultRegistryEntry }
 
@@ -62,6 +63,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
 			initSettingsManager()
 			await getSettingsManager().loadFromVault(path)
+			await useSyncStore.getState().loadSyncPreferences(path)
 
 			set({
 				vault: metadata,
@@ -85,6 +87,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
 			initSettingsManager()
 			await getSettingsManager().loadFromVault(path)
+			await useSyncStore.getState().loadSyncPreferences(path)
 
 			set({
 				vault: metadata,

@@ -1,4 +1,4 @@
-import { useAuthStore, useUIStore } from "@cortex/core"
+import { useAuthStore, useRemoteVaultStore, useUIStore } from "@cortex/core"
 import {
 	Button,
 	Dialog,
@@ -29,6 +29,7 @@ export function AuthModal() {
 	const closeAuth = useUIStore((s) => s.closeAuth)
 	const openSettings = useUIStore((s) => s.openSettings)
 	const { login, register, loading, error, clearError } = useAuthStore()
+	const serverUrl = useRemoteVaultStore((s) => s.syncConfig.serverUrl)
 
 	const [activeView, setActiveView] = useState<AuthView>(authInitialView)
 	const [email, setEmail] = useState("")
@@ -73,7 +74,7 @@ export function AuthModal() {
 		setValidationError(null)
 		clearError()
 		try {
-			await login(email, password)
+			await login(email, password, serverUrl ?? undefined)
 			handleSuccess()
 		} catch {}
 	}
@@ -93,7 +94,7 @@ export function AuthModal() {
 		}
 
 		try {
-			await register(email, password, displayName)
+			await register(email, password, displayName, serverUrl ?? undefined)
 			handleSuccess()
 		} catch {}
 	}

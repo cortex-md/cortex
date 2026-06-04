@@ -148,6 +148,7 @@ pub enum SyncCommand {
         sync_workspace: bool,
         sync_plugin_metadata: bool,
         sync_theme_metadata: bool,
+        ignore_images: bool,
         excluded_paths: Vec<String>,
     },
 }

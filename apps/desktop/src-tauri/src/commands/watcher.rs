@@ -168,10 +168,6 @@ fn add_symlink_targets(watcher: &mut RecommendedWatcher, dir: &Path) -> Result<(
 }
 
 fn is_hidden_path(path: &Path) -> bool {
-    path.components().any(|component| {
-        component
-            .as_os_str()
-            .to_string_lossy()
-            .starts_with('.')
-    })
+    path.components()
+        .any(|component| component.as_os_str().to_string_lossy().starts_with('.'))
 }

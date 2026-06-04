@@ -219,7 +219,7 @@ export interface EditorState {
 **Usage**: `const { activeFilePath, mode, setMode } = useEditorStore()`
 
 ### workspaceStore
-Manages the layout (split panes, tabs, their positions):
+Manages the vault-scoped layout (split panes, tabs, their positions, and persisted sidebar layout):
 
 ```typescript
 export interface WorkspaceState {
@@ -237,6 +237,7 @@ export interface WorkspaceState {
 ```
 
 **Usage**: Complex layout operations. See `apps/desktop/src/App.tsx` for examples.
+`persistWorkspace()` writes `.cortex/workspace.json`; keep `leftSidebar` in that snapshot so resize and collapsed state are restored per vault.
 
 ### uiStore
 Manages UI chrome, app-level overlays, and settings entry points:
@@ -251,7 +252,10 @@ export interface UIState {
   marketplaceInitialTab: "plugins" | "themes"
 
   toggleLeftSidebar: () => void
+  setLeftSidebarCollapsed: (collapsed: boolean) => void
   setLeftSidebarWidth: (width: number) => void
+  setLeftSidebarLayout: (layout: Partial<LeftSidebarLayout>) => void
+  resetLeftSidebarLayout: () => void
   setLeftSidebarView: (view: string) => void
   openSettings: (section?: string) => void
   openMarketplace: (tab?: "plugins" | "themes") => void
@@ -271,8 +275,13 @@ export interface SyncState {
   error: string | null
   conflicts: Record<string, ConflictInfo>
   vekRequired: boolean
-  syncPreferences: SyncPreferences
+  syncPreferences: SyncPreferences  // includes excludedPaths and ignoreImages
 
+  loadSyncPreferences: (vaultPath: string) => Promise<void>
+  saveSyncPreferences: (vaultPath: string, preferences: SyncPreferences) => Promise<void>
+  updateSyncPreference: (key, value) => Promise<void>
+  toggleExcludedPath: (relativePath, excluded) => Promise<void>
+  isPathExcluded: (relativePath) => boolean
   startSync: (vaultId, vaultPath, serverUrl) => Promise<void>
   stopSync: () => Promise<void>
   subscribeEvents: () => Promise<void>   // Listens to Tauri events from Rust engine
@@ -281,6 +290,7 @@ export interface SyncState {
 ```
 
 `subscribeEvents()` bridges Rust engine events to Zustand state. It also listens for `sync-log` events from Rust and pipes them into `syncLogStore`. The `onVaultAccessDenied` listener auto-unlinks the vault when a 403 is received.
+Sync preferences are vault-scoped in `.cortex/sync-preferences.json`; use `normalizeSyncPreferences()` for migration defaults and `shouldIgnoreSyncPath()` for UI-only checks that mirror Rust ignore behavior.
 
 **Usage**: `const { engineState, startSync, stopSync } = useSyncStore()`
 
@@ -303,13 +313,14 @@ export interface SyncLogState {
 **Usage**: `const { entries, clear } = useSyncLogStore()`
 
 ### authStore
-Manages authentication state and account lifecycle:
+Manages authentication state for the active sync server:
 
-- `logout()` stops sync first, then clears auth tokens, then unlinks the vault from disk (not just memory)
-- `login()` unlinks any existing vault link to prevent stale remote vault references
+- Auth is scoped by normalized `serverUrl`; Cortex Cloud and self-hosted servers must not share tokens.
+- `login(email, password, serverUrl)` and `register(..., serverUrl)` authenticate against the vault's configured sync server.
+- `logout(allDevices, serverUrl)` stops active sync and clears only that server session. It must not disable sync or unlink the vault.
 
 ### remoteVaultStore
-Manages remote vault linking. `linkedVaultId` is persisted on disk at `vault_path/.cortex/sync-config.json`. `clearLink()` clears memory only; `unlinkVault(path)` clears both memory and disk.
+Manages vault-scoped sync configuration. `syncConfig` is persisted on disk at `vault_path/.cortex/sync-config.json` and includes `enabled`, `remoteVaultId`, `selfHosted`, `serverUrl`, `offlineMode`, and non-secret `selfHostedEnvironment` values. `linkedVaultId` mirrors `syncConfig.remoteVaultId`. `clearLink()` clears memory only; `unlinkVault(path)` clears only the remote vault link from disk and preserves the rest of the sync config.
 
 ## NoteCache
 
@@ -419,11 +430,12 @@ syncLogStore (sync log buffer)
   └─ no dependencies (pure in-memory store, platform-independent)
 
 authStore (auth state)
-  ├─ uses getPlatform().auth + keychain
-  └─ dynamic imports syncStore, vaultStore, remoteVaultStore → stopSync + unlinkVault on logout
+  ├─ uses getPlatform().auth
+  └─ dynamic imports syncStore → stopSync on logout
 
-remoteVaultStore (vault linking)
-  └─ uses getPlatform().remoteVault → reads/writes sync-config.json
+remoteVaultStore (vault-scoped sync config)
+  ├─ uses getPlatform().remoteVault → reads/writes sync-config.json
+  └─ dynamic imports authStore → checks auth for the configured server URL
 
 tagsStore (tag management)
   ├─ uses getPlatform() → file I/O

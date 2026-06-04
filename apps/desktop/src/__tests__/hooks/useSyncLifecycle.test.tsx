@@ -24,13 +24,14 @@ const mockVault = { path: "/vault", name: "Test", uuid: "vault-id" }
 const startSync = vi.fn().mockResolvedValue(undefined)
 const stopSync = vi.fn().mockResolvedValue(undefined)
 const loadLink = vi.fn().mockResolvedValue(undefined)
+const checkAuth = vi.fn().mockResolvedValue(undefined)
 const logFn = vi.fn()
 
 function setupMocks(overrides: {
 	authenticated?: boolean
-	selfHosted?: boolean
 	syncEnabled?: boolean
 	serverUrl?: string
+	authServerUrl?: string
 	vault?: typeof mockVault | null
 	linkedVaultId?: string | null
 }) {
@@ -42,11 +43,11 @@ function setupMocks(overrides: {
 	}) as never)
 
 	vi.mocked(useAuthStore).mockImplementation(((selector?: (s: unknown) => unknown) => {
+		const serverUrl = overrides.serverUrl ?? "https://sync.example.com"
 		const state = {
 			authenticated: overrides.authenticated ?? false,
-			selfHosted: overrides.selfHosted ?? false,
-			syncEnabled: overrides.syncEnabled ?? true,
-			serverUrl: overrides.serverUrl ?? "https://sync.example.com",
+			serverUrl: overrides.authServerUrl ?? serverUrl,
+			checkAuth,
 		}
 		return selector ? selector(state) : state
 	}) as never)
@@ -54,6 +55,14 @@ function setupMocks(overrides: {
 	vi.mocked(useRemoteVaultStore).mockReturnValue({
 		linkedVaultId: overrides.linkedVaultId ?? null,
 		loadLink,
+		syncConfig: {
+			enabled: overrides.syncEnabled ?? true,
+			remoteVaultId: overrides.linkedVaultId ?? null,
+			selfHosted: false,
+			serverUrl: overrides.serverUrl ?? "https://sync.example.com",
+			offlineMode: false,
+			selfHostedEnvironment: {},
+		},
 	} as never)
 
 	vi.mocked(useSyncStore).mockReturnValue({ startSync, stopSync } as never)
@@ -64,6 +73,7 @@ afterEach(() => {
 	startSync.mockClear()
 	stopSync.mockClear()
 	loadLink.mockClear()
+	checkAuth.mockClear()
 	logFn.mockClear()
 })
 
@@ -100,19 +110,51 @@ describe("useSyncLifecycle", () => {
 
 	describe("when user is not authenticated", () => {
 		it("does not call startSync", () => {
-			setupMocks({ authenticated: false, selfHosted: false, vault: mockVault, linkedVaultId: "id" })
+			setupMocks({ authenticated: false, vault: mockVault, linkedVaultId: "id" })
 			renderHook(() => useSyncLifecycle())
 			expect(startSync).not.toHaveBeenCalled()
 		})
 	})
 
-	describe("when selfHosted is true without authentication", () => {
-		it("does not call startSync", () => {
+	describe("when self-hosted sync is enabled without authentication", () => {
+		it("does not call startSync before sign-in", () => {
 			setupMocks({
 				authenticated: false,
-				selfHosted: true,
 				syncEnabled: true,
 				serverUrl: "https://self.hosted.com",
+				vault: mockVault,
+				linkedVaultId: "remote-vault-id",
+			})
+			renderHook(() => useSyncLifecycle())
+			expect(startSync).not.toHaveBeenCalled()
+		})
+	})
+
+	describe("when self-hosted sync is authenticated", () => {
+		it("starts with the vault-scoped server URL", () => {
+			setupMocks({
+				authenticated: true,
+				syncEnabled: true,
+				serverUrl: "https://self.hosted.com",
+				vault: mockVault,
+				linkedVaultId: "remote-vault-id",
+			})
+			renderHook(() => useSyncLifecycle())
+			expect(startSync).toHaveBeenCalledWith(
+				"remote-vault-id",
+				mockVault.path,
+				"https://self.hosted.com",
+			)
+		})
+	})
+
+	describe("when auth belongs to another server", () => {
+		it("does not call startSync", () => {
+			setupMocks({
+				authenticated: true,
+				syncEnabled: true,
+				serverUrl: "https://self.hosted.com",
+				authServerUrl: "https://sync.example.com",
 				vault: mockVault,
 				linkedVaultId: "remote-vault-id",
 			})

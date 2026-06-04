@@ -40,9 +40,9 @@ const mockVault = { path: "/vault", name: "Test Vault", uuid: "vault-id" }
 
 function mockAllStores(overrides: {
 	syncStore?: Partial<ReturnType<typeof useSyncStore>>
-	authStore?: { authenticated?: boolean; syncEnabled?: boolean }
+	authStore?: { authenticated?: boolean }
 	vaultStore?: { vault?: typeof mockVault | null }
-	remoteVaultStore?: { linkedVaultId?: string | null }
+	remoteVaultStore?: { linkedVaultId?: string | null; syncEnabled?: boolean }
 	uiStore?: { openSettings?: ReturnType<typeof vi.fn> }
 	editorStore?: { activeFilePath?: string | null }
 }) {
@@ -58,7 +58,7 @@ function mockAllStores(overrides: {
 	} as never)
 
 	vi.mocked(useAuthStore).mockImplementation(((selector?: (s: unknown) => unknown) => {
-		const state = { authenticated: false, syncEnabled: false, ...(overrides.authStore ?? {}) }
+		const state = { authenticated: false, ...(overrides.authStore ?? {}) }
 		return selector ? selector(state) : state
 	}) as never)
 
@@ -68,7 +68,18 @@ function mockAllStores(overrides: {
 	}) as never)
 
 	vi.mocked(useRemoteVaultStore).mockImplementation(((selector?: (s: unknown) => unknown) => {
-		const state = { linkedVaultId: "vault-remote-id", ...(overrides.remoteVaultStore ?? {}) }
+		const state = {
+			linkedVaultId: "vault-remote-id",
+			syncConfig: {
+				enabled: overrides.remoteVaultStore?.syncEnabled ?? false,
+				remoteVaultId: overrides.remoteVaultStore?.linkedVaultId ?? "vault-remote-id",
+				selfHosted: false,
+				serverUrl: "https://sync.example.com",
+				offlineMode: false,
+				selfHostedEnvironment: {},
+			},
+			...(overrides.remoteVaultStore ?? {}),
+		}
 		return selector ? selector(state) : state
 	}) as never)
 
@@ -103,8 +114,8 @@ describe("SyncIndicator", () => {
 	describe("when engine is idle and user is authenticated without linked vault", () => {
 		beforeEach(() => {
 			mockAllStores({
-				authStore: { authenticated: true, syncEnabled: true },
-				remoteVaultStore: { linkedVaultId: null },
+				authStore: { authenticated: true },
+				remoteVaultStore: { linkedVaultId: null, syncEnabled: true },
 			})
 		})
 
@@ -116,8 +127,8 @@ describe("SyncIndicator", () => {
 		it("calls openSettings('sync') when clicked", async () => {
 			const openSettings = vi.fn()
 			mockAllStores({
-				authStore: { authenticated: true, syncEnabled: true },
-				remoteVaultStore: { linkedVaultId: null },
+				authStore: { authenticated: true },
+				remoteVaultStore: { linkedVaultId: null, syncEnabled: true },
 				uiStore: { openSettings },
 			})
 			render(<SyncIndicator />)
@@ -140,8 +151,8 @@ describe("SyncIndicator", () => {
 	describe("when engine is idle and sync is disabled", () => {
 		it("renders nothing", () => {
 			mockAllStores({
-				authStore: { authenticated: true, syncEnabled: false },
-				remoteVaultStore: { linkedVaultId: null },
+				authStore: { authenticated: true },
+				remoteVaultStore: { linkedVaultId: null, syncEnabled: false },
 			})
 			const { container } = render(<SyncIndicator />)
 			expect(container).toBeEmptyDOMElement()

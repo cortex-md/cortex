@@ -3,6 +3,7 @@ import { create } from "zustand"
 import { devtools } from "zustand/middleware"
 import { immer } from "zustand/middleware/immer"
 import { noteCache } from "../noteCache"
+import { type LeftSidebarLayout, useUIStore } from "./uiStore"
 
 export type SplitDirection = "horizontal" | "vertical"
 export type TabType = "file" | "view"
@@ -43,6 +44,13 @@ export interface Pane {
 interface RecentlyClosed {
 	filePath: string
 	title: string
+}
+
+interface WorkspaceSnapshot {
+	panes: Record<string, Pane>
+	splitTree: SplitTree
+	activePaneId: string
+	leftSidebar?: Partial<LeftSidebarLayout>
 }
 
 export interface OpenTabOptions {
@@ -581,11 +589,24 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
 			persistWorkspace: async (vaultPath) => {
 				const { panes, splitTree, activePaneId } = get()
+				const { leftSidebarCollapsed, leftSidebarWidth } = useUIStore.getState()
 				const platform = getPlatform()
 				const configPath = `${vaultPath}/.cortex/workspace.json`
 				await platform.fs.writeFile(
 					configPath,
-					JSON.stringify({ panes, splitTree, activePaneId }, null, 2),
+					JSON.stringify(
+						{
+							panes,
+							splitTree,
+							activePaneId,
+							leftSidebar: {
+								collapsed: leftSidebarCollapsed,
+								width: leftSidebarWidth,
+							},
+						},
+						null,
+						2,
+					),
 				)
 			},
 
@@ -594,11 +615,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 				const configPath = `${vaultPath}/.cortex/workspace.json`
 				try {
 					const raw = await platform.fs.readFile(configPath)
-					const data = JSON.parse(raw) as {
-						panes: Record<string, Pane>
-						splitTree: SplitTree
-						activePaneId: string
-					}
+					const data = JSON.parse(raw) as WorkspaceSnapshot
 					if (data.panes && data.splitTree) {
 						for (const pane of Object.values(data.panes)) {
 							for (const tab of pane.tabs) {
@@ -612,8 +629,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 							s.activePaneId = data.activePaneId ?? ROOT_PANE_ID
 						})
 					}
+					if (data.leftSidebar) {
+						useUIStore.getState().setLeftSidebarLayout(data.leftSidebar)
+					} else {
+						useUIStore.getState().resetLeftSidebarLayout()
+					}
 				} catch {
-					// No workspace file yet
+					useUIStore.getState().resetLeftSidebarLayout()
 				}
 			},
 

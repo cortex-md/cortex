@@ -4,10 +4,11 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("@cortex/core", () => ({
 	useAuthStore: vi.fn(),
+	useRemoteVaultStore: vi.fn(),
 	useUIStore: vi.fn(),
 }))
 
-import { useAuthStore, useUIStore } from "@cortex/core"
+import { useAuthStore, useRemoteVaultStore, useUIStore } from "@cortex/core"
 import { AuthModal } from "../../../features/auth/AuthModal"
 
 const login = vi.fn().mockResolvedValue(undefined)
@@ -42,6 +43,15 @@ function setupMocks(
 			loading: overrides.loading ?? false,
 			error: overrides.error ?? null,
 			clearError,
+		}
+		return selector ? selector(state) : state
+	}) as never)
+
+	vi.mocked(useRemoteVaultStore).mockImplementation(((selector?: (s: unknown) => unknown) => {
+		const state = {
+			syncConfig: {
+				serverUrl: "https://sync.example.com",
+			},
 		}
 		return selector ? selector(state) : state
 	}) as never)
@@ -80,7 +90,11 @@ describe("AuthModal", () => {
 		await userEvent.click(screen.getByText("Sign in", { selector: "button[type='submit']" }))
 
 		await waitFor(() => {
-			expect(login).toHaveBeenCalledWith("you@example.com", "password123")
+			expect(login).toHaveBeenCalledWith(
+				"you@example.com",
+				"password123",
+				"https://sync.example.com",
+			)
 		})
 		expect(closeAuth).toHaveBeenCalled()
 		expect(openSettings).toHaveBeenCalledWith("sync")
@@ -123,7 +137,12 @@ describe("AuthModal", () => {
 		await userEvent.click(screen.getByText("Create account", { selector: "button[type='submit']" }))
 
 		await waitFor(() => {
-			expect(register).toHaveBeenCalledWith("jane@example.com", "password123", "Jane Doe")
+			expect(register).toHaveBeenCalledWith(
+				"jane@example.com",
+				"password123",
+				"Jane Doe",
+				"https://sync.example.com",
+			)
 		})
 		expect(closeAuth).toHaveBeenCalled()
 	})

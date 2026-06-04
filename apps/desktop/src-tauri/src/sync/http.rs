@@ -10,6 +10,8 @@ use crate::keychain;
 const ACCESS_TOKEN_KEY: &str = "access_token";
 const REFRESH_TOKEN_KEY: &str = "refresh_token";
 const SERVER_URL_KEY: &str = "server_url";
+const USER_ID_KEY: &str = "user_id";
+const USER_EMAIL_KEY: &str = "user_email";
 
 pub struct SyncHttpClient {
     client: Client,
@@ -30,8 +32,7 @@ impl SyncHttpClient {
 
     pub fn set_server_url(&self, url: &str) {
         let mut server_url = self.server_url.lock().unwrap();
-        *server_url = url.trim_end_matches('/').to_string();
-        let _ = keychain::set(SERVER_URL_KEY, url);
+        *server_url = normalize_server_url(url);
     }
 
     pub fn get_server_url(&self) -> String {
@@ -46,7 +47,9 @@ impl SyncHttpClient {
     }
 
     async fn inject_auth_headers(&self, builder: RequestBuilder) -> Result<RequestBuilder, String> {
-        let access_token = keychain::get(ACCESS_TOKEN_KEY)?;
+        let server_url = self.get_server_url();
+        migrate_legacy_auth(&server_url)?;
+        let access_token = get_access_token_for_server(&server_url)?;
         let device_id = device::get_device_id()?;
 
         let builder = builder.header("X-Device-ID", &device_id);
@@ -54,7 +57,7 @@ impl SyncHttpClient {
         if let Some(token) = access_token {
             if should_refresh(&token) {
                 if let Err(_) = self.refresh_tokens_internal().await {}
-                if let Ok(Some(new_token)) = keychain::get(ACCESS_TOKEN_KEY) {
+                if let Ok(Some(new_token)) = get_access_token_for_server(&server_url) {
                     return Ok(builder.header("Authorization", format!("Bearer {}", new_token)));
                 }
             }
@@ -192,10 +195,12 @@ impl SyncHttpClient {
     async fn refresh_tokens_internal(&self) -> Result<(), String> {
         let _guard = self.refresh_lock.lock().await;
 
-        let refresh_token =
-            keychain::get(REFRESH_TOKEN_KEY)?.ok_or_else(|| "No refresh token".to_string())?;
+        let server_url = self.get_server_url();
+        migrate_legacy_auth(&server_url)?;
+        let refresh_token = get_refresh_token_for_server(&server_url)?
+            .ok_or_else(|| "No refresh token".to_string())?;
 
-        let url = format!("{}/auth/v1/token/refresh", self.get_server_url());
+        let url = format!("{}/auth/v1/token/refresh", server_url);
 
         let response = self
             .client
@@ -208,7 +213,7 @@ impl SyncHttpClient {
         let status = response.status();
 
         if status.as_u16() == 401 || status.as_u16() == 403 {
-            clear_tokens_and_user_info()?;
+            clear_tokens_and_user_info_for_server(&server_url)?;
             let _ = self.app.emit("auth-session-expired", ());
             return Err("Session expired: refresh token revoked or invalid".to_string());
         }
@@ -223,10 +228,10 @@ impl SyncHttpClient {
         let body: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
 
         if let Some(access) = body["access_token"].as_str() {
-            keychain::set(ACCESS_TOKEN_KEY, access)?;
+            keychain::set(&scoped_key(&server_url, ACCESS_TOKEN_KEY), access)?;
         }
         if let Some(refresh) = body["refresh_token"].as_str() {
-            keychain::set(REFRESH_TOKEN_KEY, refresh)?;
+            keychain::set(&scoped_key(&server_url, REFRESH_TOKEN_KEY), refresh)?;
         }
 
         Ok(())
@@ -242,30 +247,141 @@ pub async fn parse_response<T: DeserializeOwned>(response: Response) -> Result<T
     response.json::<T>().await.map_err(|e| e.to_string())
 }
 
-pub fn store_tokens(access_token: &str, refresh_token: &str) -> Result<(), String> {
-    keychain::set(ACCESS_TOKEN_KEY, access_token)?;
-    keychain::set(REFRESH_TOKEN_KEY, refresh_token)?;
+pub fn normalize_server_url(url: &str) -> String {
+    url.trim().trim_end_matches('/').to_lowercase()
+}
+
+pub fn scoped_key(server_url: &str, key: &str) -> String {
+    let normalized = normalize_server_url(server_url);
+    let hash = blake3::hash(normalized.as_bytes()).to_hex().to_string();
+    format!("sync:{}:{}", hash, key)
+}
+
+pub fn store_tokens_for_server(
+    server_url: &str,
+    access_token: &str,
+    refresh_token: &str,
+) -> Result<(), String> {
+    let normalized = normalize_server_url(server_url);
+    keychain::set(&scoped_key(&normalized, ACCESS_TOKEN_KEY), access_token)?;
+    keychain::set(&scoped_key(&normalized, REFRESH_TOKEN_KEY), refresh_token)?;
     Ok(())
 }
 
-pub fn clear_tokens() -> Result<(), String> {
-    keychain::delete(ACCESS_TOKEN_KEY)?;
-    keychain::delete(REFRESH_TOKEN_KEY)?;
+pub fn clear_tokens_for_server(server_url: &str) -> Result<(), String> {
+    let normalized = normalize_server_url(server_url);
+    keychain::delete(&scoped_key(&normalized, ACCESS_TOKEN_KEY))?;
+    keychain::delete(&scoped_key(&normalized, REFRESH_TOKEN_KEY))?;
     Ok(())
 }
 
-fn clear_tokens_and_user_info() -> Result<(), String> {
-    keychain::delete(ACCESS_TOKEN_KEY)?;
-    keychain::delete(REFRESH_TOKEN_KEY)?;
-    let _ = keychain::delete("user_id");
-    let _ = keychain::delete("user_email");
+pub fn store_user_for_server(server_url: &str, user_id: &str, email: &str) -> Result<(), String> {
+    let normalized = normalize_server_url(server_url);
+    keychain::set(&scoped_key(&normalized, USER_ID_KEY), user_id)?;
+    keychain::set(&scoped_key(&normalized, USER_EMAIL_KEY), email)?;
     Ok(())
 }
 
-pub fn has_tokens() -> Result<bool, String> {
-    let has_access = keychain::get(ACCESS_TOKEN_KEY)?.is_some();
-    let has_refresh = keychain::get(REFRESH_TOKEN_KEY)?.is_some();
+pub fn clear_tokens_and_user_info_for_server(server_url: &str) -> Result<(), String> {
+    let normalized = normalize_server_url(server_url);
+    clear_tokens_for_server(&normalized)?;
+    let _ = keychain::delete(&scoped_key(&normalized, USER_ID_KEY));
+    let _ = keychain::delete(&scoped_key(&normalized, USER_EMAIL_KEY));
+    Ok(())
+}
+
+pub fn get_access_token_for_server(server_url: &str) -> Result<Option<String>, String> {
+    let normalized = normalize_server_url(server_url);
+    migrate_legacy_auth(&normalized)?;
+    keychain::get(&scoped_key(&normalized, ACCESS_TOKEN_KEY))
+}
+
+pub fn get_refresh_token_for_server(server_url: &str) -> Result<Option<String>, String> {
+    let normalized = normalize_server_url(server_url);
+    migrate_legacy_auth(&normalized)?;
+    keychain::get(&scoped_key(&normalized, REFRESH_TOKEN_KEY))
+}
+
+pub fn get_user_for_server(server_url: &str) -> Result<(Option<String>, Option<String>), String> {
+    let normalized = normalize_server_url(server_url);
+    migrate_legacy_auth(&normalized)?;
+    Ok((
+        keychain::get(&scoped_key(&normalized, USER_ID_KEY))?,
+        keychain::get(&scoped_key(&normalized, USER_EMAIL_KEY))?,
+    ))
+}
+
+pub fn has_tokens_for_server(server_url: &str) -> Result<bool, String> {
+    let normalized = normalize_server_url(server_url);
+    migrate_legacy_auth(&normalized)?;
+    let has_access = keychain::get(&scoped_key(&normalized, ACCESS_TOKEN_KEY))?.is_some();
+    let has_refresh = keychain::get(&scoped_key(&normalized, REFRESH_TOKEN_KEY))?.is_some();
     Ok(has_access && has_refresh)
+}
+
+fn migrate_legacy_auth(server_url: &str) -> Result<(), String> {
+    let normalized = normalize_server_url(server_url);
+    if normalized.is_empty() {
+        return Ok(());
+    }
+
+    if keychain::get(&scoped_key(&normalized, ACCESS_TOKEN_KEY))?.is_some() {
+        return Ok(());
+    }
+
+    let legacy_access = keychain::get(ACCESS_TOKEN_KEY)?;
+    let legacy_refresh = keychain::get(REFRESH_TOKEN_KEY)?;
+    let legacy_server = keychain::get(SERVER_URL_KEY)?.unwrap_or_default();
+    let legacy_matches =
+        legacy_server.trim().is_empty() || normalize_server_url(&legacy_server) == normalized;
+
+    if !legacy_matches {
+        return Ok(());
+    }
+
+    if let Some(access) = legacy_access {
+        keychain::set(&scoped_key(&normalized, ACCESS_TOKEN_KEY), &access)?;
+    }
+    if let Some(refresh) = legacy_refresh {
+        keychain::set(&scoped_key(&normalized, REFRESH_TOKEN_KEY), &refresh)?;
+    }
+    if let Some(user_id) = keychain::get(USER_ID_KEY)? {
+        keychain::set(&scoped_key(&normalized, USER_ID_KEY), &user_id)?;
+    }
+    if let Some(email) = keychain::get(USER_EMAIL_KEY)? {
+        keychain::set(&scoped_key(&normalized, USER_EMAIL_KEY), &email)?;
+    }
+
+    let _ = keychain::delete(ACCESS_TOKEN_KEY);
+    let _ = keychain::delete(REFRESH_TOKEN_KEY);
+    let _ = keychain::delete(USER_ID_KEY);
+    let _ = keychain::delete(USER_EMAIL_KEY);
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{normalize_server_url, scoped_key};
+
+    #[test]
+    fn normalizes_server_url_for_auth_scope() {
+        assert_eq!(
+            normalize_server_url("HTTPS://Sync.Example.com///"),
+            "https://sync.example.com"
+        );
+    }
+
+    #[test]
+    fn scopes_auth_keys_by_server_url() {
+        assert_eq!(
+            scoped_key("https://sync.example.com", "access_token"),
+            scoped_key("https://sync.example.com/", "access_token")
+        );
+        assert_ne!(
+            scoped_key("https://sync.example.com", "access_token"),
+            scoped_key("https://self.hosted", "access_token")
+        );
+    }
 }
 
 fn should_refresh(token: &str) -> bool {

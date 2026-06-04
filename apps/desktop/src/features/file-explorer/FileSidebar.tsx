@@ -1,4 +1,11 @@
-import { useSyncStore, useTagsStore, useVaultStore, useWorkspaceStore } from "@cortex/core"
+import {
+	isSyncImagePath,
+	shouldIgnoreSyncPath,
+	useSyncStore,
+	useTagsStore,
+	useVaultStore,
+	useWorkspaceStore,
+} from "@cortex/core"
 import type { FileEntry } from "@cortex/platform"
 import { getPlatform } from "@cortex/platform"
 import {
@@ -130,6 +137,14 @@ function showNativeFileContextMenu(
 	actions: FileActions,
 ) {
 	const vault = useVaultStore.getState().vault
+	const vaultPath = vault?.path
+	const syncPreferences = useSyncStore.getState().syncPreferences
+	const relative = vaultPath ? node.path.replace(`${vaultPath}/`, "") : ""
+	const syncIgnoreToggleAvailable = !(
+		syncPreferences.ignoreImages &&
+		!node.isDir &&
+		isSyncImagePath(relative)
+	)
 	const items = buildFileContextMenuItems(
 		{
 			path: node.path,
@@ -156,21 +171,25 @@ function showNativeFileContextMenu(
 			copyRelativePath: (path) => actions.onCopyPath(path, "relative"),
 			showInExplorer: (path) => actions.onReveal(path),
 			showVersionHistory: (path) => actions.onViewHistory(path),
-			toggleSyncIgnore: (path, ignored) => {
-				if (!vault?.path) return
-				const relative = path.replace(`${vault.path}/`, "")
-				const normalized = node.isDir
-					? relative.endsWith("/")
-						? relative
-						: `${relative}/`
-					: relative
-				useSyncStore.getState().toggleExcludedPath(normalized, ignored)
-			},
-			isSyncIgnored: (path) => {
-				if (!vault?.path) return false
-				const relative = path.replace(`${vault.path}/`, "")
-				return useSyncStore.getState().isPathExcluded(relative)
-			},
+			toggleSyncIgnore:
+				vaultPath && syncIgnoreToggleAvailable
+					? (path, ignored) => {
+							const relative = path.replace(`${vaultPath}/`, "")
+							const normalized = node.isDir
+								? relative.endsWith("/")
+									? relative
+									: `${relative}/`
+								: relative
+							useSyncStore.getState().toggleExcludedPath(normalized, ignored)
+						}
+					: undefined,
+			isSyncIgnored:
+				vaultPath && syncIgnoreToggleAvailable
+					? (path) => {
+							const relative = path.replace(`${vaultPath}/`, "")
+							return useSyncStore.getState().isPathExcluded(relative)
+						}
+					: undefined,
 		},
 	)
 
@@ -227,14 +246,15 @@ function TreeNodeRow({
 				if (e.key === "F2") onStartRename(node.path)
 			}}
 		>
-      {node.isDir && (
-        <ChevronRightIcon
-          size={12}
-          strokeWidth={2.5}
-          className={`text-text-muted flex-shrink-0 transition-transform duration-100 ${isExpanded ? "rotate-90" : ""
-            }`}
-        />
-      )}
+			{node.isDir && (
+				<ChevronRightIcon
+					size={12}
+					strokeWidth={2.5}
+					className={`text-text-muted flex-shrink-0 transition-transform duration-100 ${
+						isExpanded ? "rotate-90" : ""
+					}`}
+				/>
+			)}
 			{isRenaming ? (
 				<InlineInput
 					defaultValue={node.name}
@@ -498,15 +518,15 @@ function TreeNodeView({
 
 function SyncExcludeMenuItem({ node }: { node: TreeNode }) {
 	const vaultPath = useVaultStore((s) => s.vault?.path)
-	const excludedPaths = useSyncStore((s) => s.syncPreferences.excludedPaths)
+	const syncPreferences = useSyncStore((s) => s.syncPreferences)
 
 	if (!vaultPath) return null
 
 	const relative = node.path.replace(`${vaultPath}/`, "")
+	if (syncPreferences.ignoreImages && !node.isDir && isSyncImagePath(relative)) return null
+
 	const normalized = node.isDir ? (relative.endsWith("/") ? relative : `${relative}/`) : relative
-	const isExcluded = excludedPaths.some((excluded) =>
-		excluded.endsWith("/") ? relative.startsWith(excluded) : relative === excluded,
-	)
+	const isExcluded = shouldIgnoreSyncPath(relative, syncPreferences)
 
 	return (
 		<>

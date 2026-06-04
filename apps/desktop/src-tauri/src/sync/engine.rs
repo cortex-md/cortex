@@ -146,19 +146,27 @@ impl SyncEngine {
                         }
                         Some(SyncCommand::ForceSyncFile { path }) => {
                             let relative = self.to_relative_path(&path);
-                            self.pending_uploads.remove(&relative);
-                            let (op, priority) = SyncQueue::upload(relative);
-                            self.queue.push(op, priority);
+                            if !should_ignore(&relative, &self.sync_preferences) {
+                                self.pending_uploads.remove(&relative);
+                                let (op, priority) = SyncQueue::upload(relative);
+                                self.queue.push(op, priority);
+                            }
                         }
                         Some(SyncCommand::RemoteFileChanged { path, version }) => {
-                            let (op, priority) = SyncQueue::download(path, version);
-                            self.queue.push(op, priority);
+                            if !should_ignore(&path, &self.sync_preferences) {
+                                let (op, priority) = SyncQueue::download(path, version);
+                                self.queue.push(op, priority);
+                            }
                         }
                         Some(SyncCommand::RemoteFileDeleted { path }) => {
-                            self.queue.push(SyncOp::Delete { path }, 80);
+                            if !should_ignore(&path, &self.sync_preferences) {
+                                self.queue.push(SyncOp::Delete { path }, 80);
+                            }
                         }
                         Some(SyncCommand::RemoteFileRenamed { old_path, new_path }) => {
-                            self.queue.push(SyncOp::Rename { old_path, new_path }, 80);
+                            if !should_ignore(&new_path, &self.sync_preferences) {
+                                self.queue.push(SyncOp::Rename { old_path, new_path }, 80);
+                            }
                         }
                         Some(SyncCommand::ResolveConflict { path, resolution }) => {
                             let (_op, priority) = SyncQueue::conflict(path.clone());
@@ -188,6 +196,7 @@ impl SyncEngine {
                             sync_workspace,
                             sync_plugin_metadata,
                             sync_theme_metadata,
+                            ignore_images,
                             excluded_paths,
                         }) => {
                             self.handle_update_sync_preferences(
@@ -196,6 +205,7 @@ impl SyncEngine {
                                 sync_workspace,
                                 sync_plugin_metadata,
                                 sync_theme_metadata,
+                                ignore_images,
                                 excluded_paths,
                             );
                         }
@@ -276,6 +286,9 @@ impl SyncEngine {
 
         for path in ready {
             self.pending_deletes.remove(&path);
+            if should_ignore(&path, &self.sync_preferences) {
+                continue;
+            }
             let (op, priority) = SyncQueue::delete_remote(path);
             self.queue.push(op, priority);
         }
@@ -283,6 +296,10 @@ impl SyncEngine {
 
     async fn handle_start(&mut self, vault_id: String, vault_path: String, server_url: String) {
         self.set_state(SyncEngineState::Connecting);
+
+        if let Some(client) = self.app.try_state::<SyncHttpClient>() {
+            client.set_server_url(&server_url);
+        }
 
         match SyncDb::open(&vault_path) {
             Ok(db) => {
@@ -375,6 +392,7 @@ impl SyncEngine {
         sync_workspace: bool,
         sync_plugin_metadata: bool,
         sync_theme_metadata: bool,
+        ignore_images: bool,
         excluded_paths: Vec<String>,
     ) {
         let old = self.sync_preferences.clone();
@@ -384,8 +402,14 @@ impl SyncEngine {
             sync_workspace,
             sync_plugin_metadata,
             sync_theme_metadata,
+            ignore_images,
             excluded_paths,
         };
+        let sync_preferences = self.sync_preferences.clone();
+        self.pending_uploads
+            .retain(|path, _| !should_ignore(path, &sync_preferences));
+        self.pending_deletes
+            .retain(|path, _| !should_ignore(path, &sync_preferences));
 
         if self.vault_path.is_none() {
             return;
@@ -594,6 +618,10 @@ impl SyncEngine {
         for path in ready {
             self.pending_uploads.remove(&path);
 
+            if should_ignore(&path, &self.sync_preferences) {
+                continue;
+            }
+
             if let Some(ref vault_path) = self.vault_path {
                 let full_path = std::path::Path::new(vault_path).join(&path);
                 if !full_path.exists() {
@@ -633,7 +661,7 @@ impl SyncEngine {
             Err(_) => return false,
         };
 
-        match crate::keychain::get("access_token") {
+        match crate::sync::http::get_access_token_for_server(server_url) {
             Ok(Some(_)) => {}
             _ => return false,
         }
@@ -654,10 +682,13 @@ impl SyncEngine {
 
         let saved_last_event_id = self.last_event_id.clone();
         let device_id_clone = device_id.clone();
+        let server_url_clone = server_url.clone();
 
         tokio::spawn(async move {
             let mut sse = SseClient::new(tx, device_id_clone.clone(), saved_last_event_id);
-            let _ = sse.connect(&url, "", &device_id_clone, cancel).await;
+            let _ = sse
+                .connect(&url, &server_url_clone, &device_id_clone, cancel)
+                .await;
         });
 
         true
@@ -716,6 +747,11 @@ impl SyncEngine {
         let client = &*client_state;
 
         while let Some(item) = self.queue.pop() {
+            if self.should_ignore_queue_item(&item.op) {
+                self.queue.mark_completed(&item);
+                continue;
+            }
+
             let result: Result<(), String> = match &item.op {
                 SyncOp::Upload { ref path } => {
                     self.emit_file_event(path, "uploading");
@@ -862,6 +898,20 @@ impl SyncEngine {
                     self.queue.mark_failed(item, e, retriable);
                 }
             }
+        }
+    }
+
+    fn should_ignore_queue_item(&self, op: &SyncOp) -> bool {
+        match op {
+            SyncOp::Upload { path }
+            | SyncOp::Download { path, .. }
+            | SyncOp::Delete { path }
+            | SyncOp::DeleteRemote { path }
+            | SyncOp::ResolveConflict { path, .. } => should_ignore(path, &self.sync_preferences),
+            SyncOp::Rename { new_path, .. } | SyncOp::RenameRemote { new_path, .. } => {
+                should_ignore(new_path, &self.sync_preferences)
+            }
+            SyncOp::InitialSync | SyncOp::Reconcile => false,
         }
     }
 }

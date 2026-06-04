@@ -207,7 +207,7 @@
 	--syntax-meta: #b3b2a8;
 
 	--font-ui: ui-sans-serif, -apple-system, "system-ui";
-	--font-editor: "DM Sans", system-ui, -apple-system, sans-serif;
+	--font-editor: system-ui, -apple-system, sans-serif;
 	--font-mono: system-ui, -apple-system, sans-serif;
 
 	--status-error: #b83535;
@@ -1023,6 +1023,33 @@ body[data-platform="windows"] .file-tree-item.active {
 	border-radius: 4px;
 }
 
+.marketplace-readme {
+	padding: 20px;
+}
+
+.marketplace-readme .reading-view {
+	height: auto;
+	min-height: 100%;
+	overflow: visible;
+	max-width: 760px;
+	margin: 0;
+	padding: 0 0 24px;
+}
+
+.marketplace-readme .reading-view > :first-child {
+	margin-top: 0;
+}
+
+.marketplace-readme .reading-view table {
+	display: block;
+	max-width: 100%;
+	overflow-x: auto;
+}
+
+.marketplace-readme .reading-view pre {
+	max-width: 100%;
+}
+
 /* Syntax highlight token mapping (hljs → --syntax-* CSS vars) */
 .reading-view .hljs-keyword,
 .reading-view .hljs-selector-tag,
@@ -1110,7 +1137,7 @@ body[data-platform="macos"] .app-titlebar {
 
 body[data-platform="macos"] .app-sidebar-toggle {
 	position: absolute;
-	top: 10px;
+	top: 12px;
 	left: 98px;
 	z-index: 40;
 	width: 34px;

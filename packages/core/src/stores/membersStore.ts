@@ -27,6 +27,13 @@ export interface MembersState {
 	clearError: () => void
 }
 
+async function syncAuthContext(): Promise<void> {
+	const { useRemoteVaultStore } = await import("./remoteVaultStore")
+	const { useAuthStore } = await import("./authStore")
+	const serverUrl = useRemoteVaultStore.getState().syncConfig.serverUrl
+	await useAuthStore.getState().checkAuth(serverUrl ?? undefined)
+}
+
 export const useMembersStore = create<MembersState>()(
 	devtools(
 		immer((set) => ({
@@ -43,6 +50,7 @@ export const useMembersStore = create<MembersState>()(
 				})
 				try {
 					const platform = getPlatform()
+					await syncAuthContext()
 					const members = await platform.members.listMembers(vaultId)
 					set((state) => {
 						state.members = members
@@ -62,6 +70,7 @@ export const useMembersStore = create<MembersState>()(
 			updateMemberRole: async (vaultId, userId, role) => {
 				try {
 					const platform = getPlatform()
+					await syncAuthContext()
 					await platform.members.updateMemberRole(vaultId, userId, role)
 					set((state) => {
 						const member = state.members.find((m) => m.userId === userId)
@@ -79,6 +88,7 @@ export const useMembersStore = create<MembersState>()(
 			removeMember: async (vaultId, userId) => {
 				try {
 					const platform = getPlatform()
+					await syncAuthContext()
 					await platform.members.removeMember(vaultId, userId)
 					set((state) => {
 						state.members = state.members.filter((m) => m.userId !== userId)
@@ -93,6 +103,7 @@ export const useMembersStore = create<MembersState>()(
 			fetchInvites: async (vaultId) => {
 				try {
 					const platform = getPlatform()
+					await syncAuthContext()
 					const invites = await platform.members.listInvites(vaultId)
 					set((state) => {
 						state.invites = invites
@@ -107,6 +118,7 @@ export const useMembersStore = create<MembersState>()(
 			createInvite: async (vaultId, inviteeEmail, role, encryptedVaultKey) => {
 				try {
 					const platform = getPlatform()
+					await syncAuthContext()
 					const invite = await platform.members.createInvite(
 						vaultId,
 						inviteeEmail,
@@ -127,6 +139,7 @@ export const useMembersStore = create<MembersState>()(
 			deleteInvite: async (vaultId, inviteId) => {
 				try {
 					const platform = getPlatform()
+					await syncAuthContext()
 					await platform.members.deleteInvite(vaultId, inviteId)
 					set((state) => {
 						state.invites = state.invites.filter((i) => i.id !== inviteId)
@@ -141,6 +154,7 @@ export const useMembersStore = create<MembersState>()(
 			fetchMyInvites: async () => {
 				try {
 					const platform = getPlatform()
+					await syncAuthContext()
 					const invites = await platform.members.myInvites()
 					set((state) => {
 						state.myInvites = invites
@@ -155,6 +169,7 @@ export const useMembersStore = create<MembersState>()(
 			acceptInvite: async (inviteId) => {
 				try {
 					const platform = getPlatform()
+					await syncAuthContext()
 					const result = await platform.members.acceptInvite(inviteId)
 					set((state) => {
 						state.myInvites = state.myInvites.filter((i) => i.id !== inviteId)

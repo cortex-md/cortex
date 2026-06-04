@@ -54,17 +54,32 @@ pub async fn auth_register(
 #[tauri::command]
 pub async fn auth_logout(
     client: State<'_, SyncHttpClient>,
+    server_url: String,
     all_devices: bool,
 ) -> Result<(), String> {
-    auth::logout(&client, all_devices).await
+    auth::logout(&client, &server_url, all_devices).await
 }
 
 #[tauri::command]
-pub fn auth_get_status() -> Result<AuthStatus, String> {
-    auth::get_auth_status()
+pub fn auth_get_status(
+    client: State<'_, SyncHttpClient>,
+    server_url: Option<String>,
+) -> Result<AuthStatus, String> {
+    let url = server_url.unwrap_or_else(|| client.get_server_url());
+    if !url.is_empty() {
+        client.set_server_url(&url);
+    }
+    auth::get_auth_status(&url)
 }
 
 #[tauri::command]
-pub fn auth_get_current_user() -> Result<Option<CurrentUser>, String> {
-    auth::get_current_user()
+pub fn auth_get_current_user(
+    client: State<'_, SyncHttpClient>,
+    server_url: Option<String>,
+) -> Result<Option<CurrentUser>, String> {
+    let url = server_url.unwrap_or_else(|| client.get_server_url());
+    if !url.is_empty() {
+        client.set_server_url(&url);
+    }
+    auth::get_current_user(&url)
 }

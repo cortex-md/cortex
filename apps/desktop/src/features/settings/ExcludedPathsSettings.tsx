@@ -1,8 +1,14 @@
-import { useSyncStore, useVaultStore } from "@cortex/core"
+import {
+	isSyncImagePath,
+	normalizeSyncPathPattern,
+	shouldIgnoreSyncPath,
+	useSyncStore,
+	useVaultStore,
+} from "@cortex/core"
 import type { FileEntry } from "@cortex/platform"
-import { Badge, FolderPicker } from "@cortex/ui"
-import { FileIcon, FolderIcon, XIcon } from "lucide-react"
-import { useMemo } from "react"
+import { Badge, Button, Field, FieldLabel, FolderPicker, Input, Switch } from "@cortex/ui"
+import { FileIcon, FolderIcon, PlusIcon, XIcon } from "lucide-react"
+import { type ChangeEvent, type KeyboardEvent, useMemo, useState } from "react"
 
 function fileEntryToRelativePath(entry: FileEntry, vaultPath: string): string {
 	const relative = entry.path.replace(`${vaultPath}/`, "")
@@ -12,21 +18,39 @@ function fileEntryToRelativePath(entry: FileEntry, vaultPath: string): string {
 export function ExcludedPathsSettings() {
 	const files = useVaultStore((s) => s.files)
 	const vault = useVaultStore((s) => s.vault)
-	const excludedPaths = useSyncStore((s) => s.syncPreferences.excludedPaths)
+	const syncPreferences = useSyncStore((s) => s.syncPreferences)
+	const excludedPaths = syncPreferences.excludedPaths
 	const toggleExcludedPath = useSyncStore((s) => s.toggleExcludedPath)
+	const updateSyncPreference = useSyncStore((s) => s.updateSyncPreference)
+	const [patternInput, setPatternInput] = useState("")
+	const normalizedPatternInput = normalizeSyncPathPattern(patternInput)
 
 	const availableOptions = useMemo(() => {
 		if (!vault?.path) return []
 		return files
 			.map((f) => fileEntryToRelativePath(f, vault.path))
 			.filter((p) => !p.startsWith(".cortex/") && !p.startsWith(".cortex"))
-			.filter((p) => !excludedPaths.includes(p))
+			.filter((p) => !(syncPreferences.ignoreImages && isSyncImagePath(p)))
+			.filter((p) => !shouldIgnoreSyncPath(p, syncPreferences))
 			.map((p) => ({
 				value: p,
 				label: p,
 				isDir: p.endsWith("/"),
 			}))
-	}, [files, vault?.path, excludedPaths])
+	}, [files, vault?.path, syncPreferences])
+
+	const handleAddPattern = async () => {
+		if (!normalizedPatternInput || excludedPaths.includes(normalizedPatternInput)) return
+		await toggleExcludedPath(normalizedPatternInput, true)
+		setPatternInput("")
+	}
+
+	const handlePatternKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+		if (event.key === "Enter") {
+			event.preventDefault()
+			handleAddPattern()
+		}
+	}
 
 	return (
 		<div>
@@ -37,6 +61,38 @@ export function ExcludedPathsSettings() {
 				Files and folders excluded from sync will not be uploaded to the remote vault.
 			</p>
 
+			<Field orientation="horizontal" className="items-center justify-between py-2 mb-3">
+				<FieldLabel htmlFor="ignore-sync-images">Ignore images</FieldLabel>
+				<Switch
+					id="ignore-sync-images"
+					checked={syncPreferences.ignoreImages}
+					onCheckedChange={(checked) => updateSyncPreference("ignoreImages", checked)}
+				/>
+			</Field>
+
+			<Field className="mb-3">
+				<FieldLabel htmlFor="sync-ignore-pattern">Ignore pattern</FieldLabel>
+				<div className="flex gap-2">
+					<Input
+						id="sync-ignore-pattern"
+						value={patternInput}
+						onChange={(event: ChangeEvent<HTMLInputElement>) => setPatternInput(event.target.value)}
+						onKeyDown={handlePatternKeyDown}
+						placeholder="node_modules/, *.log, docs/**/*.tmp"
+					/>
+					<Button
+						variant="secondary"
+						size="sm"
+						onClick={handleAddPattern}
+						disabled={!normalizedPatternInput || excludedPaths.includes(normalizedPatternInput)}
+						className="shrink-0"
+					>
+						<PlusIcon size={14} />
+						Add
+					</Button>
+				</div>
+			</Field>
+
 			{excludedPaths.length > 0 && (
 				<div className="flex flex-wrap gap-1.5 mb-3">
 					{excludedPaths.map((path) => (
@@ -45,7 +101,7 @@ export function ExcludedPathsSettings() {
 							variant="secondary"
 							className="flex items-center gap-1.5 pl-2 pr-1 py-1"
 						>
-							{path.endsWith("/") ? (
+							{path.replace(/^!/, "").endsWith("/") ? (
 								<FolderIcon className="size-3 shrink-0 text-text-muted" />
 							) : (
 								<FileIcon className="size-3 shrink-0 text-text-muted" />

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("@cortex/core", () => ({
+	DEFAULT_SYNC_SERVER_URL: "http://localhost:8080",
 	useAuthStore: vi.fn(),
 	useRemoteVaultStore: vi.fn(),
 	useSyncStore: vi.fn(),
@@ -10,12 +11,19 @@ vi.mock("@cortex/core", () => ({
 	useVaultStore: vi.fn(),
 }))
 
-vi.mock("../../../features/sync/DeviceManager", () => ({
-	DeviceManager: () => <div>Device manager panel</div>,
+vi.mock("@cortex/platform", () => ({
+	getPlatform: vi.fn(() => ({
+		dialog: {
+			showConfirm: vi.fn().mockResolvedValue(true),
+		},
+		keychain: {
+			get: vi.fn().mockResolvedValue(null),
+			set: vi.fn().mockResolvedValue(undefined),
+			delete: vi.fn().mockResolvedValue(undefined),
+		},
+	})),
 }))
-vi.mock("../../../features/sync/InvitesPanel", () => ({
-	InvitesPanel: () => <div>Invites panel</div>,
-}))
+
 vi.mock("../../../features/sync/MembersPanel", () => ({
 	MembersPanel: () => <div>Members panel</div>,
 }))
@@ -42,6 +50,8 @@ const logout = vi.fn().mockResolvedValue(undefined)
 const setSyncEnabled = vi.fn().mockResolvedValue(undefined)
 const saveServerUrl = vi.fn().mockResolvedValue(undefined)
 const setSelfHosted = vi.fn().mockResolvedValue(undefined)
+const updateSelfHostedEnvironment = vi.fn().mockResolvedValue(undefined)
+const unlinkVault = vi.fn().mockResolvedValue(undefined)
 const loadLink = vi.fn().mockResolvedValue(undefined)
 const fetchRemoteVaults = vi.fn().mockResolvedValue(undefined)
 const updateSyncPreference = vi.fn().mockResolvedValue(undefined)
@@ -56,39 +66,51 @@ function setupMocks(
 		remoteVaults?: Array<{ id: string; role: string }>
 	} = {},
 ) {
-	vi.mocked(useUIStore).mockImplementation(((selector?: (s: unknown) => unknown) => {
+	vi.mocked(useUIStore).mockImplementation(((selector?: (state: unknown) => unknown) => {
 		const state = { closeSettings, openAuth }
 		return selector ? selector(state) : state
 	}) as never)
 
-	vi.mocked(useAuthStore).mockImplementation(((selector?: (s: unknown) => unknown) => {
+	vi.mocked(useAuthStore).mockImplementation(((selector?: (state: unknown) => unknown) => {
 		const authenticated = overrides.authenticated ?? false
 		const state = {
 			authenticated,
-			syncEnabled: overrides.syncEnabled ?? false,
-			selfHosted: overrides.selfHosted ?? false,
 			user:
 				overrides.user ?? (authenticated ? { userId: "user-id", email: "you@example.com" } : null),
 			logout,
-			setSyncEnabled,
 			serverUrl: "https://sync.example.com",
-			saveServerUrl,
-			setSelfHosted,
 		}
 		return selector ? selector(state) : state
 	}) as never)
 
-	vi.mocked(useVaultStore).mockImplementation(((selector?: (s: unknown) => unknown) => {
+	vi.mocked(useVaultStore).mockImplementation(((selector?: (state: unknown) => unknown) => {
 		const state = { vault: mockVault }
 		return selector ? selector(state) : state
 	}) as never)
 
-	vi.mocked(useRemoteVaultStore).mockReturnValue({
-		linkedVaultId: overrides.linkedVaultId ?? null,
-		remoteVaults: overrides.remoteVaults ?? [],
-		loadLink,
-		fetchRemoteVaults,
-	} as never)
+	vi.mocked(useRemoteVaultStore).mockImplementation(((selector?: (state: unknown) => unknown) => {
+		const linkedVaultId = overrides.linkedVaultId ?? null
+		const state = {
+			linkedVaultId,
+			remoteVaults: overrides.remoteVaults ?? [],
+			loadLink,
+			fetchRemoteVaults,
+			setSyncEnabled,
+			saveServerUrl,
+			setSelfHosted,
+			unlinkVault,
+			updateSelfHostedEnvironment,
+			syncConfig: {
+				enabled: overrides.syncEnabled ?? false,
+				remoteVaultId: linkedVaultId,
+				selfHosted: overrides.selfHosted ?? false,
+				serverUrl: "https://sync.example.com",
+				offlineMode: false,
+				selfHostedEnvironment: {},
+			},
+		}
+		return selector ? selector(state) : state
+	}) as never)
 
 	vi.mocked(useSyncStore).mockReturnValue({
 		engineState: "idle",
@@ -98,6 +120,7 @@ function setupMocks(
 			syncWorkspace: false,
 			syncPluginMetadata: false,
 			syncThemeMetadata: false,
+			ignoreImages: false,
 			excludedPaths: [],
 		},
 		updateSyncPreference,
@@ -110,12 +133,24 @@ afterEach(() => {
 })
 
 describe("SyncSection", () => {
-	it("shows only a sign-in alert when signed out", async () => {
-		setupMocks({ authenticated: false })
+	it("lets signed-out users enable sync from the overview", async () => {
+		setupMocks({ authenticated: false, syncEnabled: false })
 		render(<SyncSection />)
 
-		expect(screen.getByText("Sign in to use sync")).toBeInTheDocument()
-		expect(screen.queryByText("Enable sync")).not.toBeInTheDocument()
+		expect(screen.getByText("Enable sync for this vault")).toBeInTheDocument()
+		expect(screen.queryByText("Sign in to connect")).not.toBeInTheDocument()
+		expect(screen.queryByText("Connection")).not.toBeInTheDocument()
+
+		await userEvent.click(screen.getByRole("switch", { name: "Enable sync for this vault" }))
+
+		expect(setSyncEnabled).toHaveBeenCalledWith("/vault", true)
+	})
+
+	it("shows sign-in CTA after signed-out users enable sync", async () => {
+		setupMocks({ authenticated: false, syncEnabled: true })
+		render(<SyncSection />)
+
+		expect(screen.getByText("Sign in to connect")).toBeInTheDocument()
 
 		await userEvent.click(screen.getByRole("button", { name: "Sign in" }))
 
@@ -123,47 +158,45 @@ describe("SyncSection", () => {
 		expect(openAuth).toHaveBeenCalledWith("login", "sync")
 	})
 
-	it("shows account and enable sync toggle when signed in but sync is disabled", () => {
-		setupMocks({ authenticated: true, syncEnabled: false })
-		render(<SyncSection />)
-
-		expect(screen.getByText("you@example.com")).toBeInTheDocument()
-		expect(screen.getByText("Enable sync")).toBeInTheDocument()
-		expect(screen.queryByText("Vault Link")).not.toBeInTheDocument()
-		expect(fetchRemoteVaults).not.toHaveBeenCalled()
-	})
-
-	it("shows vault-link onboarding when sync is enabled without a link", async () => {
+	it("shows vault-link onboarding when authenticated and enabled without a link", async () => {
 		setupMocks({ authenticated: true, syncEnabled: true, linkedVaultId: null })
 		render(<SyncSection />)
 
-		expect(screen.getByText("Vault Link")).toBeInTheDocument()
+		expect(screen.getByText("Remote Vault")).toBeInTheDocument()
 		expect(screen.getByText("Link or create a remote vault to start syncing.")).toBeInTheDocument()
-		expect(screen.queryByText("Devices")).not.toBeInTheDocument()
 
 		await waitFor(() => {
 			expect(fetchRemoteVaults).toHaveBeenCalled()
 		})
 	})
 
-	it("shows full sync settings after sync is enabled and linked", () => {
+	it("shows content settings on the preferences page", () => {
+		setupMocks({ authenticated: false, syncEnabled: true })
+		render(<SyncSection view="preferences" />)
+
+		expect(screen.getByText("Metadata")).toBeInTheDocument()
+		expect(screen.getByText("Excluded paths panel")).toBeInTheDocument()
+	})
+
+	it("shows members after sync is enabled and linked", () => {
 		setupMocks({
 			authenticated: true,
 			syncEnabled: true,
 			linkedVaultId: "remote-vault-id",
 			remoteVaults: [{ id: "remote-vault-id", role: "owner" }],
 		})
-		render(<SyncSection />)
+		render(<SyncSection view="members" />)
 
-		expect(screen.getByText("Linked to remote vault")).toBeInTheDocument()
-		expect(screen.getByText("Devices")).toBeInTheDocument()
-		expect(screen.getByText("Device manager panel")).toBeInTheDocument()
-		expect(screen.getByText("My Invites")).toBeInTheDocument()
-		expect(screen.getByText("Invites panel")).toBeInTheDocument()
-		expect(screen.getByText("Vault Members & Invites")).toBeInTheDocument()
+		expect(screen.getByText("Members")).toBeInTheDocument()
 		expect(screen.getByText("Members panel")).toBeInTheDocument()
-		expect(screen.getByText("Sync Preferences")).toBeInTheDocument()
-		expect(screen.getByText("Excluded paths panel")).toBeInTheDocument()
-		expect(screen.getByText("Server")).toBeInTheDocument()
+	})
+
+	it("shows self-host settings with closed environment groups", () => {
+		setupMocks({ authenticated: false, syncEnabled: true, selfHosted: true })
+		render(<SyncSection view="self-host" />)
+
+		expect(screen.getByText("Connection")).toBeInTheDocument()
+		expect(screen.getByText("Environment")).toBeInTheDocument()
+		expect(screen.getByRole("button", { name: "Server" })).toHaveAttribute("aria-expanded", "false")
 	})
 })

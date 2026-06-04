@@ -10,10 +10,12 @@ export interface RemoteVaultInfo {
 }
 
 export interface SyncConfig {
+	enabled: boolean
 	remoteVaultId: string | null
 	selfHosted: boolean
 	serverUrl: string | null
 	offlineMode: boolean
+	selfHostedEnvironment: Record<string, string>
 }
 
 export interface RemoteVault {

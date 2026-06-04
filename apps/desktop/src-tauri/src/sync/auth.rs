@@ -72,10 +72,13 @@ pub async fn login(
     let response = client.post_json("/auth/v1/login", &body).await?;
     let login_resp: LoginResponse = parse_response(response).await?;
 
-    http::store_tokens(&login_resp.access_token, &login_resp.refresh_token)?;
-
-    crate::keychain::set("user_id", &login_resp.user_id)?;
-    crate::keychain::set("user_email", &login_resp.email)?;
+    let server_url = client.get_server_url();
+    http::store_tokens_for_server(
+        &server_url,
+        &login_resp.access_token,
+        &login_resp.refresh_token,
+    )?;
+    http::store_user_for_server(&server_url, &login_resp.user_id, &login_resp.email)?;
 
     Ok(login_resp)
 }
@@ -98,28 +101,33 @@ pub async fn register(
     Ok(register_resp)
 }
 
-pub async fn logout(client: &SyncHttpClient, all_devices: bool) -> Result<(), String> {
+pub async fn logout(
+    client: &SyncHttpClient,
+    server_url: &str,
+    all_devices: bool,
+) -> Result<(), String> {
+    client.set_server_url(server_url);
     let body = LogoutRequest { all_devices };
-    let response = client.post_json("/auth/v1/logout", &body).await?;
-    let status = response.status();
-    if !status.is_success() {
-        let body = response.text().await.unwrap_or_default();
-        return Err(format!("Logout failed: HTTP {}: {}", status.as_u16(), body));
-    }
-
-    http::clear_tokens()?;
-    crate::keychain::delete("user_id")?;
-    crate::keychain::delete("user_email")?;
-    crate::keychain::delete("device_id")?;
-
-    Ok(())
+    let remote_result = match client.post_json("/auth/v1/logout", &body).await {
+        Ok(response) => {
+            let status = response.status();
+            if !status.is_success() {
+                let body = response.text().await.unwrap_or_default();
+                Err(format!("Logout failed: HTTP {}: {}", status.as_u16(), body))
+            } else {
+                Ok(())
+            }
+        }
+        Err(e) => Err(e),
+    };
+    http::clear_tokens_and_user_info_for_server(server_url)?;
+    remote_result
 }
 
-pub fn get_auth_status() -> Result<AuthStatus, String> {
-    let authenticated = http::has_tokens()?;
+pub fn get_auth_status(server_url: &str) -> Result<AuthStatus, String> {
+    let authenticated = http::has_tokens_for_server(server_url)?;
     if authenticated {
-        let user_id = crate::keychain::get("user_id")?;
-        let email = crate::keychain::get("user_email")?;
+        let (user_id, email) = http::get_user_for_server(server_url)?;
         Ok(AuthStatus {
             authenticated: true,
             user_id,
@@ -134,9 +142,8 @@ pub fn get_auth_status() -> Result<AuthStatus, String> {
     }
 }
 
-pub fn get_current_user() -> Result<Option<CurrentUser>, String> {
-    let user_id = crate::keychain::get("user_id")?;
-    let email = crate::keychain::get("user_email")?;
+pub fn get_current_user(server_url: &str) -> Result<Option<CurrentUser>, String> {
+    let (user_id, email) = http::get_user_for_server(server_url)?;
     match (user_id, email) {
         (Some(uid), Some(e)) => Ok(Some(CurrentUser {
             user_id: uid,

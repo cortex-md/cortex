@@ -33,6 +33,7 @@ export class Sync implements ISync {
 			syncWorkspace: preferences.syncWorkspace,
 			syncPluginMetadata: preferences.syncPluginMetadata,
 			syncThemeMetadata: preferences.syncThemeMetadata,
+			ignoreImages: preferences.ignoreImages,
 			excludedPaths: preferences.excludedPaths,
 		})
 	}

@@ -190,6 +190,7 @@ pub async fn sync_update_preferences(
     sync_workspace: bool,
     sync_plugin_metadata: bool,
     sync_theme_metadata: bool,
+    ignore_images: bool,
     excluded_paths: Vec<String>,
 ) -> Result<(), String> {
     sender
@@ -199,6 +200,7 @@ pub async fn sync_update_preferences(
             sync_workspace,
             sync_plugin_metadata,
             sync_theme_metadata,
+            ignore_images,
             excluded_paths,
         })
         .await

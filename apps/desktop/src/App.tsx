@@ -261,6 +261,9 @@ export default function App() {
 	const pluginViews = usePluginStore((s) => s.views)
 	const [communityThemesLoaded, setCommunityThemesLoaded] = useState(false)
 	const [settingsModalOpen, setSettingsModalOpen] = useState(false)
+	const [workspacePersistenceVaultPath, setWorkspacePersistenceVaultPath] = useState<string | null>(
+		null,
+	)
 
 	const navItems = useMemo<NavItem[]>(() => {
 		const pluginNavItems: NavItem[] = pluginSidebarItems.map((item) => ({
@@ -590,16 +593,25 @@ export default function App() {
 
 	useEffect(() => {
 		if (!vault) {
+			setWorkspacePersistenceVaultPath(null)
 			reset()
 			resetSearch()
 			resetBookmarks()
 			return
 		}
-		loadWorkspace(vault.path)
+		setWorkspacePersistenceVaultPath(null)
+		let cancelled = false
+		const vaultPath = vault.path
+		loadWorkspace(vaultPath).finally(() => {
+			if (!cancelled) setWorkspacePersistenceVaultPath(vaultPath)
+		})
 		loadSettings(vault.path)
 		loadOverrides(vault.path)
 		loadBookmarks(vault.path)
 		loadTagColors(vault.path)
+		return () => {
+			cancelled = true
+		}
 	}, [
 		vault,
 		loadWorkspace,
@@ -700,11 +712,41 @@ export default function App() {
 			.catch(() => setSettingsModalOpen(true))
 	}, [settingsOpen, settingsInitialSection, marketplaceInitialTab, vault, closeSettings])
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: persist when workspace state changes
 	useEffect(() => {
 		if (!vault) return
-		persistWorkspace(vault.path)
-	}, [panes, splitTree, activePaneId, vault, persistWorkspace])
+		if (workspacePersistenceVaultPath !== vault.path) return
+		const vaultPath = vault.path
+		let persistTimer: number | null = null
+		const schedulePersistWorkspace = () => {
+			if (persistTimer) window.clearTimeout(persistTimer)
+			persistTimer = window.setTimeout(() => {
+				persistWorkspace(vaultPath).catch(() => {})
+			}, 500)
+		}
+		const unsubscribeWorkspace = useWorkspaceStore.subscribe((state, previousState) => {
+			if (
+				state.panes !== previousState.panes ||
+				state.splitTree !== previousState.splitTree ||
+				state.activePaneId !== previousState.activePaneId
+			) {
+				schedulePersistWorkspace()
+			}
+		})
+		const unsubscribeUI = useUIStore.subscribe((state, previousState) => {
+			if (
+				state.leftSidebarCollapsed !== previousState.leftSidebarCollapsed ||
+				state.leftSidebarWidth !== previousState.leftSidebarWidth
+			) {
+				schedulePersistWorkspace()
+			}
+		})
+		schedulePersistWorkspace()
+		return () => {
+			if (persistTimer) window.clearTimeout(persistTimer)
+			unsubscribeWorkspace()
+			unsubscribeUI()
+		}
+	}, [vault, workspacePersistenceVaultPath, persistWorkspace])
 
 	useEffect(() => {
 		const suspensionInterval = setInterval(

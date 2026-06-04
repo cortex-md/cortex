@@ -28,7 +28,7 @@ export interface Auth {
 		password: string,
 		displayName: string,
 	): Promise<RegisterResult>
-	logout(allDevices: boolean): Promise<void>
-	getStatus(): Promise<AuthStatus>
-	getCurrentUser(): Promise<CurrentUser | null>
+	logout(serverUrl: string, allDevices: boolean): Promise<void>
+	getStatus(serverUrl?: string): Promise<AuthStatus>
+	getCurrentUser(serverUrl?: string): Promise<CurrentUser | null>
 }

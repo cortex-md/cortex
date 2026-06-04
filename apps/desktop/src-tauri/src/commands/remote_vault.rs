@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use tauri::State;
 
 use crate::sync::http::{parse_response, SyncHttpClient};
@@ -149,10 +150,12 @@ fn write_sync_config(vault_path: &str, config: &serde_json::Value) -> Result<(),
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncConfig {
+    pub enabled: bool,
     pub remote_vault_id: Option<String>,
     pub self_hosted: bool,
     pub server_url: Option<String>,
     pub offline_mode: bool,
+    pub self_hosted_environment: HashMap<String, String>,
 }
 
 #[tauri::command]
@@ -179,10 +182,13 @@ pub fn remote_vault_get_link(vault_path: String) -> Result<Option<String>, Strin
 pub fn sync_config_read(vault_path: String) -> Result<SyncConfig, String> {
     let config = read_sync_config(&vault_path);
     Ok(SyncConfig {
+        enabled: config["enabled"].as_bool().unwrap_or(false),
         remote_vault_id: config["remoteVaultId"].as_str().map(|s| s.to_string()),
         self_hosted: config["selfHosted"].as_bool().unwrap_or(false),
         server_url: config["serverUrl"].as_str().map(|s| s.to_string()),
         offline_mode: config["offlineMode"].as_bool().unwrap_or(false),
+        self_hosted_environment: serde_json::from_value(config["selfHostedEnvironment"].clone())
+            .unwrap_or_default(),
     })
 }
 

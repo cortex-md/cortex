@@ -23,7 +23,18 @@ import {
 	SidebarMenuItem,
 	SidebarProvider,
 } from "@cortex/ui"
-import { Blocks, Keyboard, Palette, RefreshCw, Settings, Store, Type } from "lucide-react"
+import {
+	Blocks,
+	Keyboard,
+	Palette,
+	RefreshCw,
+	Server,
+	Settings,
+	SlidersHorizontal,
+	Store,
+	Type,
+	Users,
+} from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { MarketplaceSection } from "../marketplace"
 import { AppearanceSection } from "./AppearanceSettings"
@@ -33,15 +44,43 @@ import { HotkeysSection } from "./HotkeysSettings"
 import { PluginsSection } from "./PluginsSettings"
 import { SyncSection } from "./SyncSettings"
 
-const coreSections = [
+interface SettingsSectionItem {
+	name: string
+	id: string
+	icon: typeof Settings
+}
+
+interface SettingsSectionGroup {
+	label: string
+	sections: SettingsSectionItem[]
+}
+
+const appSections: SettingsSectionItem[] = [
 	{ name: "General", id: "general", icon: Settings },
 	{ name: "Appearance", id: "appearance", icon: Palette },
 	{ name: "Editor", id: "editor", icon: Type },
 	{ name: "Hotkeys", id: "hotkeys", icon: Keyboard },
+]
+
+const syncSections: SettingsSectionItem[] = [
 	{ name: "Sync", id: "sync", icon: RefreshCw },
+	{ name: "Preferences", id: "sync-preferences", icon: SlidersHorizontal },
+	{ name: "Members", id: "sync-members", icon: Users },
+	{ name: "Self-host", id: "sync-self-host", icon: Server },
+]
+
+const extensionSections: SettingsSectionItem[] = [
 	{ name: "Plugins", id: "plugins", icon: Blocks },
 	{ name: "Marketplace", id: "marketplace", icon: Store },
-] as const
+]
+
+const settingsSectionGroups: SettingsSectionGroup[] = [
+	{ label: "App", sections: appSections },
+	{ label: "Sync", sections: syncSections },
+	{ label: "Extensions", sections: extensionSections },
+]
+
+const settingsSections = settingsSectionGroups.flatMap((group) => group.sections)
 
 interface SettingsModalProps {
 	open: boolean
@@ -90,7 +129,7 @@ export function SettingsContent({
 		}
 	}, [requestedSection])
 
-	const coreSection = coreSections.find((s) => s.id === activeSectionId)
+	const coreSection = settingsSections.find((s) => s.id === activeSectionId)
 	const pluginTab = pluginSettingsTabs.find((t) => t.id === activeSectionId)
 	const activeName = coreSection?.name ?? pluginTab?.label ?? "Settings"
 
@@ -109,26 +148,29 @@ export function SettingsContent({
 	}, [])
 
 	return (
-		<SidebarProvider className="settings-content items-start">
-			<Sidebar collapsible="none" className="hidden md:flex min-h-full">
+		<SidebarProvider className="settings-content h-full min-h-0 items-start overflow-hidden">
+			<Sidebar collapsible="none" className="hidden h-full min-h-0 md:flex">
 				<SidebarContent>
-					<SidebarGroup>
-						<SidebarGroupContent>
-							<SidebarMenu>
-								{coreSections.map((item) => (
-									<SidebarMenuItem key={item.id}>
-										<SidebarMenuButton
-											onClick={() => setActiveSectionId(item.id)}
-											isActive={activeSectionId === item.id}
-										>
-											<item.icon />
-											<span>{item.name}</span>
-										</SidebarMenuButton>
-									</SidebarMenuItem>
-								))}
-							</SidebarMenu>
-						</SidebarGroupContent>
-					</SidebarGroup>
+					{settingsSectionGroups.map((group) => (
+						<SidebarGroup key={group.label}>
+							<SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+							<SidebarGroupContent>
+								<SidebarMenu>
+									{group.sections.map((item) => (
+										<SidebarMenuItem key={item.id}>
+											<SidebarMenuButton
+												onClick={() => setActiveSectionId(item.id)}
+												isActive={activeSectionId === item.id}
+											>
+												<item.icon />
+												<span>{item.name}</span>
+											</SidebarMenuButton>
+										</SidebarMenuItem>
+									))}
+								</SidebarMenu>
+							</SidebarGroupContent>
+						</SidebarGroup>
+					))}
 					{pluginSettingsTabs.length > 0 && (
 						<SidebarGroup>
 							<SidebarGroupLabel>Plugin Settings</SidebarGroupLabel>
@@ -152,8 +194,8 @@ export function SettingsContent({
 				</SidebarContent>
 			</Sidebar>
 			<main
-				className={`settings-main flex flex-1 flex-col overflow-hidden ${
-					fullHeight ? "h-screen" : "h-[580px]"
+				className={`settings-main flex min-h-0 flex-1 flex-col overflow-hidden ${
+					fullHeight ? "h-full" : "h-full max-h-full"
 				}`}
 			>
 				<header className="flex h-12 shrink-0 items-center gap-2 border-b border-border">
@@ -173,7 +215,7 @@ export function SettingsContent({
 					className={
 						activeSectionId === "marketplace"
 							? "flex min-h-0 flex-1 flex-col overflow-hidden"
-							: "flex flex-1 flex-col gap-4 overflow-y-auto p-4"
+							: "flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4"
 					}
 				>
 					{activeSectionId === "general" && (
@@ -190,7 +232,10 @@ export function SettingsContent({
 						/>
 					)}
 					{activeSectionId === "hotkeys" && <HotkeysSection />}
-					{activeSectionId === "sync" && <SyncSection />}
+					{activeSectionId === "sync" && <SyncSection view="overview" />}
+					{activeSectionId === "sync-preferences" && <SyncSection view="preferences" />}
+					{activeSectionId === "sync-members" && <SyncSection view="members" />}
+					{activeSectionId === "sync-self-host" && <SyncSection view="self-host" />}
 					{activeSectionId === "plugins" && <PluginsSection />}
 					{activeSectionId === "marketplace" && <MarketplaceSection initialTab={marketplaceTab} />}
 					{pluginTab && (
@@ -213,7 +258,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="overflow-hidden p-0 md:max-h-[700px] md:max-w-[1100px] lg:max-w-[1000px]">
+			<DialogContent className="flex h-[calc(100vh-1rem)] max-h-[calc(100vh-1rem)] overflow-hidden p-0 md:h-[760px] md:max-w-[1180px] lg:max-w-[1240px] xl:max-w-[1320px]">
 				<DialogTitle className="sr-only">Settings</DialogTitle>
 				<DialogDescription className="sr-only">Customize your settings here.</DialogDescription>
 				<SettingsContent

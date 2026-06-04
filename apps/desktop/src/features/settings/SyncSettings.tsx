@@ -1,33 +1,226 @@
 import {
+	DEFAULT_SYNC_SERVER_URL,
 	useAuthStore,
 	useRemoteVaultStore,
 	useSyncStore,
 	useUIStore,
 	useVaultStore,
 } from "@cortex/core"
+import { getPlatform } from "@cortex/platform"
 import {
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
 	Alert,
 	AlertDescription,
 	AlertTitle,
 	Badge,
 	Button,
 	Field,
+	FieldDescription,
+	FieldGroup,
 	FieldLabel,
 	Input,
-	Separator,
 	Switch,
 } from "@cortex/ui"
-import { Cloud, CloudOff, Link, Loader2, LogIn, LogOut, User } from "lucide-react"
-import { type ChangeEvent, type KeyboardEvent, useEffect, useState } from "react"
-import { DeviceManager } from "../sync/DeviceManager"
-import { InvitesPanel } from "../sync/InvitesPanel"
+import { ClipboardCopy, Cloud, CloudOff, Download, Link, Loader2, LogIn } from "lucide-react"
+import {
+	type ChangeEvent,
+	type KeyboardEvent,
+	type ReactNode,
+	useEffect,
+	useMemo,
+	useState,
+} from "react"
 import { MembersPanel } from "../sync/MembersPanel"
 import { VaultLinkModal } from "../sync/VaultLinkModal"
 import { ExcludedPathsSettings } from "./ExcludedPathsSettings"
 
+export type SyncSettingsView = "overview" | "preferences" | "members" | "self-host"
+
+interface SelfHostedEnvironmentField {
+	key: string
+	label: string
+	defaultValue: string
+	secret?: boolean
+}
+
+interface SelfHostedEnvironmentGroup {
+	id: string
+	label: string
+	fields: SelfHostedEnvironmentField[]
+}
+
+const selfHostedEnvironmentGroups: SelfHostedEnvironmentGroup[] = [
+	{
+		id: "server",
+		label: "Server",
+		fields: [
+			{ key: "CORTEX_SERVER_HOST", label: "Host", defaultValue: "0.0.0.0" },
+			{ key: "CORTEX_SERVER_PORT", label: "Port", defaultValue: "8080" },
+			{ key: "CORTEX_SERVER_SHUTDOWN_TIMEOUT", label: "Shutdown timeout", defaultValue: "15s" },
+		],
+	},
+	{
+		id: "database",
+		label: "Database",
+		fields: [
+			{
+				key: "CORTEX_DATABASE_URL",
+				label: "PostgreSQL URL",
+				defaultValue: "postgres://cortex:cortex@localhost:5432/cortex_sync?sslmode=disable",
+			},
+			{ key: "CORTEX_DATABASE_MAX_CONNS", label: "Max connections", defaultValue: "25" },
+			{ key: "CORTEX_DATABASE_MIN_CONNS", label: "Min connections", defaultValue: "5" },
+		],
+	},
+	{
+		id: "storage",
+		label: "Storage / S3",
+		fields: [
+			{ key: "CORTEX_S3_PROVIDER", label: "Provider", defaultValue: "minio" },
+			{ key: "CORTEX_S3_ENDPOINT", label: "Endpoint", defaultValue: "localhost:9000" },
+			{
+				key: "CORTEX_S3_ACCESS_KEY",
+				label: "Access key",
+				defaultValue: "minioadmin",
+				secret: true,
+			},
+			{
+				key: "CORTEX_S3_SECRET_KEY",
+				label: "Secret key",
+				defaultValue: "minioadmin",
+				secret: true,
+			},
+			{ key: "CORTEX_S3_BUCKET", label: "Bucket", defaultValue: "cortex-snapshots" },
+			{ key: "CORTEX_S3_USE_SSL", label: "Use SSL", defaultValue: "false" },
+			{ key: "CORTEX_S3_REGION", label: "Region", defaultValue: "us-east-1" },
+		],
+	},
+	{
+		id: "auth",
+		label: "Auth",
+		fields: [
+			{
+				key: "CORTEX_AUTH_ACCESS_TOKEN_SECRET",
+				label: "Access token secret",
+				defaultValue: "change-me-in-production",
+				secret: true,
+			},
+			{ key: "CORTEX_AUTH_ACCESS_TOKEN_EXPIRY", label: "Access token expiry", defaultValue: "15m" },
+			{
+				key: "CORTEX_AUTH_REFRESH_TOKEN_EXPIRY",
+				label: "Refresh token expiry",
+				defaultValue: "2160h",
+			},
+			{ key: "CORTEX_AUTH_ISSUER", label: "Issuer", defaultValue: "cortex-sync" },
+		],
+	},
+	{
+		id: "limits",
+		label: "Sync Limits",
+		fields: [
+			{
+				key: "CORTEX_SYNC_MAX_DELTAS_BEFORE_SNAPSHOT",
+				label: "Deltas before snapshot",
+				defaultValue: "10",
+			},
+			{ key: "CORTEX_SYNC_MAX_DELTA_SIZE_RATIO", label: "Delta size ratio", defaultValue: "0.5" },
+			{ key: "CORTEX_SYNC_MAX_FILE_SIZE", label: "Max file size", defaultValue: "104857600" },
+			{
+				key: "CORTEX_SYNC_MAX_SNAPSHOTS_PER_FILE",
+				label: "Snapshots per file",
+				defaultValue: "50",
+			},
+			{ key: "CORTEX_SYNC_EVENT_RETENTION", label: "Event retention", defaultValue: "720h" },
+		],
+	},
+	{
+		id: "collab",
+		label: "Collab",
+		fields: [
+			{ key: "CORTEX_COLLAB_MAX_PEERS_PER_ROOM", label: "Max peers per room", defaultValue: "10" },
+			{ key: "CORTEX_COLLAB_FLUSH_INTERVAL", label: "Flush interval", defaultValue: "10s" },
+		],
+	},
+	{
+		id: "ops",
+		label: "Metrics / Rate Limit",
+		fields: [
+			{ key: "CORTEX_METRICS_ENABLED", label: "Metrics enabled", defaultValue: "true" },
+			{ key: "CORTEX_METRICS_PATH", label: "Metrics path", defaultValue: "/metrics" },
+			{
+				key: "CORTEX_RATE_LIMIT_REQUESTS_PER_SECOND",
+				label: "Requests per second",
+				defaultValue: "100",
+			},
+			{ key: "CORTEX_RATE_LIMIT_BURST", label: "Burst", defaultValue: "200" },
+		],
+	},
+	{
+		id: "subscription",
+		label: "Subscription",
+		fields: [
+			{ key: "CORTEX_SUBSCRIPTION_ENABLED", label: "Enabled", defaultValue: "false" },
+			{ key: "CORTEX_SUBSCRIPTION_API_KEY", label: "API key", defaultValue: "", secret: true },
+			{ key: "CORTEX_SUBSCRIPTION_PRODUCT_ID", label: "Product ID", defaultValue: "" },
+			{ key: "CORTEX_SUBSCRIPTION_CACHE_TTL", label: "Cache TTL", defaultValue: "5m" },
+		],
+	},
+]
+
+const selfHostedEnvironmentFields = selfHostedEnvironmentGroups.flatMap((group) => group.fields)
+
+function syncSecretKey(vaultId: string, key: string): string {
+	return `sync-env-secret:${vaultId}:${key}`
+}
+
+function buildEnvironmentFile(
+	values: Record<string, string>,
+	secrets: Record<string, string>,
+): string {
+	return selfHostedEnvironmentFields
+		.map((field) => {
+			const value = field.secret ? secrets[field.key] : values[field.key]
+			return `${field.key}=${value || field.defaultValue}`
+		})
+		.join("\n")
+}
+
+function SyncPage({ children }: { children: ReactNode }) {
+	return <section className="mx-auto flex w-full max-w-5xl flex-col gap-4">{children}</section>
+}
+
+function SettingsBlock({
+	title,
+	description,
+	action,
+	children,
+}: {
+	title: string
+	description?: string
+	action?: ReactNode
+	children: ReactNode
+}) {
+	return (
+		<div className="rounded-lg border border-border bg-muted/20 p-4">
+			<div className="mb-4 flex items-start justify-between gap-3">
+				<div>
+					<h3 className="m-0 text-sm font-semibold text-foreground">{title}</h3>
+					{description && <p className="m-0 mt-1 text-xs text-muted-foreground">{description}</p>}
+				</div>
+				{action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
+			</div>
+			<div className="flex flex-col gap-3">{children}</div>
+		</div>
+	)
+}
+
 function SignedOutNotice() {
 	const closeSettings = useUIStore((s) => s.closeSettings)
 	const openAuth = useUIStore((s) => s.openAuth)
+	const serverUrl = useRemoteVaultStore((s) => s.syncConfig.serverUrl)
 
 	const handleSignIn = () => {
 		closeSettings()
@@ -37,10 +230,10 @@ function SignedOutNotice() {
 	return (
 		<Alert>
 			<LogIn />
-			<AlertTitle>Sign in to use sync</AlertTitle>
+			<AlertTitle>Sign in to connect</AlertTitle>
 			<AlertDescription>
 				<div className="flex flex-col gap-3">
-					<p>Sync is available after you sign in to your Cortex account.</p>
+					<p>Sync is enabled for this vault. Sign in to {serverUrl} to link a remote vault.</p>
 					<Button size="sm" className="w-fit" onClick={handleSignIn}>
 						Sign in
 					</Button>
@@ -50,123 +243,126 @@ function SignedOutNotice() {
 	)
 }
 
-function AccountSection() {
-	const { user, logout } = useAuthStore()
-
-	if (!user) return null
-
+function SyncDisabledNotice({ description }: { description: string }) {
 	return (
-		<div className="mb-6">
-			<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-				Account
-			</h3>
-			<div className="flex items-center gap-3 py-2">
-				<div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center shrink-0">
-					<User size={14} className="text-accent" />
-				</div>
-				<div className="flex flex-col min-w-0 flex-1">
-					<span className="text-xs font-medium truncate">{user.email}</span>
-					<span className="text-[10px] text-text-muted">Signed in</span>
-				</div>
-				<Button
-					variant="ghost"
-					size="sm"
-					onClick={() => logout()}
-					className="text-xs h-6 px-2 text-text-muted gap-1.5"
-				>
-					<LogOut size={12} />
-					Sign out
-				</Button>
-			</div>
-		</div>
+		<Alert>
+			<CloudOff />
+			<AlertTitle>Sync is disabled</AlertTitle>
+			<AlertDescription>{description}</AlertDescription>
+		</Alert>
 	)
 }
 
 function SyncToggleSection() {
-	const { syncEnabled, setSyncEnabled } = useAuthStore()
+	const vault = useVaultStore((s) => s.vault)
+	const syncEnabled = useRemoteVaultStore((s) => s.syncConfig.enabled)
+	const setSyncEnabled = useRemoteVaultStore((s) => s.setSyncEnabled)
 
 	return (
-		<div className="mb-6">
-			<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-				Sync
-			</h3>
+		<SettingsBlock
+			title="Sync"
+			description="Enable or disable sync for this vault without changing its remote link."
+		>
 			<Field orientation="horizontal" className="items-center justify-between py-2">
-				<FieldLabel htmlFor="sync-enabled">Enable sync</FieldLabel>
-				<Switch id="sync-enabled" checked={syncEnabled} onCheckedChange={setSyncEnabled} />
+				<FieldLabel htmlFor="sync-enabled">Enable sync for this vault</FieldLabel>
+				<Switch
+					id="sync-enabled"
+					checked={syncEnabled}
+					onCheckedChange={(checked) => vault?.path && setSyncEnabled(vault.path, checked)}
+				/>
 			</Field>
-		</div>
+		</SettingsBlock>
 	)
 }
 
 function ServerSection() {
-	const { serverUrl, saveServerUrl, selfHosted, setSelfHosted } = useAuthStore()
 	const vault = useVaultStore((s) => s.vault)
-	const [inputValue, setInputValue] = useState(serverUrl)
+	const linkedVaultId = useRemoteVaultStore((s) => s.linkedVaultId)
+	const syncConfig = useRemoteVaultStore((s) => s.syncConfig)
+	const saveServerUrl = useRemoteVaultStore((s) => s.saveServerUrl)
+	const setSelfHosted = useRemoteVaultStore((s) => s.setSelfHosted)
+	const unlinkVault = useRemoteVaultStore((s) => s.unlinkVault)
+	const [inputValue, setInputValue] = useState(syncConfig.serverUrl ?? DEFAULT_SYNC_SERVER_URL)
 	const [saving, setSaving] = useState(false)
 
 	useEffect(() => {
-		setInputValue(serverUrl)
-	}, [serverUrl])
+		setInputValue(syncConfig.serverUrl ?? DEFAULT_SYNC_SERVER_URL)
+	}, [syncConfig.serverUrl])
 
 	const handleSave = async () => {
-		const trimmed = inputValue.trim()
-		if (!trimmed || trimmed === serverUrl) return
-		setSaving(true)
-		await saveServerUrl(trimmed)
-		if (vault?.path) {
-			const platform = (await import("@cortex/platform")).getPlatform()
-			await platform.remoteVault.updateSyncConfig(vault.path, "serverUrl", trimmed)
+		const trimmed = inputValue.trim().replace(/\/+$/, "")
+		if (!vault?.path || !trimmed || trimmed === syncConfig.serverUrl) return
+		if (linkedVaultId) {
+			const confirmed = await getPlatform().dialog.showConfirm({
+				title: "Change sync server?",
+				message: "Changing the sync server will unlink this vault from its current remote vault.",
+				confirmLabel: "Change server",
+				cancelLabel: "Keep current server",
+				destructive: true,
+			})
+			if (!confirmed) {
+				setInputValue(syncConfig.serverUrl ?? DEFAULT_SYNC_SERVER_URL)
+				return
+			}
+			await unlinkVault(vault.path)
 		}
-		setSaving(false)
+		setSaving(true)
+		try {
+			await saveServerUrl(vault.path, trimmed)
+		} finally {
+			setSaving(false)
+		}
 	}
 
-	const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-		if (e.key === "Enter") handleSave()
+	const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+		if (event.key === "Enter") handleSave()
 	}
 
 	const handleSelfHostToggle = async (checked: boolean) => {
-		await setSelfHosted(checked)
-		if (vault?.path) {
-			const platform = (await import("@cortex/platform")).getPlatform()
-			await platform.remoteVault.updateSyncConfig(vault.path, "selfHosted", checked)
-		}
+		if (!vault?.path) return
+		await setSelfHosted(vault.path, checked)
 	}
 
 	return (
-		<div className="mb-6">
-			<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-				Server
-			</h3>
+		<SettingsBlock
+			title="Connection"
+			description="Choose Cortex Cloud or point this vault at a self-hosted sync server."
+		>
 			<Field orientation="horizontal" className="items-center justify-between py-2">
 				<FieldLabel htmlFor="self-hosted-sync">Self-hosted sync</FieldLabel>
-				<Switch id="self-hosted-sync" checked={selfHosted} onCheckedChange={handleSelfHostToggle} />
+				<Switch
+					id="self-hosted-sync"
+					checked={syncConfig.selfHosted}
+					onCheckedChange={handleSelfHostToggle}
+				/>
 			</Field>
-			{selfHosted && (
-				<Field>
-					<FieldLabel htmlFor="server-url">Sync URL</FieldLabel>
-					<div className="flex gap-2">
-						<Input
-							id="server-url"
-							type="url"
-							value={inputValue}
-							onChange={(e: ChangeEvent<HTMLInputElement>) => setInputValue(e.target.value)}
-							onKeyDown={handleKeyDown}
-							placeholder="http://localhost:8080"
-							disabled={saving}
-						/>
-						<Button
-							variant="secondary"
-							size="sm"
-							onClick={handleSave}
-							disabled={saving}
-							className="shrink-0"
-						>
-							{saving ? <Loader2 size={14} className="animate-spin" /> : "Save"}
-						</Button>
-					</div>
-				</Field>
-			)}
-		</div>
+			<Field>
+				<FieldLabel htmlFor="server-url">Sync URL</FieldLabel>
+				<div className="flex gap-2">
+					<Input
+						id="server-url"
+						type="url"
+						value={inputValue}
+						onChange={(event: ChangeEvent<HTMLInputElement>) => setInputValue(event.target.value)}
+						onKeyDown={handleKeyDown}
+						placeholder={DEFAULT_SYNC_SERVER_URL}
+						disabled={saving}
+					/>
+					<Button
+						variant="secondary"
+						size="sm"
+						onClick={handleSave}
+						disabled={saving || inputValue.trim() === syncConfig.serverUrl}
+						className="shrink-0"
+					>
+						{saving ? <Loader2 size={14} className="animate-spin" /> : "Save"}
+					</Button>
+				</div>
+				<FieldDescription>
+					Remote vaults and login use this URL for the active vault only.
+				</FieldDescription>
+			</Field>
+		</SettingsBlock>
 	)
 }
 
@@ -174,18 +370,18 @@ function SyncPreferencesSection() {
 	const { syncPreferences, updateSyncPreference } = useSyncStore()
 
 	const preferences = [
-		{ key: "syncSettings" as const, label: "Sync app settings" },
-		{ key: "syncHotkeys" as const, label: "Sync keyboard shortcuts" },
-		{ key: "syncWorkspace" as const, label: "Sync workspace layout" },
-		{ key: "syncPluginMetadata" as const, label: "Sync plugin configuration" },
-		{ key: "syncThemeMetadata" as const, label: "Sync theme configuration" },
+		{ key: "syncSettings" as const, label: "App settings" },
+		{ key: "syncHotkeys" as const, label: "Keyboard shortcuts" },
+		{ key: "syncWorkspace" as const, label: "Workspace layout" },
+		{ key: "syncPluginMetadata" as const, label: "Plugin configuration" },
+		{ key: "syncThemeMetadata" as const, label: "Theme configuration" },
 	]
 
 	return (
-		<div className="mb-6">
-			<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-				Sync Preferences
-			</h3>
+		<SettingsBlock
+			title="Metadata"
+			description="Choose which vault metadata should travel with your notes."
+		>
 			{preferences.map(({ key, label }) => (
 				<Field key={key} orientation="horizontal" className="items-center justify-between py-2">
 					<FieldLabel>{label}</FieldLabel>
@@ -195,7 +391,7 @@ function SyncPreferencesSection() {
 					/>
 				</Field>
 			))}
-		</div>
+		</SettingsBlock>
 	)
 }
 
@@ -211,10 +407,7 @@ function VaultLinkSection({
 	onOpenLink: () => void
 }) {
 	return (
-		<div className="mb-6">
-			<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-				Vault Link
-			</h3>
+		<SettingsBlock title="Remote Vault" description="The remote vault linked to this local vault.">
 			<div className="flex items-center gap-3 py-2">
 				{linkedVaultId ? (
 					<>
@@ -253,15 +446,191 @@ function VaultLinkSection({
 					{linkedVaultId ? "Change" : "Link"}
 				</Button>
 			</div>
-		</div>
+		</SettingsBlock>
 	)
 }
 
-export function SyncSection() {
+function MembersSection({
+	authenticated,
+	linkedVaultId,
+	linkedVaultRole,
+	onOpenLink,
+}: {
+	authenticated: boolean
+	linkedVaultId: string | null
+	linkedVaultRole?: string
+	onOpenLink: () => void
+}) {
+	if (!authenticated) {
+		return (
+			<SyncPage>
+				<SignedOutNotice />
+			</SyncPage>
+		)
+	}
+
+	if (!linkedVaultId) {
+		return (
+			<SyncPage>
+				<VaultLinkSection
+					linkedVaultId={linkedVaultId}
+					remoteVaultRole={linkedVaultRole}
+					engineState="idle"
+					onOpenLink={onOpenLink}
+				/>
+			</SyncPage>
+		)
+	}
+
+	return (
+		<SyncPage>
+			<div>
+				<h3 className="m-0 text-sm font-semibold text-foreground">Members</h3>
+				<p className="m-0 mt-1 text-xs text-muted-foreground">
+					Manage access and invitations for the linked remote vault.
+				</p>
+			</div>
+			<MembersPanel vaultId={linkedVaultId} currentUserRole={linkedVaultRole} />
+		</SyncPage>
+	)
+}
+
+function SelfHostedEnvironmentSection() {
+	const vault = useVaultStore((s) => s.vault)
+	const syncConfig = useRemoteVaultStore((s) => s.syncConfig)
+	const updateSelfHostedEnvironment = useRemoteVaultStore((s) => s.updateSelfHostedEnvironment)
+	const [secrets, setSecrets] = useState<Record<string, string>>({})
+	const [copied, setCopied] = useState(false)
+
+	useEffect(() => {
+		let cancelled = false
+		async function loadSecrets() {
+			if (!vault?.uuid) {
+				setSecrets({})
+				return
+			}
+			const platform = getPlatform()
+			const entries = await Promise.all(
+				selfHostedEnvironmentFields
+					.filter((field) => field.secret)
+					.map(async (field) => [
+						field.key,
+						await platform.keychain.get(syncSecretKey(vault.uuid, field.key)),
+					]),
+			)
+			if (cancelled) return
+			setSecrets(
+				Object.fromEntries(entries.filter((entry): entry is [string, string] => Boolean(entry[1]))),
+			)
+		}
+		loadSecrets()
+		return () => {
+			cancelled = true
+		}
+	}, [vault?.uuid])
+
+	const handleFieldChange = async (field: SelfHostedEnvironmentField, value: string) => {
+		if (!vault?.path || !vault.uuid) return
+		if (field.secret) {
+			const platform = getPlatform()
+			const key = syncSecretKey(vault.uuid, field.key)
+			if (value) {
+				await platform.keychain.set(key, value)
+			} else {
+				await platform.keychain.delete(key)
+			}
+			setSecrets((previous) => {
+				const next = { ...previous }
+				if (value) {
+					next[field.key] = value
+				} else {
+					delete next[field.key]
+				}
+				return next
+			})
+			return
+		}
+		await updateSelfHostedEnvironment(vault.path, field.key, value)
+	}
+
+	const environmentFile = useMemo(
+		() => buildEnvironmentFile(syncConfig.selfHostedEnvironment, secrets),
+		[syncConfig.selfHostedEnvironment, secrets],
+	)
+
+	const handleCopy = async () => {
+		await navigator.clipboard.writeText(environmentFile)
+		setCopied(true)
+		window.setTimeout(() => setCopied(false), 1200)
+	}
+
+	const handleExport = () => {
+		const blob = new Blob([environmentFile], { type: "text/plain;charset=utf-8" })
+		const url = URL.createObjectURL(blob)
+		const link = document.createElement("a")
+		link.href = url
+		link.download = ".env"
+		link.click()
+		URL.revokeObjectURL(url)
+	}
+
+	return (
+		<SettingsBlock
+			title="Environment"
+			description="Values are saved for this vault. Secret values are stored in the OS keychain."
+			action={
+				<>
+					<Button variant="secondary" size="sm" onClick={handleCopy}>
+						<ClipboardCopy size={14} />
+						{copied ? "Copied" : "Copy .env"}
+					</Button>
+					<Button variant="secondary" size="sm" onClick={handleExport}>
+						<Download size={14} />
+						Export
+					</Button>
+				</>
+			}
+		>
+			<Accordion type="multiple">
+				{selfHostedEnvironmentGroups.map((group) => (
+					<AccordionItem key={group.id} value={group.id}>
+						<AccordionTrigger>{group.label}</AccordionTrigger>
+						<AccordionContent>
+							<FieldGroup className="gap-3">
+								{group.fields.map((field) => {
+									const value = field.secret
+										? (secrets[field.key] ?? "")
+										: (syncConfig.selfHostedEnvironment[field.key] ?? "")
+									return (
+										<Field key={field.key}>
+											<FieldLabel htmlFor={field.key}>{field.label}</FieldLabel>
+											<Input
+												id={field.key}
+												type={field.secret ? "password" : "text"}
+												value={value}
+												onChange={(event: ChangeEvent<HTMLInputElement>) =>
+													handleFieldChange(field, event.target.value)
+												}
+												placeholder={field.defaultValue}
+											/>
+											<FieldDescription>{field.key}</FieldDescription>
+										</Field>
+									)
+								})}
+							</FieldGroup>
+						</AccordionContent>
+					</AccordionItem>
+				))}
+			</Accordion>
+		</SettingsBlock>
+	)
+}
+
+export function SyncSection({ view = "overview" }: { view?: SyncSettingsView }) {
 	const authenticated = useAuthStore((s) => s.authenticated)
-	const syncEnabled = useAuthStore((s) => s.syncEnabled)
 	const { vault } = useVaultStore()
-	const { linkedVaultId, remoteVaults, loadLink, fetchRemoteVaults } = useRemoteVaultStore()
+	const { linkedVaultId, remoteVaults, loadLink, fetchRemoteVaults, syncConfig } =
+		useRemoteVaultStore()
 	const { engineState } = useSyncStore()
 	const [linkModalOpen, setLinkModalOpen] = useState(false)
 
@@ -272,86 +641,75 @@ export function SyncSection() {
 	}, [vault?.path, loadLink])
 
 	useEffect(() => {
-		if (authenticated && syncEnabled) {
+		if (authenticated && syncConfig.enabled) {
 			fetchRemoteVaults()
 		}
-	}, [authenticated, syncEnabled, fetchRemoteVaults])
+	}, [authenticated, syncConfig.enabled, fetchRemoteVaults])
 
-	if (!authenticated) {
-		return (
-			<section>
-				<SignedOutNotice />
-			</section>
-		)
-	}
+	const linkedVault = remoteVaults.find((remoteVault) => remoteVault.id === linkedVaultId)
 
-	const linkedVault = remoteVaults.find((v) => v.id === linkedVaultId)
+	let content: ReactNode = null
 
-	return (
-		<section>
-			<AccountSection />
-
-			<Separator className="my-4" />
-
-			<SyncToggleSection />
-
-			{syncEnabled && (
-				<>
-					<Separator className="my-4" />
-
+	if (view === "overview") {
+		content = (
+			<SyncPage>
+				<SyncToggleSection />
+				{syncConfig.enabled && !authenticated && <SignedOutNotice />}
+				{syncConfig.enabled && authenticated && (
 					<VaultLinkSection
 						linkedVaultId={linkedVaultId}
 						remoteVaultRole={linkedVault?.role}
 						engineState={engineState}
 						onOpenLink={() => setLinkModalOpen(true)}
 					/>
+				)}
+			</SyncPage>
+		)
+	}
 
-					<VaultLinkModal open={linkModalOpen} onOpenChange={setLinkModalOpen} />
+	if (view === "preferences") {
+		content = syncConfig.enabled ? (
+			<SyncPage>
+				<SyncPreferencesSection />
+				<div className="rounded-lg border border-border bg-muted/20 p-4">
+					<ExcludedPathsSettings />
+				</div>
+			</SyncPage>
+		) : (
+			<SyncPage>
+				<SyncDisabledNotice description="Enable sync in the Sync page to configure content preferences." />
+			</SyncPage>
+		)
+	}
 
-					{linkedVaultId && (
-						<>
-							<Separator className="my-4" />
+	if (view === "members") {
+		content = syncConfig.enabled ? (
+			<MembersSection
+				authenticated={authenticated}
+				linkedVaultId={linkedVaultId}
+				linkedVaultRole={linkedVault?.role}
+				onOpenLink={() => setLinkModalOpen(true)}
+			/>
+		) : (
+			<SyncPage>
+				<SyncDisabledNotice description="Enable sync in the Sync page before managing members." />
+			</SyncPage>
+		)
+	}
 
-							<div className="mb-6">
-								<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-									Devices
-								</h3>
-								<DeviceManager />
-							</div>
+	if (view === "self-host") {
+		content = (
+			<SyncPage>
+				<ServerSection />
+				{syncConfig.selfHosted && <SelfHostedEnvironmentSection />}
+			</SyncPage>
+		)
+	}
 
-							<Separator className="my-4" />
-
-							<div className="mb-6">
-								<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-									My Invites
-								</h3>
-								<InvitesPanel />
-							</div>
-
-							<Separator className="my-4" />
-
-							<div className="mb-6">
-								<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-									Vault Members & Invites
-								</h3>
-								<MembersPanel vaultId={linkedVaultId} currentUserRole={linkedVault?.role} />
-							</div>
-
-							<Separator className="my-4" />
-
-							<SyncPreferencesSection />
-
-							<Separator className="my-4" />
-
-							<ExcludedPathsSettings />
-
-							<Separator className="my-4" />
-
-							<ServerSection />
-						</>
-					)}
-				</>
-			)}
-		</section>
+	return (
+		<>
+			{content}
+			<VaultLinkModal open={linkModalOpen} onOpenChange={setLinkModalOpen} />
+		</>
 	)
 }

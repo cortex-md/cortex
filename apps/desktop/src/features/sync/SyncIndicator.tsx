@@ -43,9 +43,9 @@ export function SyncIndicator() {
 		error,
 	} = useSyncStore()
 	const authenticated = useAuthStore((s) => s.authenticated)
-	const syncEnabled = useAuthStore((s) => s.syncEnabled)
 	const vault = useVaultStore((s) => s.vault)
 	const linkedVaultId = useRemoteVaultStore((s) => s.linkedVaultId)
+	const syncEnabled = useRemoteVaultStore((s) => s.syncConfig.enabled)
 	const openSettings = useUIStore((s) => s.openSettings)
 	const activeFilePath = useEditorStore((s) => s.activeFilePath)
 	const activeSyncCount = Object.values(syncingFiles).filter((s) => !s.startsWith("error:")).length
@@ -72,7 +72,7 @@ export function SyncIndicator() {
 		)
 	}
 
-	if (engineState === "idle" && authenticated && syncEnabled && vault && !linkedVaultId) {
+	if (engineState === "idle" && syncEnabled && vault && (!authenticated || !linkedVaultId)) {
 		return (
 			<button
 				type="button"

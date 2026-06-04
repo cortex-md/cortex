@@ -15,6 +15,13 @@ export interface DevicesState {
 	clearError: () => void
 }
 
+async function syncAuthContext(): Promise<void> {
+	const { useRemoteVaultStore } = await import("./remoteVaultStore")
+	const { useAuthStore } = await import("./authStore")
+	const serverUrl = useRemoteVaultStore.getState().syncConfig.serverUrl
+	await useAuthStore.getState().checkAuth(serverUrl ?? undefined)
+}
+
 export const useDevicesStore = create<DevicesState>()(
 	devtools(
 		immer((set) => ({
@@ -29,6 +36,7 @@ export const useDevicesStore = create<DevicesState>()(
 				})
 				try {
 					const platform = getPlatform()
+					await syncAuthContext()
 					const devices = await platform.devices.list()
 					set((state) => {
 						state.deviceEntries = devices
@@ -44,6 +52,7 @@ export const useDevicesStore = create<DevicesState>()(
 
 			renameDevice: async (deviceId, deviceName) => {
 				const platform = getPlatform()
+				await syncAuthContext()
 				const updated = await platform.devices.rename(deviceId, deviceName)
 				set((state) => {
 					const index = state.deviceEntries.findIndex((d) => d.id === deviceId)
@@ -55,6 +64,7 @@ export const useDevicesStore = create<DevicesState>()(
 
 			revokeDevice: async (deviceId) => {
 				const platform = getPlatform()
+				await syncAuthContext()
 				await platform.devices.revoke(deviceId)
 				set((state) => {
 					state.deviceEntries = state.deviceEntries.filter((d) => d.id !== deviceId)

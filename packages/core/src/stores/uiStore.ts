@@ -6,6 +6,11 @@ export type LeftSidebarView = "files" | "search" | "bookmarks" | "tags"
 export type MarketplaceTab = "plugins" | "themes"
 export type AuthView = "login" | "register"
 
+export interface LeftSidebarLayout {
+	collapsed: boolean
+	width: number
+}
+
 export interface UIState {
 	leftSidebarCollapsed: boolean
 	leftSidebarWidth: number
@@ -13,7 +18,10 @@ export interface UIState {
 	rightSidebarCollapsed: boolean
 
 	toggleLeftSidebar: () => void
+	setLeftSidebarCollapsed: (collapsed: boolean) => void
 	setLeftSidebarWidth: (width: number) => void
+	setLeftSidebarLayout: (layout: Partial<LeftSidebarLayout>) => void
+	resetLeftSidebarLayout: () => void
 	setLeftSidebarView: (view: LeftSidebarView) => void
 	toggleRightSidebar: () => void
 
@@ -43,12 +51,20 @@ export interface UIState {
 
 const MIN_SIDEBAR_WIDTH = 180
 const MAX_SIDEBAR_WIDTH = 400
+const DEFAULT_LEFT_SIDEBAR_LAYOUT: LeftSidebarLayout = {
+	collapsed: false,
+	width: 240,
+}
+
+function clampLeftSidebarWidth(width: number): number {
+	return Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, width))
+}
 
 export const useUIStore = create<UIState>()(
 	devtools(
 		immer((set) => ({
-			leftSidebarCollapsed: false,
-			leftSidebarWidth: 240,
+			leftSidebarCollapsed: DEFAULT_LEFT_SIDEBAR_LAYOUT.collapsed,
+			leftSidebarWidth: DEFAULT_LEFT_SIDEBAR_LAYOUT.width,
 			leftSidebarView: "files" as LeftSidebarView,
 			rightSidebarCollapsed: true,
 
@@ -57,9 +73,30 @@ export const useUIStore = create<UIState>()(
 					s.leftSidebarCollapsed = !s.leftSidebarCollapsed
 				}),
 
+			setLeftSidebarCollapsed: (collapsed) =>
+				set((s) => {
+					s.leftSidebarCollapsed = collapsed
+				}),
+
 			setLeftSidebarWidth: (width) =>
 				set((s) => {
-					s.leftSidebarWidth = Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, width))
+					s.leftSidebarWidth = clampLeftSidebarWidth(width)
+				}),
+
+			setLeftSidebarLayout: (layout) =>
+				set((s) => {
+					if (typeof layout.collapsed === "boolean") {
+						s.leftSidebarCollapsed = layout.collapsed
+					}
+					if (typeof layout.width === "number" && Number.isFinite(layout.width)) {
+						s.leftSidebarWidth = clampLeftSidebarWidth(layout.width)
+					}
+				}),
+
+			resetLeftSidebarLayout: () =>
+				set((s) => {
+					s.leftSidebarCollapsed = DEFAULT_LEFT_SIDEBAR_LAYOUT.collapsed
+					s.leftSidebarWidth = DEFAULT_LEFT_SIDEBAR_LAYOUT.width
 				}),
 
 			setLeftSidebarView: (view) =>

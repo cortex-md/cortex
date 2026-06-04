@@ -26,14 +26,28 @@ export {
 	useEditorStore,
 } from "./stores/editorStore"
 export { type MembersState, useMembersStore } from "./stores/membersStore"
-export { type RemoteVaultState, useRemoteVaultStore } from "./stores/remoteVaultStore"
+export {
+	createDefaultSyncConfig,
+	DEFAULT_SYNC_SERVER_URL,
+	normalizeSyncConfig,
+	type RemoteVaultState,
+	useRemoteVaultStore,
+} from "./stores/remoteVaultStore"
 export {
 	type SyncLogEntry,
 	type SyncLogLevel,
 	type SyncLogState,
 	useSyncLogStore,
 } from "./stores/syncLogStore"
-export { type SyncState, useSyncStore } from "./stores/syncStore"
+export {
+	createDefaultSyncPreferences,
+	isSyncImagePath,
+	normalizeSyncPathPattern,
+	normalizeSyncPreferences,
+	type SyncState,
+	shouldIgnoreSyncPath,
+	useSyncStore,
+} from "./stores/syncStore"
 export {
 	type TagColor,
 	type TagEntry,
@@ -41,6 +55,7 @@ export {
 	useTagsStore,
 } from "./stores/tagsStore"
 export {
+	type LeftSidebarLayout,
 	type LeftSidebarView,
 	type MarketplaceTab,
 	type UIState,

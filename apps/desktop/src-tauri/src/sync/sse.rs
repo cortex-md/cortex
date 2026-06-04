@@ -41,7 +41,7 @@ impl SseClient {
     pub async fn connect(
         &mut self,
         url: &str,
-        _initial_access_token: &str,
+        server_url: &str,
         device_id: &str,
         cancel: CancellationToken,
     ) -> Result<(), String> {
@@ -53,10 +53,10 @@ impl SseClient {
                 return Ok(());
             }
 
-            let access_token = match crate::keychain::get("access_token") {
+            let access_token = match crate::sync::http::get_access_token_for_server(server_url) {
                 Ok(Some(token)) => token,
                 Ok(None) => {
-                    eprintln!("SSE reconnect: no access_token in keychain, aborting");
+                    eprintln!("SSE reconnect: no access token for server, aborting");
                     return Err("No access token available for SSE".to_string());
                 }
                 Err(e) => {

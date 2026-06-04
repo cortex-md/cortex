@@ -74,6 +74,7 @@ export interface SyncPreferences {
 	syncWorkspace: boolean
 	syncPluginMetadata: boolean
 	syncThemeMetadata: boolean
+	ignoreImages: boolean
 	excludedPaths: string[]
 }
 

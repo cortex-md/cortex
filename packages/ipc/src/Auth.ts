@@ -26,15 +26,17 @@ export class Auth implements IAuth {
 		})
 	}
 
-	async logout(allDevices: boolean): Promise<void> {
-		await invoke<void>("auth_logout", { allDevices })
+	async logout(serverUrl: string, allDevices: boolean): Promise<void> {
+		await invoke<void>("auth_logout", { serverUrl, allDevices })
 	}
 
-	async getStatus(): Promise<AuthStatus> {
-		return await invoke<AuthStatus>("auth_get_status")
+	async getStatus(serverUrl?: string): Promise<AuthStatus> {
+		return await invoke<AuthStatus>("auth_get_status", { serverUrl: serverUrl ?? null })
 	}
 
-	async getCurrentUser(): Promise<CurrentUser | null> {
-		return await invoke<CurrentUser | null>("auth_get_current_user")
+	async getCurrentUser(serverUrl?: string): Promise<CurrentUser | null> {
+		return await invoke<CurrentUser | null>("auth_get_current_user", {
+			serverUrl: serverUrl ?? null,
+		})
 	}
 }

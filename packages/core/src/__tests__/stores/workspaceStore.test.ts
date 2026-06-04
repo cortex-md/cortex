@@ -1,5 +1,7 @@
+import { getPlatform } from "@cortex/platform"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { noteCache } from "../../noteCache"
+import { useUIStore } from "../../stores/uiStore"
 import { useWorkspaceStore } from "../../stores/workspaceStore"
 
 const ROOT_PANE_ID = "root"
@@ -18,6 +20,12 @@ function buildInitial() {
 
 beforeEach(() => {
 	useWorkspaceStore.setState(buildInitial())
+	useUIStore.setState({
+		leftSidebarCollapsed: false,
+		leftSidebarWidth: 240,
+		leftSidebarView: "files",
+		rightSidebarCollapsed: true,
+	})
 	vi.spyOn(noteCache, "openTab").mockImplementation(() => {})
 	vi.spyOn(noteCache, "closeTab").mockResolvedValue()
 })
@@ -259,6 +267,61 @@ describe("pinTab()", () => {
 		expect(useWorkspaceStore.getState().panes[ROOT_PANE_ID].tabs[0].isPinned).toBe(true)
 		useWorkspaceStore.getState().pinTab(tab.id, ROOT_PANE_ID)
 		expect(useWorkspaceStore.getState().panes[ROOT_PANE_ID].tabs[0].isPinned).toBe(false)
+	})
+})
+
+describe("workspace persistence", () => {
+	it("persists left sidebar layout with workspace state", async () => {
+		const writeFile = vi.fn().mockResolvedValue(undefined)
+		vi.mocked(getPlatform).mockReturnValue({
+			fs: { writeFile },
+		} as never)
+		useUIStore.getState().setLeftSidebarLayout({ collapsed: true, width: 320 })
+
+		await useWorkspaceStore.getState().persistWorkspace("/vault")
+
+		expect(writeFile).toHaveBeenCalledWith("/vault/.cortex/workspace.json", expect.any(String))
+		expect(JSON.parse(writeFile.mock.calls[0][1])).toEqual(
+			expect.objectContaining({
+				leftSidebar: {
+					collapsed: true,
+					width: 320,
+				},
+			}),
+		)
+	})
+
+	it("restores left sidebar layout from workspace state", async () => {
+		const readFile = vi.fn().mockResolvedValue(
+			JSON.stringify({
+				...buildInitial(),
+				leftSidebar: {
+					collapsed: true,
+					width: 360,
+				},
+			}),
+		)
+		vi.mocked(getPlatform).mockReturnValue({
+			fs: { readFile },
+		} as never)
+
+		await useWorkspaceStore.getState().loadWorkspace("/vault")
+
+		expect(useUIStore.getState().leftSidebarCollapsed).toBe(true)
+		expect(useUIStore.getState().leftSidebarWidth).toBe(360)
+	})
+
+	it("uses default left sidebar layout for older workspace files", async () => {
+		const readFile = vi.fn().mockResolvedValue(JSON.stringify(buildInitial()))
+		vi.mocked(getPlatform).mockReturnValue({
+			fs: { readFile },
+		} as never)
+		useUIStore.getState().setLeftSidebarLayout({ collapsed: true, width: 360 })
+
+		await useWorkspaceStore.getState().loadWorkspace("/vault")
+
+		expect(useUIStore.getState().leftSidebarCollapsed).toBe(false)
+		expect(useUIStore.getState().leftSidebarWidth).toBe(240)
 	})
 })
 

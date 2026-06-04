@@ -351,6 +351,13 @@ Sync logs follow a **single-source-of-truth** model — Rust is the authority fo
 
 **Never log tokens or secrets**. Server URLs and vault IDs are safe for debugging self-hosted setups.
 
+### Sync Ignore Preferences
+Vault-scoped sync ignore preferences live in `<vault>/.cortex/sync-preferences.json`.
+`excludedPaths` handles explicit file/folder ignores and `ignoreImages` skips image file paths
+globally. Rust `sync/ignore.rs` is the authority used by local watcher events, remote events,
+initial sync, reconciliation, and queued operations. Frontend helpers in `syncStore` mirror this
+policy only for UI state and menu affordances.
+
 ### File Watching
 - Rust `notify` crate emits `vault-file-changed` events
 - `vaultStore.refreshFiles()` polls vault on file changes
