@@ -21,6 +21,7 @@ vi.mock("@cortex/platform", () => ({
 	getPlatform: () => ({
 		app: {
 			getCurrentAppVersion: vi.fn(async () => "0.1.0"),
+			openExternalUrl: vi.fn(async () => undefined),
 		},
 	}),
 }))

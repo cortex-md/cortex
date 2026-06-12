@@ -7,7 +7,6 @@ import {
 	type EditorConfig,
 	reconfigureEditor,
 } from "./extensions"
-import { resolveSyntaxTokens } from "./highlight"
 
 export interface CursorInfo {
 	line: number
@@ -54,12 +53,11 @@ export function EditorView({
 	useEffect(() => {
 		if (!containerRef.current) return
 
-		const syntaxTokens = resolveSyntaxTokens()
 		const view = new CMEditorView({
 			state: EditorState.create({
 				doc: content,
 				extensions: [
-					...baseExtensions(syntaxTokens, editorConfigRef.current, {
+					...baseExtensions(editorConfigRef.current, {
 						livePreview,
 						resolveImageUrl,
 						filePath,

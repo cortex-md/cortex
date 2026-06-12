@@ -42,6 +42,7 @@ import { EditorSection } from "./EditorSettings"
 import { GeneralSection } from "./GeneralSettings"
 import { HotkeysSection } from "./HotkeysSettings"
 import { PluginsSection } from "./PluginsSettings"
+import { SettingsBlock, SettingsPage } from "./SettingsPrimitives"
 import { SyncSection } from "./SyncSettings"
 
 interface SettingsSectionItem {
@@ -239,12 +240,16 @@ export function SettingsContent({
 					{activeSectionId === "plugins" && <PluginsSection />}
 					{activeSectionId === "marketplace" && <MarketplaceSection initialTab={marketplaceTab} />}
 					{pluginTab && (
-						<PluginSettingsRenderer
-							pluginId={pluginTab.id}
-							settings={pluginSettingsSchemas[pluginTab.id] ?? pluginTab.settings}
-							values={pluginSettingsValues}
-							onUpdate={(key, value) => handlePluginSettingUpdate(pluginTab.id, key, value)}
-						/>
+						<SettingsPage>
+							<SettingsBlock title={pluginTab.label} description="Plugin settings for this vault.">
+								<PluginSettingsRenderer
+									pluginId={pluginTab.id}
+									settings={pluginSettingsSchemas[pluginTab.id] ?? pluginTab.settings}
+									values={pluginSettingsValues}
+									onUpdate={(key, value) => handlePluginSettingUpdate(pluginTab.id, key, value)}
+								/>
+							</SettingsBlock>
+						</SettingsPage>
 					)}
 				</div>
 			</main>

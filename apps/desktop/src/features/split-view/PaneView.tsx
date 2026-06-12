@@ -18,12 +18,7 @@ import {
 } from "@cortex/editor"
 import { useHotkeysStore } from "@cortex/hotkeys"
 import { getPlatform } from "@cortex/platform"
-import {
-	getRegisteredRendererPlugins,
-	PluginViewRenderer,
-	setEditorViewRef,
-	usePluginStore,
-} from "@cortex/plugin-runtime"
+import { PluginViewRenderer, setEditorViewRef, usePluginStore } from "@cortex/plugin-runtime"
 import { useSettingsStore } from "@cortex/settings"
 import {
 	Button,
@@ -88,7 +83,6 @@ function useEditorConfig(): EditorConfig {
 	return useMemo(
 		() => ({
 			fontSize: settings.appearance.editorFontSize,
-			lineHeight: settings.appearance.lineHeight,
 			wordWrap: settings.editor.wordWrap,
 			tabSize: settings.editor.tabSize,
 			useSpaces: settings.editor.useSpaces,
@@ -96,7 +90,6 @@ function useEditorConfig(): EditorConfig {
 		}),
 		[
 			settings.appearance.editorFontSize,
-			settings.appearance.lineHeight,
 			settings.editor.wordWrap,
 			settings.editor.tabSize,
 			settings.editor.useSpaces,
@@ -209,6 +202,10 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 		[tab.filePath, tab.id, markTabDirty],
 	)
 
+	const handleExternalLinkClick = useCallback((url: string) => {
+		void getPlatform().app.openExternalUrl(url)
+	}, [])
+
 	const handleViewReady = useCallback(
 		(view: CMView) => {
 			viewRef.current = view
@@ -253,14 +250,14 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 				) : content === null ? (
 					<div className="flex-1 bg-bg-primary" />
 				) : mode === "reading" ? (
-					<ReadingView content={content} plugins={getRegisteredRendererPlugins()} />
+					<ReadingView content={content} onExternalLinkClick={handleExternalLinkClick} />
 				) : mode === "side-by-side" ? (
 					<SideBySideView
 						content={content}
 						filePath={tab.filePath}
 						editorConfig={editorConfig}
-						rendererPlugins={getRegisteredRendererPlugins()}
 						onChange={handleChange}
+						onExternalLinkClick={handleExternalLinkClick}
 					/>
 				) : (
 					<EditorView
@@ -288,8 +285,10 @@ interface ViewTabContentProps {
 
 function ViewTabContent({ tab, paneId, isActive }: ViewTabContentProps) {
 	const views = usePluginStore((s) => s.views)
+	const updateViewTabState = useWorkspaceStore((s) => s.updateViewTabState)
 	const CoreComponent = tab.viewId ? getCoreViewComponent(tab.viewId) : null
 	const pluginRegistration = views.find((v) => v.id === tab.viewId)
+	const viewState = tab.viewState ?? pluginRegistration?.initialState ?? {}
 
 	return (
 		<div
@@ -301,7 +300,11 @@ function ViewTabContent({ tab, paneId, isActive }: ViewTabContentProps) {
 				<CoreComponent />
 			) : pluginRegistration ? (
 				<div className="p-4">
-					<PluginViewRenderer registration={pluginRegistration} />
+					<PluginViewRenderer
+						registration={pluginRegistration}
+						state={viewState}
+						onStateChange={(nextState) => updateViewTabState(tab.id, paneId, nextState)}
+					/>
 				</div>
 			) : (
 				<div className="flex flex-col items-center justify-center h-full gap-2 text-sm text-text-muted">
@@ -544,7 +547,7 @@ export function PaneView({ paneId }: Props) {
 	}
 
 	return (
-		<div className="flex flex-col h-full overflow-hidden bg-bg-primary">
+		<div className="relative flex flex-col h-full overflow-hidden bg-bg-primary">
 			<TabBar
 				tabs={pane.tabs}
 				activeTabId={pane.activeTabId}
@@ -633,7 +636,7 @@ export function PaneView({ paneId }: Props) {
 				</DropdownMenu>
 			)}
 
-			<div className="flex-1 overflow-hidden relative">
+			<div className="flex-1 overflow-hidden relative" data-drop-pane-id={paneId}>
 				{dragSource && <DropZoneOverlay paneId={paneId} />}
 				{pane.tabs.length === 0 ? (
 					<div className="flex flex-col items-center justify-center gap-5 h-full text-sm text-text-muted">

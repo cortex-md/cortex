@@ -11,26 +11,23 @@ packages/editor/
   src/
     EditorView.tsx              # React component wrapping CM6
     extensions.ts               # Base extensions + config reconfiguration
-    highlight.ts                # Syntax highlighting from CSS variables
+    highlight.ts                # Syntax highlighting using live CSS variables
     languages.ts                # Language support (markdown, JS, Python, etc.)
     ReadingView.tsx             # Read-only rendered markdown view
     SideBySideView.tsx          # Side-by-side editor + preview
     clipboardImage.ts           # Clipboard image paste CM6 extension
     markdownCommands.ts         # All markdown formatting CM6 commands (toggle bold, insert table, etc.)
     markdownKeymap.ts           # CM6 keymap bindings wiring commands to keyboard shortcuts
+    markdown.css                # Shared semantic Markdown styles
     livePreview/
-      index.ts                  # Composes all live preview plugins
-      utils.ts                  # isCursorInRange, isCursorOnLine helpers
-      formatting.ts             # Bold, italic, strikethrough decorations
-      headings.ts               # Heading level decorations
-      links.ts                  # Markdown + wiki link decorations
-      codeBlock.ts              # Fenced code block + language badge + copy button
-      checkboxes.ts             # Task list checkbox widgets
-      inlineCode.ts             # Backtick hiding + monospace styling
-      blockquote.ts             # Blockquote marker hiding
-      frontmatter.ts            # YAML frontmatter card widget
-      pluginLivePreviewBuilder.ts  # Converts LivePreviewDeclaration → CM6 Extension
-      styles.css                # Live preview CSS styles
+      index.ts                  # Composes the unified engine
+      model.ts                  # One Lezer block traversal and projection models
+      blockState.ts             # Block StateField and source/widget mode
+      visibleDecorations.ts     # One indexed viewport ViewPlugin
+      metrics.ts                # Deterministic traversal and decoration counters
+      inlineTree.ts             # Inline snapshots from existing Lezer nodes
+      widgets.ts                # Native block and control widgets
+      styles.css                # Live Preview-specific styles
     index.ts
 ```
 
@@ -41,15 +38,18 @@ packages/editor/
 - `baseExtensions(options)` — Creates CM6 extensions array including the markdown keymap
 - `reconfigureEditor(view, config)` — Reconfigures editor settings via Compartments
 - `reconfigurePluginExtensions(view, extensions)` — Reconfigures plugin-provided CM6 extensions
-- `buildPluginLivePreview(declaration)` — Converts a `LivePreviewDeclaration` into a CM6 Extension (used by plugin-runtime via bridge)
-- `livePreviewExtension()` — All built-in live preview plugins composed
-- `buildHighlightStyle(tokens)` — Creates CM6 highlight style from CSS variables
+- `livePreviewExtension()` — Unified Live Preview engine
+- `buildHighlightStyle()` — Creates CM6 highlight rules that read live CSS variables
 - `markdownKeymapCompartment` — CM6 `Compartment` for the dynamic markdown keymap (reconfigurable at runtime)
 - `defaultMarkdownBindings` — Default `FormatBinding[]` array (id, keys, enabled) matching hotkeys defaults
 - `defaultMarkdownKeymapExtension()` — Creates the initial compartment extension for use in `baseExtensions()`
 - `reconfigureMarkdownKeymap(view, bindings)` — Reconfigures the markdown keymap compartment with new bindings
 - `type FormatBinding` — `{ id: string; keys: string; enabled: boolean }`
 - Markdown commands: `toggleBold`, `toggleItalic`, `toggleStrikethrough`, `toggleInlineCode`, `toggleBlockquote`, `toggleHeading`, `toggleTaskList`, `toggleUnorderedList`, `toggleOrderedList`, `insertLink`, `insertImage`, `insertCodeBlock`, `insertTable`, `insertCallout`, `duplicateLine`, `copyLine`, `removeParagraphFormatting`
+
+## Typography
+
+CodeMirror reads editor font weight and line height from theme CSS variables (`--editor-font-weight` and `--editor-line-height`). `EditorConfig` should carry editor behavior and font size only; do not reintroduce settings-driven line height overrides.
 
 ## Markdown Keyboard Shortcuts (Dynamic / User-Customizable)
 
@@ -75,19 +75,18 @@ Default bindings (user-customizable via Settings → Hotkeys):
 | `⌘⇧O` | Toggle ordered list | `format.ordered-list` |
 | `⌘⇧Y` | Insert table | `format.table` |
 
-## Plugin Live Preview Builder
+## Live Preview Architecture
 
-`pluginLivePreviewBuilder.ts` enables plugins to create live preview decorations declaratively:
-- Receives `LivePreviewDeclaration` from `cortex-plugin-api`
-- Compiles `inlineRules` (regex patterns) into CM6 ViewPlugins
-- Supports three replacement types: `text`, `widget` (DOM element from descriptor), `mark` (CSS class)
-- Handles cursor-awareness automatically (hides decorations when cursor overlaps)
-- Reuses `isCursorInRange` from existing live preview utils
+The editor uses one block `StateField` and one visible-range `ViewPlugin`. Block state owns sorted
+indexes by block type; visual updates query those indexes for each visible range instead of filtering
+the entire document. Block widgets reveal source whenever the cursor or selection enters them.
+
+`registerInline` and `registerSemantic` use the renderer-owned text transformation engine. Portable
+semantic nodes are projected to CodeMirror marks or widgets only for visible lines. Advanced Unified
+processors do not run in Live Preview.
 
 ## Dependencies
 
 - `@codemirror/*` — CodeMirror 6 packages
 - `@lezer/*` — Lezer parser for syntax tree
-- `@cortex/core` — stores
 - `@cortex/renderer` — markdown rendering
-- `cortex-plugin-api` (devDependency) — types for LivePreviewDeclaration

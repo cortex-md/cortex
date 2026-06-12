@@ -1,10 +1,9 @@
 import { tauriPlatform } from "@cortex/ipc"
 import { initPlatform, type NativeAppearanceSnapshot } from "@cortex/platform"
-import { initThemeManager } from "@cortex/theme"
+import { generateCSSString, generateCSSVariables, initThemeManager } from "@cortex/theme"
 import ReactDOM from "react-dom/client"
 import App from "./App"
 import { SettingsWindow } from "./features/settings/SettingsWindow"
-import { generateCSSString, generateCSSVariables } from "./features/themes/cssGenerator"
 import { WebThemeAdapter } from "./features/themes/webThemeAdapter"
 import "./styles.css"
 

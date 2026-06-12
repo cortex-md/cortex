@@ -18,6 +18,8 @@ interface FolderPickerProps {
 	onChange: (value: string) => void
 	placeholder?: string
 	className?: string
+	allowCustomValue?: boolean
+	getCustomValueLabel?: (value: string) => string
 }
 
 export function FolderPicker({
@@ -26,6 +28,8 @@ export function FolderPicker({
 	onChange,
 	placeholder = "Search folders...",
 	className,
+	allowCustomValue = false,
+	getCustomValueLabel = (customValue) => `Add "${customValue}"`,
 }: FolderPickerProps) {
 	const [search, setSearch] = useState("")
 	const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -36,6 +40,14 @@ export function FolderPicker({
 		const lower = search.toLowerCase()
 		return options.filter((option) => option.label.toLowerCase().includes(lower))
 	}, [options, search])
+	const trimmedSearch = search.trim()
+	const exactOptionExists = useMemo(() => {
+		if (!trimmedSearch) return false
+		return options.some(
+			(option) => option.value === trimmedSearch || option.label === trimmedSearch,
+		)
+	}, [options, trimmedSearch])
+	const customValueAvailable = allowCustomValue && Boolean(trimmedSearch) && !exactOptionExists
 
 	const handleSelect = useCallback(
 		(optionValue: string) => {
@@ -46,6 +58,11 @@ export function FolderPicker({
 		},
 		[onChange],
 	)
+
+	const handleCustomSelect = useCallback(() => {
+		if (!trimmedSearch) return
+		handleSelect(trimmedSearch)
+	}, [handleSelect, trimmedSearch])
 
 	const selectedLabel = options.find((o) => o.value === value)?.label
 
@@ -65,9 +82,15 @@ export function FolderPicker({
 				onBlur={() => {
 					setTimeout(() => setDropdownOpen(false), 150)
 				}}
+				onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
+					if (event.key === "Enter" && customValueAvailable) {
+						event.preventDefault()
+						handleCustomSelect()
+					}
+				}}
 				placeholder={placeholder}
 			/>
-			{dropdownOpen && filteredOptions.length > 0 && (
+			{dropdownOpen && (filteredOptions.length > 0 || customValueAvailable) && (
 				<div
 					className={cn(
 						"absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-[10px] p-1",
@@ -90,9 +113,20 @@ export function FolderPicker({
 							<span className="truncate">{option.label}</span>
 						</button>
 					))}
+					{customValueAvailable && (
+						<button
+							type="button"
+							onMouseDown={(e) => e.preventDefault()}
+							onClick={handleCustomSelect}
+							className="flex items-center gap-2 w-full rounded-[6px] px-2 py-1.5 text-[13px] text-left hover:bg-accent/70"
+						>
+							<FileIcon className="size-3.5 shrink-0 text-muted-foreground" />
+							<span className="truncate">{getCustomValueLabel(trimmedSearch)}</span>
+						</button>
+					)}
 				</div>
 			)}
-			{dropdownOpen && search.trim() && filteredOptions.length === 0 && (
+			{dropdownOpen && trimmedSearch && filteredOptions.length === 0 && !customValueAvailable && (
 				<div className={cn("absolute z-50 mt-1 w-full rounded-[10px] p-1", nativeGlassSurface)}>
 					<p className="px-3 py-2 text-[13px] text-muted-foreground text-center">
 						No matching folders

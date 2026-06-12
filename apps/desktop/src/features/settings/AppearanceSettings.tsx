@@ -7,7 +7,6 @@ import {
 	Button,
 	ColorPicker,
 	type ColorPickerOption,
-	Label,
 	NativeSelect,
 	NativeSelectOption,
 	Slider,
@@ -16,6 +15,7 @@ import { Store } from "lucide-react"
 import { useEffect, useState } from "react"
 import type { UpdateSettingFn } from "."
 import { applyAppearanceSettings, buildAppearanceOverrides } from "./applyAppearance"
+import { SettingsBlock, SettingsField, SettingsPage } from "./SettingsPrimitives"
 
 interface AppearanceSectionProps {
 	settings: AppearanceSettings
@@ -112,30 +112,19 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 		applyOverrides({ editorFontSize: size })
 	}
 
-	const handleLineHeightChange = (lineHeight: number) => {
-		onUpdate("appearance", "lineHeight", lineHeight)
-		applyOverrides({ lineHeight })
-	}
-
 	return (
-		<section>
-			<div className="mb-6">
-				<div className="flex items-center justify-between mb-3">
-					<h3 className="text-[10px] font-bold m-0 text-text-muted uppercase tracking-wide">
-						Theme
-					</h3>
-					<Button
-						variant="ghost"
-						size="sm"
-						onClick={() => openMarketplace("themes")}
-						className="text-xs h-6 px-2 gap-1.5"
-					>
+		<SettingsPage>
+			<SettingsBlock
+				title="Theme"
+				description="Choose the active theme, color scheme, and accent color."
+				action={
+					<Button variant="ghost" size="sm" onClick={() => openMarketplace("themes")}>
 						<Store size={12} />
 						Browse themes
 					</Button>
-				</div>
-				<div className="flex items-center justify-between px-0 py-2 gap-4">
-					<Label htmlFor="theme">Theme</Label>
+				}
+			>
+				<SettingsField label="Theme" htmlFor="theme">
 					<NativeSelect
 						id="theme"
 						value={settings.theme}
@@ -147,9 +136,9 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 							</NativeSelectOption>
 						))}
 					</NativeSelect>
-				</div>
-				<div className="flex items-center justify-between px-0 py-2 gap-4">
-					<Label htmlFor="colorscheme">Colorscheme</Label>
+				</SettingsField>
+
+				<SettingsField label="Colorscheme" htmlFor="colorscheme">
 					<NativeSelect
 						id="colorscheme"
 						value={settings.colorscheme}
@@ -159,10 +148,9 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 						<NativeSelectOption value="dark">Dark</NativeSelectOption>
 						<NativeSelectOption value="system">System</NativeSelectOption>
 					</NativeSelect>
-				</div>
+				</SettingsField>
 
-				<div className="flex items-center justify-between px-0 py-2 gap-4">
-					<Label htmlFor="accent-color">Accent Color</Label>
+				<SettingsField label="Accent color" htmlFor="accent-color" controlClassName="max-w-[280px]">
 					<ColorPicker
 						customInputId="accent-color"
 						value={settings.accentColor}
@@ -174,15 +162,11 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 						}}
 						className="max-w-[240px] items-end"
 					/>
-				</div>
-			</div>
+				</SettingsField>
+			</SettingsBlock>
 
-			<div className="mb-6">
-				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-					Interface
-				</h3>
-				<div className="flex items-center justify-between px-0 py-2 gap-4">
-					<Label htmlFor="ui-font-family">UI Font</Label>
+			<SettingsBlock title="Interface" description="Tune the app chrome and navigation typography.">
+				<SettingsField label="UI font" htmlFor="ui-font-family">
 					<NativeSelect
 						id="ui-font-family"
 						value={settings.uiFontFamily}
@@ -195,10 +179,9 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 							</NativeSelectOption>
 						))}
 					</NativeSelect>
-				</div>
+				</SettingsField>
 
-				<div className="flex items-center justify-between px-0 py-2 gap-4">
-					<Label htmlFor="ui-font-size">UI Font Size</Label>
+				<SettingsField label="UI font size" htmlFor="ui-font-size" controlClassName="max-w-[420px]">
 					<div className="flex items-center gap-3 flex-1">
 						<Slider
 							id="ui-font-size"
@@ -212,15 +195,11 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 							{settings.uiFontSize}px
 						</span>
 					</div>
-				</div>
-			</div>
+				</SettingsField>
+			</SettingsBlock>
 
-			<div className="mb-6">
-				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-					Editor
-				</h3>
-				<div className="flex items-center justify-between px-0 py-2 gap-4">
-					<Label htmlFor="editor-font-family">Editor Font</Label>
+			<SettingsBlock title="Editor" description="Tune note editing typography.">
+				<SettingsField label="Editor font" htmlFor="editor-font-family">
 					<NativeSelect
 						id="editor-font-family"
 						value={settings.editorFontFamily}
@@ -233,10 +212,13 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 							</NativeSelectOption>
 						))}
 					</NativeSelect>
-				</div>
+				</SettingsField>
 
-				<div className="flex items-center justify-between px-0 py-2 gap-4">
-					<Label htmlFor="editor-font-size">Editor Font Size</Label>
+				<SettingsField
+					label="Editor font size"
+					htmlFor="editor-font-size"
+					controlClassName="max-w-[420px]"
+				>
 					<div className="flex items-center gap-3 flex-1">
 						<Slider
 							id="editor-font-size"
@@ -250,26 +232,8 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 							{settings.editorFontSize}px
 						</span>
 					</div>
-				</div>
-
-				<div className="flex items-center justify-between px-0 py-2 gap-4">
-					<Label htmlFor="line-height">Line Height</Label>
-					<div className="flex items-center gap-3 flex-1">
-						<Slider
-							id="line-height"
-							min={1.2}
-							max={2}
-							step={0.1}
-							defaultValue={[settings.lineHeight]}
-							onValueChange={(value: number[]) => handleLineHeightChange(value[0])}
-							className="flex-1 h-1 accent-color-accent"
-						/>
-						<span className="text-[11px] text-text-muted min-w-[36px] text-right font-family-mono">
-							{settings.lineHeight}x
-						</span>
-					</div>
-				</div>
-			</div>
-		</section>
+				</SettingsField>
+			</SettingsBlock>
+		</SettingsPage>
 	)
 }

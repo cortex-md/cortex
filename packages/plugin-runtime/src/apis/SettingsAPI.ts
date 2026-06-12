@@ -24,7 +24,12 @@ export function createSettingsAPI(
 			const content = await getPlatform().fs.readFile(filePath)
 			cache = JSON.parse(content) as Record<string, unknown>
 			return cache
-		} catch {
+		} catch (error) {
+			console.warn("[Plugin settings load failed]", {
+				pluginId,
+				filePath,
+				error: error instanceof Error ? error.message : String(error),
+			})
 			cache = {}
 			return cache
 		}
@@ -35,9 +40,7 @@ export function createSettingsAPI(
 		if (!filePath) return
 		const dirPath = filePath.replace(/\/[^/]+$/, "")
 		const platform = getPlatform()
-		try {
-			await platform.fs.createDir(dirPath)
-		} catch {}
+		await platform.fs.createDir(dirPath)
 		await platform.fs.writeFile(filePath, JSON.stringify(data, null, "\t"))
 	}
 
@@ -87,9 +90,6 @@ export function createSettingsAPI(
 			}
 		},
 
-		defineSchema(_schema: PluginSettingDefinition[]): void {
-			// Schema is stored in the plugin store for rendering by PluginSettingsRenderer
-			// Handled at the PluginAPIFactory level
-		},
+		defineSchema(_schema: PluginSettingDefinition[]): void {},
 	}
 }

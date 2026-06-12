@@ -2,12 +2,13 @@ import type { AppearanceSettings } from "@cortex/settings"
 import { getThemeManager, type ThemeTokens } from "@cortex/theme"
 
 const DEFAULT_ACCENT_COLOR = "#e8a83c"
+const SYSTEM_FONT_STACK = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI"'
 
 function buildFontStack(fontFamily: string, fallbackCategory: string): string {
 	if (fontFamily === "System Default") {
-		return `system-ui, -apple-system, ${fallbackCategory}`
+		return `${SYSTEM_FONT_STACK}, ${fallbackCategory}`
 	}
-	return `"${fontFamily}", system-ui, -apple-system, ${fallbackCategory}`
+	return `"${fontFamily}", ${SYSTEM_FONT_STACK}, ${fallbackCategory}`
 }
 
 function buildAccentOverrides(hex: string): Record<string, string> {
@@ -51,10 +52,8 @@ export function buildAppearanceOverrides(appearance: AppearanceSettings): Record
 
 	overrides["--font-ui"] = buildFontStack(appearance.uiFontFamily, "sans-serif")
 	overrides["--ui-font-size"] = `${appearance.uiFontSize}px`
-	overrides["font-size"] = `${appearance.uiFontSize}px`
-	overrides["--font-editor"] = buildFontStack(appearance.editorFontFamily, "serif")
+	overrides["--font-editor"] = buildFontStack(appearance.editorFontFamily, "sans-serif")
 	overrides["--editor-font-size"] = `${appearance.editorFontSize}px`
-	overrides["--editor-line-height"] = String(appearance.lineHeight)
 
 	return overrides
 }

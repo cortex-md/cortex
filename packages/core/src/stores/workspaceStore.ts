@@ -7,12 +7,14 @@ import { type LeftSidebarLayout, useUIStore } from "./uiStore"
 
 export type SplitDirection = "horizontal" | "vertical"
 export type TabType = "file" | "view"
+export type ViewTabState = Record<string, unknown>
 
 export interface Tab {
 	id: string
 	tabType: TabType
 	filePath: string
 	viewId: string | null
+	viewState: ViewTabState | null
 	title: string
 	isPinned: boolean
 	isDirty: boolean
@@ -57,6 +59,10 @@ export interface OpenTabOptions {
 	paneId?: string
 	split?: SplitDirection
 	splitPosition?: "before" | "after"
+	forceNew?: boolean
+	newTab?: boolean
+	insertIndex?: number
+	viewState?: ViewTabState
 }
 
 export interface WorkspaceState {
@@ -75,10 +81,11 @@ export interface WorkspaceState {
 	activateTab: (tabId: string, paneId: string) => void
 	pinTab: (tabId: string, paneId: string) => void
 	markTabDirty: (tabId: string, dirty: boolean) => void
+	updateViewTabState: (tabId: string, paneId: string, viewState: ViewTabState) => void
 	splitPane: (paneId: string, direction: SplitDirection, position?: "before" | "after") => void
 	closePane: (paneId: string) => void
 	resizeSplit: (nodeId: string, sizes: number[]) => void
-	moveTab: (tabId: string, fromPaneId: string, toPaneId: string) => void
+	moveTab: (tabId: string, fromPaneId: string, toPaneId: string, insertIndex?: number) => void
 	moveTabToNewSplit: (
 		tabId: string,
 		fromPaneId: string,
@@ -130,7 +137,7 @@ function findTabInPanes(
 	filePath: string,
 ): { tabId: string; paneId: string } | null {
 	for (const [paneId, pane] of Object.entries(panes)) {
-		const tab = pane.tabs.find((t) => t.filePath === filePath)
+		const tab = pane.tabs.find((t) => t.tabType === "file" && t.filePath === filePath)
 		if (tab) return { tabId: tab.id, paneId }
 	}
 	return null
@@ -164,6 +171,11 @@ const buildInitialState = () => ({
 	recentlyClosed: [] as RecentlyClosed[],
 })
 
+function insertTabAt(pane: Pane, tab: Tab, insertIndex?: number): void {
+	const index = insertIndex === undefined ? pane.tabs.length : Math.max(0, insertIndex)
+	pane.tabs.splice(Math.min(index, pane.tabs.length), 0, tab)
+}
+
 export const useWorkspaceStore = create<WorkspaceState>()(
 	devtools(
 		immer((set, get) => ({
@@ -172,7 +184,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 			openTab: (filePath, opts) => {
 				const { panes, activePaneId } = get()
 
-				const existing = findTabInPanes(panes, filePath)
+				const shouldForceNewTab = opts?.forceNew ?? opts?.newTab ?? false
+				const existing = shouldForceNewTab ? null : findTabInPanes(panes, filePath)
 				if (existing) {
 					get().activateTab(existing.tabId, existing.paneId)
 					return
@@ -191,6 +204,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 					tabType: "file",
 					filePath,
 					viewId: null,
+					viewState: null,
 					title: titleFromPath(filePath),
 					isPinned: false,
 					isDirty: false,
@@ -203,7 +217,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 				set((s) => {
 					const pane = s.panes[targetPaneId]
 					if (!pane) return
-					pane.tabs.push(tab)
+					insertTabAt(pane, tab, opts?.insertIndex)
 					pane.activeTabId = tabId
 					s.activePaneId = targetPaneId
 					s.mruOrder = [tabId, ...s.mruOrder.filter((id) => id !== tabId)]
@@ -213,7 +227,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 			openViewTab: (viewId, title, opts) => {
 				const { panes, activePaneId } = get()
 
-				const existing = findViewTabInPanes(panes, viewId)
+				const shouldForceNewTab = opts?.forceNew ?? opts?.newTab ?? false
+				const existing = shouldForceNewTab ? null : findViewTabInPanes(panes, viewId)
 				if (existing) {
 					get().activateTab(existing.tabId, existing.paneId)
 					return
@@ -232,6 +247,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 					tabType: "view",
 					filePath: "",
 					viewId,
+					viewState: opts?.viewState ?? null,
 					title,
 					isPinned: false,
 					isDirty: false,
@@ -242,7 +258,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 				set((s) => {
 					const pane = s.panes[targetPaneId]
 					if (!pane) return
-					pane.tabs.push(tab)
+					insertTabAt(pane, tab, opts?.insertIndex)
 					pane.activeTabId = tabId
 					s.activePaneId = targetPaneId
 					s.mruOrder = [tabId, ...s.mruOrder.filter((id) => id !== tabId)]
@@ -259,6 +275,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 					tabType: "file",
 					filePath,
 					viewId: null,
+					viewState: null,
 					title: titleFromPath(filePath),
 					isPinned: false,
 					isDirty: false,
@@ -299,11 +316,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 				}
 
 				if (tab.tabType === "file" && tab.filePath) {
-					const openInOtherPanes = Object.entries(panes)
-						.filter(([id]) => id !== paneId)
-						.some(([, p]) => p.tabs.some((t) => t.filePath === tab.filePath))
+					const openInOtherTabs = Object.values(panes).some((p) =>
+						p.tabs.some(
+							(t) => t.id !== tabId && t.tabType === "file" && t.filePath === tab.filePath,
+						),
+					)
 
-					if (!openInOtherPanes) {
+					if (!openInOtherTabs) {
 						noteCache.closeTab(tab.filePath)
 					}
 				}
@@ -384,6 +403,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 				})
 			},
 
+			updateViewTabState: (tabId, paneId, viewState) => {
+				set((s) => {
+					const tab = s.panes[paneId]?.tabs.find((t) => t.id === tabId)
+					if (tab?.tabType === "view") tab.viewState = viewState
+				})
+			},
+
 			splitPane: (paneId, direction, position) => {
 				const newPaneId = crypto.randomUUID()
 				const splitNodeId = crypto.randomUUID()
@@ -457,15 +483,19 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 				})
 			},
 
-			moveTab: (tabId, fromPaneId, toPaneId) => {
-				if (fromPaneId === toPaneId) return
+			moveTab: (tabId, fromPaneId, toPaneId, insertIndex) => {
 				const { panes } = get()
 				const fromPane = panes[fromPaneId]
 				if (!fromPane) return
-				const tab = fromPane.tabs.find((t) => t.id === tabId)
+				const sourceIndex = fromPane.tabs.findIndex((t) => t.id === tabId)
+				const tab = fromPane.tabs[sourceIndex]
 				if (!tab) return
 
 				const tabCopy = { ...tab, lastAccessed: Date.now() }
+				const targetIndex =
+					fromPaneId === toPaneId && insertIndex !== undefined && sourceIndex < insertIndex
+						? insertIndex - 1
+						: insertIndex
 
 				set((s) => {
 					const from = s.panes[fromPaneId]
@@ -475,7 +505,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 					if (from.activeTabId === tabId) {
 						from.activeTabId = from.tabs[from.tabs.length - 1]?.id ?? null
 					}
-					to.tabs.push(tabCopy)
+					insertTabAt(to, tabCopy, targetIndex)
 					to.activeTabId = tabId
 					s.activePaneId = toPaneId
 				})
@@ -535,7 +565,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 				})
 
 				const updatedFromPane = get().panes[fromPaneId]
-				if (updatedFromPane && updatedFromPane.tabs.length === 0) {
+				if (fromPaneId !== targetPaneId && updatedFromPane && updatedFromPane.tabs.length === 0) {
 					if (Object.keys(get().panes).length > 1) {
 						get().closePane(fromPaneId)
 					}
@@ -621,6 +651,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 							for (const tab of pane.tabs) {
 								if (!tab.tabType) tab.tabType = "file"
 								if (tab.viewId === undefined) tab.viewId = null
+								if (tab.viewState === undefined) tab.viewState = null
 							}
 						}
 						set((s) => {

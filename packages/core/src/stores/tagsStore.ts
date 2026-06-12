@@ -18,6 +18,7 @@ export interface TagEntry {
 export interface TagsState {
 	tagIndex: Record<string, string[]>
 	tagColors: Record<string, string>
+	fileTags: Record<string, string[]>
 	activeTagFilter: string | null
 
 	buildIndex: (vaultPath: string, filePaths: string[]) => Promise<void>
@@ -35,7 +36,6 @@ export interface TagsState {
 }
 
 const TAG_COLORS_FILE = ".cortex/tags.json"
-const fileTagsCache = new Map<string, string[]>()
 
 async function loadTagColorsFromDisk(vaultPath: string): Promise<Record<string, string>> {
 	try {
@@ -67,12 +67,13 @@ export const useTagsStore = create<TagsState>()(
 		(set, get) => ({
 			tagIndex: {},
 			tagColors: {},
+			fileTags: {},
 			activeTagFilter: null,
 
 			buildIndex: async (_vaultPath, filePaths) => {
 				const platform = getPlatform()
 				const newTagIndex: Record<string, string[]> = {}
-				fileTagsCache.clear()
+				const fileTags: Record<string, string[]> = {}
 
 				const mdFilePaths = filePaths.filter((p) => p.endsWith(".md"))
 
@@ -80,7 +81,7 @@ export const useTagsStore = create<TagsState>()(
 					try {
 						const content = await platform.fs.readFile(filePath)
 						const tags = extractAllTags(content)
-						fileTagsCache.set(filePath, tags)
+						fileTags[filePath] = tags
 
 						for (const tag of tags) {
 							if (!newTagIndex[tag]) newTagIndex[tag] = []
@@ -91,16 +92,14 @@ export const useTagsStore = create<TagsState>()(
 					} catch (_e) {}
 				}
 
-				set({ tagIndex: newTagIndex })
+				set({ tagIndex: newTagIndex, fileTags })
 			},
 
 			updateFileInIndex: (filePath, rawContent) => {
-				const previousTags = fileTagsCache.get(filePath) ?? []
+				const previousTags = get().fileTags[filePath] ?? []
 				const updatedTags = extractAllTags(rawContent)
 
-				fileTagsCache.set(filePath, updatedTags)
-
-				const { tagIndex } = get()
+				const { fileTags, tagIndex } = get()
 				const newIndex = { ...tagIndex }
 
 				for (const tag of previousTags) {
@@ -117,14 +116,18 @@ export const useTagsStore = create<TagsState>()(
 					}
 				}
 
-				set({ tagIndex: newIndex })
+				set({
+					tagIndex: newIndex,
+					fileTags: { ...fileTags, [filePath]: updatedTags },
+				})
 			},
 
 			removeFileFromIndex: (filePath) => {
-				const previousTags = fileTagsCache.get(filePath) ?? []
-				fileTagsCache.delete(filePath)
+				const { fileTags, tagIndex } = get()
+				const previousTags = fileTags[filePath] ?? []
+				const nextFileTags = { ...fileTags }
+				delete nextFileTags[filePath]
 
-				const { tagIndex } = get()
 				const newIndex = { ...tagIndex }
 
 				for (const tag of previousTags) {
@@ -134,7 +137,7 @@ export const useTagsStore = create<TagsState>()(
 					}
 				}
 
-				set({ tagIndex: newIndex })
+				set({ tagIndex: newIndex, fileTags: nextFileTags })
 			},
 
 			setActiveTagFilter: (tag) => {
@@ -153,7 +156,7 @@ export const useTagsStore = create<TagsState>()(
 			},
 
 			getTagsForFile: (filePath) => {
-				return fileTagsCache.get(filePath) ?? []
+				return get().fileTags[filePath] ?? []
 			},
 
 			getFilesForTag: (tag) => {

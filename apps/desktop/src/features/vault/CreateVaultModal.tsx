@@ -28,15 +28,8 @@ import {
 	Label,
 	Switch,
 } from "@cortex/ui"
-import { FileIcon, FolderIcon, PlusIcon, XIcon } from "lucide-react"
-import {
-	type ChangeEvent,
-	type FormEvent,
-	type KeyboardEvent,
-	useEffect,
-	useMemo,
-	useState,
-} from "react"
+import { FileIcon, FolderIcon, XIcon } from "lucide-react"
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react"
 
 interface CreateVaultModalProps {
 	open: boolean
@@ -64,7 +57,6 @@ export function CreateVaultModal({ open, folderPath, onOpenChange }: CreateVault
 	const [syncPreferences, setSyncPreferences] = useState<SyncPreferences>(
 		createDefaultSyncPreferences,
 	)
-	const [patternInput, setPatternInput] = useState("")
 	const [creating, setCreating] = useState(false)
 
 	useEffect(() => {
@@ -74,7 +66,6 @@ export function CreateVaultModal({ open, folderPath, onOpenChange }: CreateVault
 		setColor("#e8a83c")
 		setIcon(undefined)
 		setSyncPreferences(createDefaultSyncPreferences())
-		setPatternInput("")
 		getPlatform()
 			.vault.scanVault(folderPath)
 			.then(setFiles)
@@ -92,7 +83,7 @@ export function CreateVaultModal({ open, folderPath, onOpenChange }: CreateVault
 				label: path,
 				isDir: path.endsWith("/"),
 			}))
-	}, [files, folderPath, syncPreferences.ignoreImages, syncPreferences.excludedPaths])
+	}, [files, folderPath, syncPreferences])
 
 	const updateSyncPreference = (
 		key: keyof Omit<SyncPreferences, "excludedPaths">,
@@ -100,8 +91,6 @@ export function CreateVaultModal({ open, folderPath, onOpenChange }: CreateVault
 	) => {
 		setSyncPreferences((previous) => ({ ...previous, [key]: value }))
 	}
-
-	const normalizedPatternInput = normalizeSyncPathPattern(patternInput)
 
 	const toggleExcludedPath = (path: string, excluded: boolean) => {
 		const pattern = normalizeSyncPathPattern(path)
@@ -112,19 +101,6 @@ export function CreateVaultModal({ open, folderPath, onOpenChange }: CreateVault
 				? Array.from(new Set([...previous.excludedPaths, pattern]))
 				: previous.excludedPaths.filter((entry) => entry !== pattern),
 		}))
-	}
-
-	const handleAddPattern = () => {
-		if (!normalizedPatternInput || syncPreferences.excludedPaths.includes(normalizedPatternInput)) return
-		toggleExcludedPath(normalizedPatternInput, true)
-		setPatternInput("")
-	}
-
-	const handlePatternKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-		if (event.key === "Enter") {
-			event.preventDefault()
-			handleAddPattern()
-		}
 	}
 
 	const handleIdentitySubmit = (event: FormEvent) => {
@@ -222,29 +198,6 @@ export function CreateVaultModal({ open, folderPath, onOpenChange }: CreateVault
 							</Field>
 							<Field>
 								<FieldLabel>Excluded paths</FieldLabel>
-								<div className="flex gap-2 mb-3">
-									<Input
-										value={patternInput}
-										onChange={(event: ChangeEvent<HTMLInputElement>) =>
-											setPatternInput(event.target.value)
-										}
-										onKeyDown={handlePatternKeyDown}
-										placeholder="node_modules/, *.log, docs/**/*.tmp"
-									/>
-									<Button
-										variant="secondary"
-										size="sm"
-										onClick={handleAddPattern}
-										disabled={
-											!normalizedPatternInput ||
-											syncPreferences.excludedPaths.includes(normalizedPatternInput)
-										}
-										className="shrink-0"
-									>
-										<PlusIcon size={14} />
-										Add
-									</Button>
-								</div>
 								{syncPreferences.excludedPaths.length > 0 && (
 									<div className="flex flex-wrap gap-1.5 mb-3">
 										{syncPreferences.excludedPaths.map((path) => (
@@ -274,7 +227,9 @@ export function CreateVaultModal({ open, folderPath, onOpenChange }: CreateVault
 									options={availableOptions}
 									value=""
 									onChange={(path) => toggleExcludedPath(path, true)}
-									placeholder="Search files and folders to exclude..."
+									placeholder="Search files, folders, or add a pattern..."
+									allowCustomValue
+									getCustomValueLabel={(value) => `Add pattern "${value}"`}
 								/>
 							</Field>
 						</FieldGroup>

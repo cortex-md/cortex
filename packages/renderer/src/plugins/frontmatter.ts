@@ -1,58 +1,6 @@
 import type { Plugin } from "unified"
-
-interface FrontmatterField {
-	key: string
-	value: string
-}
-
-function parseYamlFields(yaml: string): FrontmatterField[] {
-	const fields: FrontmatterField[] = []
-	const lines = yaml.split("\n")
-	let currentKey = ""
-	let currentValue = ""
-	let collectingBlock = false
-
-	for (const line of lines) {
-		const keyMatch = line.match(/^(\w[\w-]*):\s*(.*)$/)
-		if (keyMatch) {
-			if (collectingBlock && currentKey) {
-				fields.push({ key: currentKey, value: currentValue.trim() })
-			}
-			currentKey = keyMatch[1]
-			const inlineValue = keyMatch[2].trim()
-
-			if (inlineValue && !inlineValue.startsWith("[") && inlineValue !== "") {
-				fields.push({ key: currentKey, value: inlineValue })
-				collectingBlock = false
-				currentKey = ""
-			} else if (inlineValue.startsWith("[")) {
-				const items = inlineValue
-					.replace(/^\[|\]$/g, "")
-					.split(",")
-					.map((s) => s.trim().replace(/^["']|["']$/g, ""))
-					.filter(Boolean)
-				fields.push({ key: currentKey, value: items.join(", ") })
-				collectingBlock = false
-				currentKey = ""
-			} else {
-				collectingBlock = true
-				currentValue = ""
-			}
-		} else if (collectingBlock && line.match(/^\s+-\s+/)) {
-			const item = line
-				.replace(/^\s+-\s+/, "")
-				.trim()
-				.replace(/^["']|["']$/g, "")
-			currentValue += (currentValue ? ", " : "") + item
-		}
-	}
-
-	if (collectingBlock && currentKey) {
-		fields.push({ key: currentKey, value: currentValue.trim() })
-	}
-
-	return fields
-}
+import type { FrontmatterField } from "../frontmatter"
+import { parseFrontmatterFields } from "../frontmatter"
 
 export const remarkStripFrontmatter: Plugin = () => {
 	return (tree, file) => {
@@ -60,7 +8,7 @@ export const remarkStripFrontmatter: Plugin = () => {
 		const firstChild = parent.children[0]
 		if (firstChild?.type !== "yaml") return
 
-		const fields = parseYamlFields(firstChild.value ?? "")
+		const fields = parseFrontmatterFields(firstChild.value ?? "")
 		file.data.frontmatterFields = fields
 		parent.children.shift()
 	}
@@ -102,8 +50,8 @@ function buildFieldRow(field: FrontmatterField): HastElement {
 	const keyEl = hastElement("span", { className: "frontmatter-key" }, [hastText(field.key)])
 
 	const valueChildren: (HastElement | HastText)[] =
-		field.key === "tags" && field.value
-			? buildTagChips(field.value)
+		field.key === "tags" && field.values.length > 0
+			? field.values.flatMap(buildTagChips)
 			: [hastText(field.value || "—")]
 
 	const valueEl = hastElement("span", { className: "frontmatter-value" }, valueChildren)

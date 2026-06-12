@@ -2,12 +2,17 @@ import { create } from "zustand"
 import { devtools } from "zustand/middleware"
 import { immer } from "zustand/middleware/immer"
 
-export type DragSourceType = "tab" | "sidebar-view"
+export type DragSourceType = "tab" | "file" | "sidebar-view"
 
 export interface TabDragSource {
 	type: "tab"
 	tabId: string
 	sourcePaneId: string
+}
+
+export interface FileDragSource {
+	type: "file"
+	filePath: string
 }
 
 export interface SidebarViewDragSource {
@@ -16,23 +21,56 @@ export interface SidebarViewDragSource {
 	viewTitle: string
 }
 
-export type DragSource = TabDragSource | SidebarViewDragSource
+export type DragSource = TabDragSource | FileDragSource | SidebarViewDragSource
 
 export type DropZone = "center" | "left" | "right" | "top" | "bottom"
 
+export type DropTargetType = "pane" | "tab"
+
 export interface DropTarget {
+	type?: DropTargetType
 	paneId: string
-	zone: DropZone
+	zone?: DropZone
+	tabId?: string
+	tabPosition?: "before" | "after"
+	insertIndex?: number
+}
+
+export interface DragPosition {
+	x: number
+	y: number
 }
 
 export interface DragState {
 	dragSource: DragSource | null
 	dropTarget: DropTarget | null
+	dragPosition: DragPosition | null
 
 	startDrag: (source: DragSource) => void
 	updateDropTarget: (target: DropTarget | null) => void
+	updateDragPosition: (position: DragPosition | null) => void
 	completeDrop: () => Promise<void>
 	cancelDrag: () => void
+}
+
+function normalizeDropZone(
+	zone: DropZone,
+	paneId: string,
+	workspace: import("./workspaceStore").WorkspaceState,
+): DropZone {
+	const targetPane = workspace.panes[paneId]
+	const isOnlyEmptyPane = Object.keys(workspace.panes).length === 1 && targetPane?.tabs.length === 0
+	return isOnlyEmptyPane ? "center" : zone
+}
+
+function getSplitPlacement(zone: DropZone): {
+	direction: "horizontal" | "vertical"
+	position: "before" | "after"
+} {
+	return {
+		direction: zone === "left" || zone === "right" ? "horizontal" : "vertical",
+		position: zone === "left" || zone === "top" ? "before" : "after",
+	}
 }
 
 export const useDragStore = create<DragState>()(
@@ -40,17 +78,25 @@ export const useDragStore = create<DragState>()(
 		immer((set, get) => ({
 			dragSource: null,
 			dropTarget: null,
+			dragPosition: null,
 
 			startDrag: (source) => {
 				set((s) => {
 					s.dragSource = source
 					s.dropTarget = null
+					s.dragPosition = null
 				})
 			},
 
 			updateDropTarget: (target) => {
 				set((s) => {
 					s.dropTarget = target
+				})
+			},
+
+			updateDragPosition: (position) => {
+				set((s) => {
+					s.dragPosition = position
 				})
 			},
 
@@ -67,39 +113,58 @@ export const useDragStore = create<DragState>()(
 				set((s) => {
 					s.dragSource = null
 					s.dropTarget = null
+					s.dragPosition = null
 				})
 
 				const { useWorkspaceStore } = await import("./workspaceStore")
 				const workspace = useWorkspaceStore.getState()
+				const targetPaneId = target.paneId
+				const zone = normalizeDropZone(target.zone ?? "center", targetPaneId, workspace)
+				const insertIndex = target.type === "tab" ? target.insertIndex : undefined
 
 				if (source.type === "tab") {
 					const { tabId, sourcePaneId } = source
-					const { paneId: targetPaneId, zone } = target
 
-					if (zone === "center") {
-						workspace.moveTab(tabId, sourcePaneId, targetPaneId)
+					if (target.type === "tab" || zone === "center") {
+						workspace.moveTab(tabId, sourcePaneId, targetPaneId, insertIndex)
 					} else {
-						const direction: "horizontal" | "vertical" =
-							zone === "left" || zone === "right" ? "horizontal" : "vertical"
-						const position: "before" | "after" =
-							zone === "left" || zone === "top" ? "before" : "after"
+						const { direction, position } = getSplitPlacement(zone)
 						workspace.moveTabToNewSplit(tabId, sourcePaneId, targetPaneId, direction, position)
+					}
+				} else if (source.type === "file") {
+					const { filePath } = source
+
+					if (target.type === "tab" || zone === "center") {
+						workspace.openTab(filePath, {
+							paneId: targetPaneId,
+							forceNew: true,
+							insertIndex,
+						})
+					} else {
+						const { direction, position } = getSplitPlacement(zone)
+						workspace.openTab(filePath, {
+							paneId: targetPaneId,
+							split: direction,
+							splitPosition: position,
+							forceNew: true,
+						})
 					}
 				} else if (source.type === "sidebar-view") {
 					const { viewId, viewTitle } = source
-					const { paneId: targetPaneId, zone } = target
 
-					if (zone === "center") {
-						workspace.openViewTab(viewId, viewTitle, { paneId: targetPaneId })
+					if (target.type === "tab" || zone === "center") {
+						workspace.openViewTab(viewId, viewTitle, {
+							paneId: targetPaneId,
+							forceNew: true,
+							insertIndex,
+						})
 					} else {
-						const direction: "horizontal" | "vertical" =
-							zone === "left" || zone === "right" ? "horizontal" : "vertical"
-						const position: "before" | "after" =
-							zone === "left" || zone === "top" ? "before" : "after"
+						const { direction, position } = getSplitPlacement(zone)
 						workspace.openViewTab(viewId, viewTitle, {
 							paneId: targetPaneId,
 							split: direction,
 							splitPosition: position,
+							forceNew: true,
 						})
 					}
 				}
@@ -109,6 +174,7 @@ export const useDragStore = create<DragState>()(
 				set((s) => {
 					s.dragSource = null
 					s.dropTarget = null
+					s.dragPosition = null
 				})
 			},
 		})),

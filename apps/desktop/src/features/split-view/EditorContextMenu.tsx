@@ -2,12 +2,15 @@ import type { EditorView } from "@codemirror/view"
 import {
 	copyLine,
 	duplicateLine,
+	getCalloutRegistryVersion,
+	getCalloutTypes,
 	insertCallout,
 	insertCodeBlock,
 	insertImage,
 	insertLink,
 	insertTable,
 	removeParagraphFormatting,
+	subscribeCalloutTypes,
 	toggleBlockquote,
 	toggleBold,
 	toggleHeading,
@@ -32,7 +35,7 @@ import {
 	ContextMenuTrigger,
 } from "@cortex/ui"
 import type { ReactNode } from "react"
-import { useCallback, useMemo, useRef } from "react"
+import { useCallback, useMemo, useRef, useSyncExternalStore } from "react"
 import type { MenuItem } from "@/utils/context-menu"
 import { NativeMenuActions } from "@/utils/context-menu"
 
@@ -170,8 +173,13 @@ function buildNativeMenuItems(view: EditorView, hasSelection: boolean): MenuItem
 		},
 		{
 			id: "insert-callout",
+			type: "submenu",
 			text: "Insert Callout",
-			action: () => runCommand(view, insertCallout),
+			items: getCalloutTypes().map((callout) => ({
+				id: `insert-callout-${callout.type}`,
+				text: callout.label,
+				action: () => runCommand(view, (editorView) => insertCallout(editorView, callout.type)),
+			})),
 		},
 		{ type: "separator" },
 		{
@@ -191,6 +199,7 @@ function buildNativeMenuItems(view: EditorView, hasSelection: boolean): MenuItem
 
 export function EditorContextMenu({ getEditorView, children }: Props) {
 	const capturedViewRef = useRef<EditorView | null>(null)
+	useSyncExternalStore(subscribeCalloutTypes, getCalloutRegistryVersion, getCalloutRegistryVersion)
 	const isNativePlatform = useMemo(() => getPlatform().capabilities.includes("menu"), [])
 	const nativeMenu = useMemo(() => new NativeMenuActions(), [])
 
@@ -300,7 +309,21 @@ export function EditorContextMenu({ getEditorView, children }: Props) {
 				<ContextMenuItem onSelect={() => runCommand(view, insertTable)}>
 					Table<ContextMenuShortcut>⌘⇧Y</ContextMenuShortcut>
 				</ContextMenuItem>
-				<ContextMenuItem onSelect={() => runCommand(view, insertCallout)}>Callout</ContextMenuItem>
+				<ContextMenuSub>
+					<ContextMenuSubTrigger>Callout</ContextMenuSubTrigger>
+					<ContextMenuSubContent>
+						{getCalloutTypes().map((callout) => (
+							<ContextMenuItem
+								key={callout.type}
+								onSelect={() =>
+									runCommand(view, (editorView) => insertCallout(editorView, callout.type))
+								}
+							>
+								{callout.label}
+							</ContextMenuItem>
+						))}
+					</ContextMenuSubContent>
+				</ContextMenuSub>
 
 				<ContextMenuSeparator />
 				<ContextMenuItem onSelect={() => runCommand(view, copyLine)}>Copy Line</ContextMenuItem>

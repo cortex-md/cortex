@@ -26,9 +26,10 @@ Base class for all plugins. Runtime sets `manifest` and `api` before calling `on
 Convenience methods auto-track disposables for cleanup on unload:
 - `addCommand(command)` → registers via `api.commands`
 - `registerEditorExtension(ext)` → registers via `api.editor`
-- `registerLivePreview(declaration)` → registers via `api.editor` (declarative live preview)
-- `registerMarkdownProcessor(plugin)` → registers via `api.renderer`
-- `registerCodeBlockProcessor(lang, handler)` → registers via `api.renderer`
+- `registerMarkdownInline(registration)` → registers via `api.markdown`
+- `registerMarkdownSemantic(registration)` → registers validated portable semantic output
+- `registerMarkdownProcessor(processor)` → registers via `api.markdown`
+- `registerCalloutType(registration)` → registers via `api.markdown`
 - `registerView(registration)` → registers via `api.ui`
 - `registerSettingsTab(tab)` → registers via `api.ui`, auto-wires `onChange` from setting definitions
 
@@ -39,22 +40,35 @@ The scoped API surface injected into each plugin. Sub-APIs:
 - `commands` — register/execute commands (supports `defaultHotkey` for auto-binding)
 - `settings` — read/write plugin settings, define schema (supports inline `onChange`)
 - `vault` — scoped file I/O (relative paths only)
-- `editor` — CM6 extensions, live preview declarations, cursor operations
-- `renderer` — remark/rehype plugins, code block processors
+- `editor` — CM6 extensions and cursor operations
+- `markdown` — shared inline/semantic rules, targeted Unified processors, and callout types
 - `ui` — views, sidebar, statusbar, context menu, ribbon, notices
 - `hotkeys` — keyboard shortcut registration
 - `metadata` — frontmatter and tag access
 - `data` — plugin data persistence
 - `theme` — theme registration
-- `workspace` — open files, active file events
+- `workspace` — open files/views, target splits, active file events
 - `bookmarks` — read/write bookmarks, subscribe to changes
 - `notifications` — native app notifications, gated by the `notifications` manifest capability
 
-### LivePreviewDeclaration (type)
-Declarative API for creating CodeMirror live preview decorations without importing CM6:
-- `inlineRules` — regex pattern matching with text/widget/mark replacements
-- `cursorAware` — auto-hides decorations when cursor is in range (default: true)
-- `LivePreviewWidgetDescriptor` — describes DOM element (tag, textContent, className, attributes)
+### MarkdownInlineRegistration (type)
+Declarative API applied to Live Preview and Reading View without importing CM6:
+- `pattern` and `flags` define regex matching
+- `priority` resolves overlaps deterministically
+- `replacement` accepts text replacement or a semantic CSS class mark
+- arbitrary DOM widgets are intentionally unsupported
+
+### MarkdownSemanticRegistration (type)
+
+Transforms text semantic nodes into validated portable nodes: text, container, span, link, image,
+or code. Registrations compose by priority, and the same registration runs in Live Preview, Reading
+View, and export. `registerInline` is the regex convenience API over this portable-node path.
+
+### MarkdownProcessorRegistration (type)
+
+Advanced Unified integration with `id`, one `phase`, explicit `surfaces`, optional `priority`, and
+one typed zero-argument plugin function returning a transformer. Processor surfaces are limited to
+`reading-view` and `export`.
 
 ### PluginSettingDefinition (interface)
 Supports inline `onChange` callback for reactive settings — no need to call `api.settings.onChange()` separately.
@@ -63,10 +77,13 @@ Supports inline `onChange` callback for reactive settings — no need to call `a
 Supports `defaultHotkey` — auto-registers as a customizable hotkey binding when command is registered.
 
 ### Capabilities (PluginCapability)
-Declared permissions: `vault:read/write/delete/watch`, `editor:extensions`, `renderer:plugins`, `ui:views/sidebar/statusbar/contextmenu`, `commands`, `hotkeys`, `settings`, `themes`, `bookmarks:read`, `bookmarks:write`, `notifications`.
+Declared permissions: `vault:read/write/delete/watch`, `editor:extensions`, `markdown:extensions`, `ui:views/sidebar/statusbar/contextmenu`, `commands`, `hotkeys`, `settings`, `themes`, `bookmarks:read`, `bookmarks:write`, `notifications`.
 
 ### ViewDescriptor (type)
 Declarative UI tree (JSON-serializable). Plugins describe UI as `ViewNode` trees; the host renders per-platform. Plugins never touch DOM/CSS directly.
+
+### WorkspaceOpenOptions (type)
+`api.workspace.openFile(path, options?)` and `api.workspace.openView(viewId, options?)` accept `target: "active" | "left" | "right" | "top" | "bottom"` and `newTab?: boolean`. The default target is the active pane; edge targets create host-managed splits. `newTab` asks the host to create a new instance instead of activating an existing file/view tab.
 
 ### PluginManifest (interface)
 Metadata for plugin discovery: id, name, version, author, icon (lucide name string), capabilities.

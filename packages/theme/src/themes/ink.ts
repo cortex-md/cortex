@@ -1,5 +1,7 @@
 import type { Theme } from "../types"
 
+const systemFontStack = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+
 export const inkTheme: Theme = {
 	name: "ink",
 	displayName: "Ink (Dark)",
@@ -73,6 +75,11 @@ export const inkTheme: Theme = {
 				code: "#1a1918",
 				tag: "#222120",
 			},
+			selection: {
+				background: "rgba(232,168,60,0.24)",
+				searchMatch: "rgba(245,194,101,0.18)",
+				searchMatchActive: "rgba(232,168,60,0.36)",
+			},
 			text: {
 				primary: "#f2f2f1",
 				secondary: "#d4d3d1",
@@ -114,9 +121,19 @@ export const inkTheme: Theme = {
 			},
 		},
 		fonts: {
-			ui: "ui-sans-serif, -apple-system, sans-serif",
-			editor: "ui-sans-serif, -apple-system, serif",
-			mono: 'ui-sans-serif, -apple-system, "JetBrains Mono", "Fira Code", Menlo, monospace',
+			ui: systemFontStack,
+			editor: systemFontStack,
+			mono: systemFontStack,
+		},
+		typography: {
+			ui: {
+				fontWeight: "500",
+				lineHeight: "17px",
+			},
+			editor: {
+				fontWeight: "400",
+				lineHeight: "27px",
+			},
 		},
 		status: {
 			error: "#e05252",
@@ -173,12 +190,39 @@ export const inkTheme: Theme = {
 			h4FontSize: "1.1em",
 			h5FontSize: "1em",
 			h6FontSize: "0.9em",
+			h1Color: "#f5c265",
+			h2Color: "#d8b86f",
+			h3Color: "#b0a0e0",
+			h4Color: "#c8a0e0",
+			h5Color: "#d4d3d1",
+			h6Color: "#9e9c99",
+		},
+		markdown: {
+			contentWidth: "720px",
+			contentGutter: "40px",
+			codePaddingInline: "16px",
+			codePaddingBlock: "8px",
+			callouts: {
+				note: { color: "#e8a83c", backgroundColor: "#241800" },
+				abstract: { color: "#d4d3d1", backgroundColor: "#1a1918" },
+				info: { color: "#f5c265", backgroundColor: "#241800" },
+				todo: { color: "#e8a83c", backgroundColor: "#241800" },
+				tip: { color: "#4a9b6f", backgroundColor: "#0a2015" },
+				success: { color: "#4a9b6f", backgroundColor: "#0a2015" },
+				question: { color: "#d4a017", backgroundColor: "#1e1500" },
+				warning: { color: "#d4a017", backgroundColor: "#1e1500" },
+				failure: { color: "#e05252", backgroundColor: "#2a0a0a" },
+				danger: { color: "#e05252", backgroundColor: "#2a0a0a" },
+				bug: { color: "#e05252", backgroundColor: "#2a0a0a" },
+				example: { color: "#b0a0e0", backgroundColor: "#1a1918" },
+				quote: { color: "#9e9c99", backgroundColor: "#1a1918" },
+			},
 		},
 		sizing: {
 			radius: "0.625rem",
 			uiFontSize: "14px",
 			editorFontSize: "16px",
-			editorLineHeight: "1.5",
+			editorLineHeight: "27px",
 			editorParagraphSpacing: "1em",
 		},
 		colorScheme: "dark",

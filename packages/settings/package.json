@@ -7,7 +7,6 @@
 		"./types": "./src/types.ts"
 	},
 	"dependencies": {
-		"@cortex/core": "workspace:*",
 		"@cortex/platform": "workspace:*",
 		"zustand": "^5.0.11",
 		"zod": "^3.24.1"

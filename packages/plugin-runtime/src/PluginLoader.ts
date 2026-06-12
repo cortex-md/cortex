@@ -22,6 +22,14 @@ const bundledPlugins = new Map<string, PluginModule>()
 const communityPluginLoadErrors = new Map<string, string>()
 const communityPluginDirs = new Map<string, string>()
 
+function reportPluginOperationError(operation: string, pluginId: string, error: unknown): void {
+	console.error("[Plugin operation failed]", {
+		operation,
+		pluginId,
+		error: error instanceof Error ? error.message : String(error),
+	})
+}
+
 export function registerBundledPlugin(manifest: PluginManifest, module: PluginModule): void {
 	validatePluginManifestCapabilities(manifest)
 	bundledPlugins.set(manifest.id, module)
@@ -65,7 +73,9 @@ export async function disablePlugin(pluginId: string): Promise<void> {
 
 	try {
 		await instance.plugin.onunload()
-	} catch {}
+	} catch (error) {
+		reportPluginOperationError("unload", pluginId, error)
+	}
 
 	instance.plugin._disposeAll()
 	instances.delete(pluginId)
@@ -175,7 +185,9 @@ export async function reloadCommunityPlugins(
 		if (!store.plugins[pluginId]) continue
 		try {
 			await enablePlugin(pluginId, getVaultPath)
-		} catch {}
+		} catch (error) {
+			reportPluginOperationError("reload", pluginId, error)
+		}
 	}
 }
 
@@ -277,7 +289,9 @@ export async function loadEnabledPlugins(
 		if (!bundledPlugins.has(pluginId)) continue
 		try {
 			await enablePlugin(pluginId, getVaultPath)
-		} catch {}
+		} catch (error) {
+			reportPluginOperationError("load-enabled", pluginId, error)
+		}
 	}
 	if (isDefault) {
 		await saveEnabledPlugins(vaultPath)
@@ -301,7 +315,9 @@ export async function saveEnabledPlugins(vaultPath: string): Promise<void> {
 	const content = JSON.stringify({ enabled: enabledIds }, null, "\t")
 	try {
 		await getPlatform().fs.writeFile(`${vaultPath}/.cortex/plugins.json`, content)
-	} catch {}
+	} catch (error) {
+		reportPluginOperationError("save-enabled", "registry", error)
+	}
 }
 
 export function getPluginInstance(pluginId: string): CortexPlugin | undefined {

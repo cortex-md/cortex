@@ -1,6 +1,12 @@
 import type { ComponentType, ReactNode } from "react"
 
 export interface SettingsControlComponents {
+	Group?: ComponentType<{ children: ReactNode }>
+	Field?: ComponentType<{
+		label: ReactNode
+		description?: ReactNode
+		children: ReactNode
+	}>
 	Switch: ComponentType<{ checked: boolean; onCheckedChange: (value: boolean) => void }>
 	TextInput: ComponentType<{
 		value: string

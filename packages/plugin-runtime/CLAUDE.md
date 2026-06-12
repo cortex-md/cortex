@@ -15,16 +15,16 @@ packages/plugin-runtime/
       DataAPI.ts         # Plugin data persistence in .cortex/plugins/<id>/data/
       VaultAPI.ts        # Scoped file I/O via getPlatform().fs with path validation
       EditorAPI.ts       # CM6 extension registration + live preview builder bridge + cursor operations
-      RendererAPI.ts     # Renderer plugin registration
+      MarkdownAPI.ts     # Shared Markdown registration
       HotkeysAPI.ts      # Hotkey binding registration + dynamic bindings for command hotkeys
       MetadataAPI.ts     # Frontmatter + tags read access
       ThemeAPI.ts        # Theme registration + active theme queries
-      WorkspaceAPI.ts    # Open files, active file subscriptions
+      WorkspaceAPI.ts    # Open files/views, target splits, active file subscriptions
       BookmarksAPI.ts    # Bookmark read/write/subscribe via bridge
       NotificationsAPI.ts # Native notification bridge with capability enforcement
     rendering/
       PluginSettingsRenderer.tsx  # Renders plugin settings forms from injected controls
-      PluginViewRenderer.tsx      # Maps ViewDescriptor → React components
+      PluginViewRenderer.tsx      # Maps ViewDescriptor → React components with optional controlled state
       settingsControls.ts         # Platform-agnostic component contract for settings renderer
     pluginStore.ts       # Zustand store: loaded plugins, enabled state, aggregated registrations
     PluginLoader.ts      # Discovery, lifecycle (load/enable/disable/unload)
@@ -55,20 +55,19 @@ packages/plugin-runtime/
 ### Bridge Functions (called by apps/desktop to wire APIs to real implementations)
 - `setEditorViewRef(view)` — provides CM6 EditorView for cursor operations
 - `setReconfigurePluginExtensions(fn)` — provides reconfigure function from @cortex/editor
-- `setLivePreviewBuilder(fn)` — provides live preview builder from @cortex/editor
 - `setHotkeyHandlerFunctions(register, unregister)` — wires to @cortex/hotkeys store
 - `setDynamicBindingFunctions(add, remove)` — wires dynamic hotkey bindings for commands
 - `setMetadataFunctions({...})` — wires frontmatter parsing and tag queries
 - `setThemeManagerRef(manager)` — wires to ThemeManager instance
-- `setWorkspaceFunctions({...})` — wires to workspace/editor stores
+- `setWorkspaceFunctions({...})` — wires file/view opening, target splits, and active file subscriptions to workspace/editor stores
 - `setBookmarksFunctions({...})` — wires to bookmarksStore
 - `setNotificationFunctions({...})` — wires plugin notifications to the host platform notification service
 - `setSettingsControls(components)` — injects platform-specific UI controls for settings renderer
 
 ### Settings Renderer (platform-agnostic)
-- `SettingsControlComponents` — interface defining required UI controls (Switch, TextInput, NumberInput, Select, Slider, ColorPicker, Label, Description)
-- `setSettingsControls(components)` — desktop injects @cortex/ui components, mobile injects RN components
-- `PluginSettingsRenderer` — renders plugin settings using injected controls (no direct HTML/DOM)
+- `SettingsControlComponents` — interface defining required UI controls (Switch, TextInput, NumberInput, Select, Slider, ColorPicker, Label, Description) plus optional layout wrappers (`Group`, `Field`)
+- `setSettingsControls(components)` — desktop injects @cortex/ui components and settings layout wrappers, mobile injects RN components
+- `PluginSettingsRenderer` — renders plugin settings using injected controls, preferring host-provided layout wrappers while preserving the legacy Label/Description fallback
 
 ## API Status
 
@@ -79,12 +78,12 @@ packages/plugin-runtime/
 | `vault` | Done | Scoped file I/O with `../` escape prevention |
 | `data` | Done | Plugin data persistence with filename validation |
 | `ui` | Done | Sidebar, statusbar, views, context menu, ribbon, settings tabs (via plugin store) |
-| `editor` | Done | CM6 extension registration, live preview declarations, cursor operations |
-| `renderer` | Done | Renderer plugin registration (stored, consumed by Renderer component) |
+| `editor` | Done | CM6 extension registration and cursor operations |
+| `markdown` | Done | Namespaced inline/semantic rules, targeted processors, and callouts |
 | `hotkeys` | Done | Hotkey binding registration + dynamic bindings via bridge functions |
 | `metadata` | Done | Frontmatter + tags read access via bridge functions |
 | `theme` | Done | Theme registration + active theme queries via ThemeManager bridge |
-| `workspace` | Done | Open files, active file subscriptions via bridge functions |
+| `workspace` | Done | Open files/views, target splits, active file subscriptions via bridge functions |
 | `bookmarks` | Done | Read/write/subscribe bookmarks via bridge to bookmarksStore |
 | `notifications` | Done | Native notifications via bridge, manifest capability check, permission/no-op handling |
 
@@ -104,6 +103,10 @@ vault/.cortex/
 ```
 
 Community plugin discovery only accepts a safe relative `manifest.main` path. Empty paths, absolute paths, Windows drive paths, and any path containing `..` are ignored before the runtime attempts to read or evaluate the bundle. The loader accepts CommonJS bundles and self-contained ESM bundles with a default plugin class export. Bare ESM imports are not resolved by the runtime, so marketplace plugins should publish bundled release assets.
+
+Markdown registration IDs are scoped as `<plugin-id>:<registration-id>`. Invalid registrations fail
+before changing renderer state. Loader lifecycle failures emit structured plugin diagnostics instead
+of being swallowed. Plugin settings and data failures include operation, plugin, and file context.
 
 ## Dependencies
 

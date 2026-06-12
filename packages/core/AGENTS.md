@@ -165,9 +165,21 @@ refreshFiles: async () => {
     set((state) => {
       state.files = files
     })
-  } catch (_e) {}  // Silently ignore errors
+  } catch (error) {
+    console.error("[Vault refresh failed]", { vaultPath: vault.path, error })
+    set({ error: String(error) })
+  }
 }
 ```
+
+Background failures must update an existing store error field or emit a structured log. Do not add
+empty `catch` blocks.
+
+### 6. Reactive Tag Index
+
+`tagsStore.fileTags` is the reactive source of file-to-tag associations. Components should select
+`fileTags[filePath]` and `tagColors` directly instead of subscribing to getter functions or creating
+their own caches.
 
 ## Existing Stores
 
@@ -224,13 +236,14 @@ Manages the vault-scoped layout (split panes, tabs, their positions, and persist
 ```typescript
 export interface WorkspaceState {
   splitTree: SplitTree                    // Recursive layout tree
-  panes: Map<PaneId, Pane>               // All panes by ID
-  activePaneId: PaneId | null            // Currently focused pane
+  panes: Record<string, Pane>            // All panes by ID
+  activePaneId: string                   // Currently focused pane
   // ... + many layout actions
 
-  resizeSplit: (nodeId: string, delta: number) => void
-  closeTab: (paneId: PaneId, tabIndex: number) => void
-  goToTabIndex: (paneId: PaneId, tabIndex: number) => void
+  openTab: (filePath: string, opts?: OpenTabOptions) => void
+  openViewTab: (viewId: string, title: string, opts?: OpenTabOptions) => void
+  updateViewTabState: (tabId: string, paneId: string, viewState: ViewTabState) => void
+  moveTabToNewSplit: (tabId: string, fromPaneId: string, targetPaneId: string, direction: SplitDirection, position: "before" | "after") => void
   loadWorkspace: (vaultPath: string) => Promise<void>
   persistWorkspace: (vaultPath: string) => void
 }
@@ -238,6 +251,8 @@ export interface WorkspaceState {
 
 **Usage**: Complex layout operations. See `apps/desktop/src/App.tsx` for examples.
 `persistWorkspace()` writes `.cortex/workspace.json`; keep `leftSidebar` in that snapshot so resize and collapsed state are restored per vault.
+
+Tabs are either `file` or `view`. File tabs may be duplicated with `forceNew`/`newTab`; view tabs carry per-tab serializable `viewState` so plugin views keep state when moved between panes. `dragStore` coordinates `tab`, `file`, and `sidebar-view` drag sources, cursor position for the desktop drag preview, pane edge drops for splits, and tab-bar insertion targets with `insertIndex`.
 
 ### uiStore
 Manages UI chrome, app-level overlays, and settings entry points:
@@ -262,7 +277,9 @@ export interface UIState {
 }
 ```
 
-**Usage**: `const { leftSidebarWidth, setLeftSidebarWidth } = useUIStore()`. Marketplace is a Settings tab; `openMarketplace(tab)` opens Settings with `settingsInitialSection` set to `"marketplace"`.
+`LEFT_SIDEBAR_WIDTH_BOUNDS` and `clampLeftSidebarWidth()` are exported with `uiStore`; use them anywhere sidebar width is read from pointer input or restored from persisted state.
+
+**Usage**: Prefer selectors such as `useUIStore((s) => s.leftSidebarWidth)` in frequently re-rendered app chrome. Marketplace is a Settings tab; `openMarketplace(tab)` opens Settings with `settingsInitialSection` set to `"marketplace"`.
 
 ### syncStore
 Manages the active sync engine state, file sync status, conflicts, and event subscriptions:
@@ -290,7 +307,7 @@ export interface SyncState {
 ```
 
 `subscribeEvents()` bridges Rust engine events to Zustand state. It also listens for `sync-log` events from Rust and pipes them into `syncLogStore`. The `onVaultAccessDenied` listener auto-unlinks the vault when a 403 is received.
-Sync preferences are vault-scoped in `.cortex/sync-preferences.json`; use `normalizeSyncPreferences()` for migration defaults and `shouldIgnoreSyncPath()` for UI-only checks that mirror Rust ignore behavior.
+Sync preferences are vault-scoped in `.cortex/sync-preferences.json`; `excludedPaths` are gitignore-style patterns that may reference paths not currently present in the vault. Use `normalizeSyncPreferences()` and `normalizeSyncPathPattern()` for migration/input cleanup, and `shouldIgnoreSyncPath()` for UI-only checks that mirror Rust ignore behavior.
 
 **Usage**: `const { engineState, startSync, stopSync } = useSyncStore()`
 

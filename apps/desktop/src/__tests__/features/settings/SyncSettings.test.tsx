@@ -174,7 +174,8 @@ describe("SyncSection", () => {
 		setupMocks({ authenticated: false, syncEnabled: true })
 		render(<SyncSection view="preferences" />)
 
-		expect(screen.getByText("Metadata")).toBeInTheDocument()
+		expect(screen.getByText("Preferences")).toBeInTheDocument()
+		expect(screen.getByRole("switch", { name: "Ignore images" })).toBeInTheDocument()
 		expect(screen.getByText("Excluded paths panel")).toBeInTheDocument()
 	})
 

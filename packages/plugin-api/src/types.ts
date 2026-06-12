@@ -8,7 +8,7 @@ export type PluginCapability =
 	| "vault:delete"
 	| "vault:watch"
 	| "editor:extensions"
-	| "renderer:plugins"
+	| "markdown:extensions"
 	| "ui:views"
 	| "ui:sidebar"
 	| "ui:statusbar"
@@ -206,36 +206,85 @@ export interface RibbonActionRegistration {
 	onClick: () => void
 }
 
-export interface LivePreviewWidgetDescriptor {
-	tag: string
-	textContent?: string
-	className?: string
-	attributes?: Record<string, string>
-}
-
-export type LivePreviewReplacement =
+export type MarkdownInlineReplacement =
 	| { type: "text"; content: string | ((match: RegExpExecArray) => string) }
-	| { type: "widget"; render: (match: RegExpExecArray) => LivePreviewWidgetDescriptor }
 	| { type: "mark"; className: string }
 
-export interface LivePreviewInlineRule {
+export interface MarkdownInlineRegistration {
+	id: string
 	pattern: string
 	flags?: string
-	replacement: LivePreviewReplacement
+	priority?: number
+	replacement: MarkdownInlineReplacement
 }
 
-export interface LivePreviewDeclaration {
+export type MarkdownSurface = "reading-view" | "export"
+
+export type MarkdownSemanticSurface = MarkdownSurface | "live-preview"
+
+export type MarkdownProcessorPhase = "remark" | "rehype"
+
+export interface MarkdownUnifiedNode {
+	type: string
+	children?: MarkdownUnifiedNode[]
+	[property: string]: unknown
+}
+
+export interface MarkdownUnifiedFile {
+	data: Record<string, unknown>
+	path?: string
+	value: unknown
+	[property: string]: unknown
+}
+
+export type MarkdownUnifiedTransformer = (
+	tree: MarkdownUnifiedNode,
+	file: MarkdownUnifiedFile,
+) => unknown
+
+export type MarkdownUnifiedPlugin = () => MarkdownUnifiedTransformer | undefined
+
+export type MarkdownPortableNode =
+	| { type: "text"; value: string }
+	| { type: "container"; children: readonly MarkdownPortableNode[] }
+	| { type: "span"; className?: string; children: readonly MarkdownPortableNode[] }
+	| { type: "link"; href: string; children: readonly MarkdownPortableNode[] }
+	| { type: "image"; src: string; alt: string }
+	| { type: "code"; value: string; language?: string }
+
+export interface MarkdownNodeSelector {
+	type: "text"
+}
+
+export interface MarkdownSemanticContext {
+	surface: MarkdownSemanticSurface
+	node: MarkdownPortableNode
+	source: string
+}
+
+export interface MarkdownSemanticRegistration {
 	id: string
-	inlineRules?: LivePreviewInlineRule[]
-	cursorAware?: boolean
+	selector: MarkdownNodeSelector
+	priority?: number
+	transform: (
+		context: MarkdownSemanticContext,
+	) => MarkdownPortableNode | readonly MarkdownPortableNode[] | null
 }
 
-export type CodeBlockHandler = (content: string, container: ViewDescriptor) => ViewDescriptor
+export interface CalloutTypeRegistration {
+	type: string
+	aliases?: string[]
+	label?: string
+	color?: string
+	backgroundColor?: string
+}
 
-export interface RendererPlugin {
-	name: string
-	remarkPlugins?: unknown[]
-	rehypePlugins?: unknown[]
+export interface MarkdownProcessorRegistration {
+	id: string
+	phase: MarkdownProcessorPhase
+	surfaces: readonly MarkdownSurface[]
+	priority?: number
+	processor: MarkdownUnifiedPlugin
 }
 
 export interface TagEntry {
@@ -248,6 +297,13 @@ export interface Theme {
 	name: string
 	type: "light" | "dark"
 	colors: Record<string, string>
+}
+
+export type WorkspaceOpenTarget = "active" | "left" | "right" | "top" | "bottom"
+
+export interface WorkspaceOpenOptions {
+	target?: WorkspaceOpenTarget
+	newTab?: boolean
 }
 
 export interface PluginAPI {
@@ -277,16 +333,17 @@ export interface PluginAPI {
 
 	editor: {
 		registerExtension(extension: unknown): Disposable
-		registerLivePreview(declaration: LivePreviewDeclaration): Disposable
 		getActiveFilePath(): string | null
 		getActiveFileContent(): string | null
 		insertAtCursor(text: string): void
 		replaceSelection(text: string): void
 	}
 
-	renderer: {
-		registerPlugin(plugin: RendererPlugin): Disposable
-		registerCodeBlockProcessor(language: string, handler: CodeBlockHandler): Disposable
+	markdown: {
+		registerInline(registration: MarkdownInlineRegistration): Disposable
+		registerSemantic(registration: MarkdownSemanticRegistration): Disposable
+		registerProcessor(processor: MarkdownProcessorRegistration): Disposable
+		registerCalloutType(registration: CalloutTypeRegistration): Disposable
 	}
 
 	ui: {
@@ -329,7 +386,8 @@ export interface PluginAPI {
 	}
 
 	workspace: {
-		openFile(path: string): void
+		openFile(path: string, options?: WorkspaceOpenOptions): void
+		openView(viewId: string, options?: WorkspaceOpenOptions): void
 		getOpenFiles(): string[]
 		onActiveFileChange(callback: (path: string | null) => void): Disposable
 	}

@@ -1,14 +1,9 @@
+import type { MarkdownProcessorRegistration, MarkdownSurface } from "./registry"
+
 export interface RendererOptions {
-	plugins?: RendererPlugin[]
+	surface?: MarkdownSurface
+	processors?: MarkdownProcessorRegistration[]
 }
-
-export interface RendererPlugin {
-	name: string
-	remarkPlugins?: UnifiedPlugin[]
-	rehypePlugins?: UnifiedPlugin[]
-}
-
-export type UnifiedPlugin = [unknown, ...unknown[]] | unknown
 
 export interface Renderer {
 	render: (markdown: string) => Promise<string>

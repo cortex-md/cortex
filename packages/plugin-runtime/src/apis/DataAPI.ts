@@ -1,6 +1,20 @@
 import { getPlatform } from "@cortex/platform"
 import type { PluginAPI } from "cortex-plugin-api"
 
+function reportPluginDataError(
+	operation: string,
+	pluginId: string,
+	filename: string,
+	error: unknown,
+): void {
+	console.warn("[Plugin data operation failed]", {
+		operation,
+		pluginId,
+		filename,
+		error: error instanceof Error ? error.message : String(error),
+	})
+}
+
 function validateFilename(filename: string): void {
 	if (filename.includes("..") || filename.startsWith("/") || filename.startsWith("\\")) {
 		throw new Error(`Invalid data filename: ${filename}`)
@@ -24,7 +38,8 @@ export function createDataAPI(
 			if (!dir) return null
 			try {
 				return await getPlatform().fs.readFile(`${dir}/${filename}`)
-			} catch {
+			} catch (error) {
+				reportPluginDataError("read", pluginId, filename, error)
 				return null
 			}
 		},
@@ -34,9 +49,7 @@ export function createDataAPI(
 			const dir = dataDir()
 			if (!dir) return
 			const platform = getPlatform()
-			try {
-				await platform.fs.createDir(dir)
-			} catch {}
+			await platform.fs.createDir(dir)
 			await platform.fs.writeFile(`${dir}/${filename}`, content)
 		},
 
@@ -46,7 +59,9 @@ export function createDataAPI(
 			if (!dir) return
 			try {
 				await getPlatform().fs.deleteFile(`${dir}/${filename}`)
-			} catch {}
+			} catch (error) {
+				reportPluginDataError("delete", pluginId, filename, error)
+			}
 		},
 
 		getDataPath(): string {

@@ -11,10 +11,11 @@ This file provides guidance for working with the Tauri desktop application front
 ```
 src/
   main.tsx              # React entry, calls initPlatform(tauriAdapter)
-  App.tsx               # Root component: layout, providers, keyboard shortcuts
+  App.tsx               # Root shell composition and high-level app state
+  bootstrap/            # Host bridges and bundled plugin registration
   components/           # Desktop-specific UI (FileSidebar, PaneView, etc.)
   features/             # Feature modules (sync/, editor/, etc.)
-  hooks/                # React hooks (useSyncLifecycle, etc.)
+  hooks/                # Commands and app/plugin/theme/workspace/window lifecycles
   styles.css            # Design system CSS
 src-tauri/              # Rust source (Tauri commands, sync engine)
 ```
@@ -25,9 +26,29 @@ The main app and Settings use separate Tauri webview windows. `main.tsx` renders
 
 `SettingsModal` remains as a fallback for cases where there is no active vault or native window creation fails. Shared settings layout belongs in `SettingsContent`, not in window-specific wrappers.
 
+Settings form sections should use `SettingsPage`, `SettingsBlock`, `SettingsField`, `SettingsList`, and `SettingsEmptyState` from `features/settings/SettingsPrimitives`. Keep Marketplace as its own browser-style settings view, but use the shared settings primitives for General, Appearance, Editor, Hotkeys, Sync, Plugins, and plugin-declared settings.
+
+Appearance settings may override only font families and font sizes. UI/editor font weights and line heights are theme CSS tokens (`--ui-font-weight`, `--ui-line-height`, `--editor-font-weight`, `--editor-line-height`) and should not be written by runtime appearance overrides.
+
 `tauri.conf.json` should stay platform-neutral. macOS chrome belongs in `tauri.macos.conf.json`; Windows chrome belongs in `tauri.windows.conf.json`.
 
 Window-level native materials should come from Tauri/window effects. Do not add CSS blur to app chrome that is meant to show native vibrancy, Mica, or acrylic.
+
+## Workspace Layout
+
+`SplitPaneView` renders the recursive workspace tree and `PaneView` owns each pane's tab bar, file editor tabs, and view tabs. Tabs can contain files or declarative plugin/core views. Drag sources are tabs, file rows from `FileSidebar`, and sidebar view items. `DropZoneOverlay` covers pane content for center/edge split drops, while `TabBar` owns insertion targets for dropping before or after existing tabs.
+
+Workspace tabs keep a fixed width with truncated titles so tab order changes do not resize neighboring tabs. Keep motion limited to subtle create, close, drag, and drop marker states.
+
+The left sidebar's persisted width lives in `uiStore`, but live resize feedback should stay local/imperative during the drag and commit the final clamped width only on mouseup.
+
+`FileSidebar` builds its hierarchy in O(n), flattens expanded rows, and virtualizes the result with
+`@tanstack/react-virtual`. Keep file tree construction pure in `fileTree.ts`; row components must
+subscribe only to visible row state.
+
+App-level bridges belong in `bootstrap/pluginBridges.ts`. Lifecycle effects and command wiring belong
+in dedicated hooks; native menu listeners belong in `hooks/useNativeMenuEvents.ts`. `App.tsx` should
+remain focused on shell composition.
 
 ## Marketplace
 

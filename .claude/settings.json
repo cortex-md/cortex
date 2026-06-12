@@ -1,6 +1,0 @@
-{
-  "enabledPlugins": {
-    "skill-creator@claude-plugins-official": true,
-    "arscontexta@agenticnotetaking": true
-  }
-}

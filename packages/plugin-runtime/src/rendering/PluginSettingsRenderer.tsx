@@ -1,4 +1,5 @@
 import type { PluginSettingDefinition } from "cortex-plugin-api"
+import type { ReactNode } from "react"
 import { getSettingsControls } from "./settingsControls"
 
 interface Props {
@@ -9,8 +10,11 @@ interface Props {
 }
 
 export function PluginSettingsRenderer({ settings, values, onUpdate }: Props) {
+	const { Group } = getSettingsControls()
+	const SettingsGroup = Group ?? DefaultSettingsGroup
+
 	return (
-		<div className="flex flex-col gap-4">
+		<SettingsGroup>
 			{settings.map((setting) => (
 				<SettingField
 					key={setting.key}
@@ -19,8 +23,12 @@ export function PluginSettingsRenderer({ settings, values, onUpdate }: Props) {
 					onChange={(value) => onUpdate(setting.key, value)}
 				/>
 			))}
-		</div>
+		</SettingsGroup>
 	)
+}
+
+function DefaultSettingsGroup({ children }: { children: ReactNode }) {
+	return <div className="flex flex-col gap-4">{children}</div>
 }
 
 interface SettingFieldProps {
@@ -30,13 +38,22 @@ interface SettingFieldProps {
 }
 
 function SettingField({ definition, value, onChange }: SettingFieldProps) {
-	const { Label, Description } = getSettingsControls()
+	const { Label, Description, Field } = getSettingsControls()
+	const control = <SettingControl definition={definition} value={value} onChange={onChange} />
+
+	if (Field) {
+		return (
+			<Field label={definition.label} description={definition.description}>
+				{control}
+			</Field>
+		)
+	}
 
 	return (
 		<div className="flex flex-col gap-1.5">
 			<Label>{definition.label}</Label>
 			{definition.description && <Description>{definition.description}</Description>}
-			<SettingControl definition={definition} value={value} onChange={onChange} />
+			{control}
 		</div>
 	)
 }

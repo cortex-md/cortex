@@ -1,101 +1,72 @@
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language"
 import { tags } from "@lezer/highlight"
 
-export interface SyntaxTokens {
-	keyword: string
-	string: string
-	comment: string
-	number: string
-	function: string
-	type: string
-	operator: string
-	property: string
-	heading: string
-	meta: string
-	link: string
-	textPrimary: string
-	textMuted: string
-	accent: string
-	fontMono: string
-}
-
-function resolveValue(value: string, style: CSSStyleDeclaration, depth = 0): string {
-	if (depth > 10) return value
-	if (!value) return value
-	const varMatch = value.match(/var\(--([^,)]+)\)/)
-	if (!varMatch) return value
-	const varName = varMatch[1]
-	const resolvedValue = style.getPropertyValue(`--${varName}`).trim()
-	if (!resolvedValue) return value
-	return resolveValue(resolvedValue, style, depth + 1)
-}
-
-export function resolveSyntaxTokens(element?: Element): SyntaxTokens {
-	const resolveFrom = element || document.body
-	const style = getComputedStyle(resolveFrom)
-
-	const get = (name: string): string => {
-		const raw = style.getPropertyValue(name).trim()
-		return resolveValue(raw, style)
-	}
-
-	const tokens = {
-		keyword: get("--syntax-keyword"),
-		string: get("--syntax-string"),
-		comment: get("--syntax-comment"),
-		number: get("--syntax-number"),
-		function: get("--syntax-function"),
-		type: get("--syntax-type"),
-		operator: get("--syntax-operator"),
-		property: get("--syntax-property"),
-		heading: get("--syntax-heading"),
-		meta: get("--syntax-meta"),
-		link: get("--link"),
-		textPrimary: get("--text-primary"),
-		textMuted: get("--text-muted"),
-		accent: get("--accent"),
-		fontMono: get("--font-mono"),
-	}
-
-	return tokens
-}
-
-export function buildHighlightStyle(t: SyntaxTokens) {
+export function buildHighlightStyle() {
 	return syntaxHighlighting(
 		HighlightStyle.define([
-			{ tag: tags.heading1, fontWeight: "700", fontSize: "1.6em", color: t.heading },
-			{ tag: tags.heading2, fontWeight: "700", fontSize: "1.4em", color: t.heading },
-			{ tag: tags.heading3, fontWeight: "700", fontSize: "1.2em", color: t.heading },
-			{ tag: tags.heading4, fontWeight: "600", fontSize: "1.1em", color: t.heading },
-			{ tag: tags.heading5, fontWeight: "600", color: t.heading },
-			{ tag: tags.heading6, fontWeight: "600", color: t.heading },
+			{
+				tag: tags.heading1,
+				fontWeight: "700",
+				fontSize: "var(--h1-font-size)",
+				color: "var(--h1-color, var(--syntax-heading))",
+			},
+			{
+				tag: tags.heading2,
+				fontWeight: "700",
+				fontSize: "var(--h2-font-size)",
+				color: "var(--h2-color, var(--syntax-heading))",
+			},
+			{
+				tag: tags.heading3,
+				fontWeight: "700",
+				fontSize: "var(--h3-font-size)",
+				color: "var(--h3-color, var(--syntax-heading))",
+			},
+			{
+				tag: tags.heading4,
+				fontWeight: "600",
+				fontSize: "var(--h4-font-size)",
+				color: "var(--h4-color, var(--syntax-heading))",
+			},
+			{
+				tag: tags.heading5,
+				fontWeight: "600",
+				fontSize: "var(--h5-font-size)",
+				color: "var(--h5-color, var(--syntax-heading))",
+			},
+			{
+				tag: tags.heading6,
+				fontWeight: "600",
+				fontSize: "var(--h6-font-size)",
+				color: "var(--h6-color, var(--syntax-heading))",
+			},
 			{ tag: tags.strong, fontWeight: "700" },
 			{ tag: tags.emphasis, fontStyle: "italic" },
 			{ tag: tags.strikethrough, textDecoration: "line-through" },
-			{ tag: tags.link, color: t.link, textDecoration: "underline" },
-			{ tag: tags.url, color: t.textMuted },
-			{ tag: tags.quote, color: t.textMuted, fontStyle: "italic" },
-			{ tag: tags.monospace, fontFamily: t.fontMono, fontSize: "0.9em" },
-			{ tag: tags.meta, color: t.meta },
-			{ tag: tags.processingInstruction, color: t.meta },
-			{ tag: tags.contentSeparator, color: t.meta },
-			{ tag: tags.comment, color: t.comment, fontStyle: "italic" },
-			{ tag: tags.keyword, color: t.keyword, fontWeight: "600" },
-			{ tag: tags.string, color: t.string },
-			{ tag: tags.number, color: t.number },
-			{ tag: tags.bool, color: t.keyword },
-			{ tag: tags.null, color: t.keyword },
-			{ tag: tags.function(tags.variableName), color: t.function },
-			{ tag: tags.definition(tags.variableName), color: t.textPrimary },
-			{ tag: tags.variableName, color: t.textPrimary },
-			{ tag: tags.typeName, color: t.type },
-			{ tag: tags.className, color: t.type },
-			{ tag: tags.operator, color: t.operator },
-			{ tag: tags.punctuation, color: t.textMuted },
-			{ tag: tags.bracket, color: t.textMuted },
-			{ tag: tags.propertyName, color: t.property },
-			{ tag: tags.attributeName, color: t.property },
-			{ tag: tags.tagName, color: t.keyword },
+			{ tag: tags.link, color: "var(--link)", textDecoration: "underline" },
+			{ tag: tags.url, color: "var(--text-muted)" },
+			{ tag: tags.quote, color: "var(--text-muted)", fontStyle: "italic" },
+			{ tag: tags.monospace, fontFamily: "var(--font-editor)", fontSize: "1em" },
+			{ tag: tags.meta, color: "var(--syntax-meta)" },
+			{ tag: tags.processingInstruction, color: "var(--syntax-meta)" },
+			{ tag: tags.contentSeparator, color: "var(--syntax-meta)" },
+			{ tag: tags.comment, color: "var(--syntax-comment)", fontStyle: "italic" },
+			{ tag: tags.keyword, color: "var(--syntax-keyword)", fontWeight: "600" },
+			{ tag: tags.string, color: "var(--syntax-string)" },
+			{ tag: tags.number, color: "var(--syntax-number)" },
+			{ tag: tags.bool, color: "var(--syntax-keyword)" },
+			{ tag: tags.null, color: "var(--syntax-keyword)" },
+			{ tag: tags.function(tags.variableName), color: "var(--syntax-function)" },
+			{ tag: tags.definition(tags.variableName), color: "var(--text-primary)" },
+			{ tag: tags.variableName, color: "var(--text-primary)" },
+			{ tag: tags.typeName, color: "var(--syntax-type)" },
+			{ tag: tags.className, color: "var(--syntax-type)" },
+			{ tag: tags.operator, color: "var(--syntax-operator)" },
+			{ tag: tags.punctuation, color: "var(--text-muted)" },
+			{ tag: tags.bracket, color: "var(--text-muted)" },
+			{ tag: tags.propertyName, color: "var(--syntax-property)" },
+			{ tag: tags.attributeName, color: "var(--syntax-property)" },
+			{ tag: tags.tagName, color: "var(--syntax-keyword)" },
 		]),
 	)
 }

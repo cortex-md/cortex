@@ -1,6 +1,5 @@
 import type { EditorView as CMEditorView } from "@codemirror/view"
-import type { RendererPlugin } from "@cortex/renderer"
-import { useCallback, useRef } from "react"
+import { useCallback, useEffect, useRef } from "react"
 import { EditorView } from "./EditorView"
 import type { EditorConfig } from "./extensions"
 import { ReadingView } from "./ReadingView"
@@ -9,26 +8,22 @@ interface Props {
 	content: string
 	filePath: string
 	editorConfig?: EditorConfig
-	rendererPlugins?: RendererPlugin[]
 	onChange: (content: string) => void
 	onWikiLinkClick?: (target: string) => void
+	onExternalLinkClick?: (url: string) => void
 }
 
 export function SideBySideView({
 	content,
 	filePath,
 	editorConfig,
-	rendererPlugins,
 	onChange,
 	onWikiLinkClick,
+	onExternalLinkClick,
 }: Props) {
 	const readingPanelRef = useRef<HTMLDivElement>(null)
 	const editorScrollRef = useRef<CMEditorView | null>(null)
 	const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-	const handleViewReady = useCallback((view: CMEditorView) => {
-		editorScrollRef.current = view
-	}, [])
 
 	const handleEditorScroll = useCallback(() => {
 		if (syncTimerRef.current) clearTimeout(syncTimerRef.current)
@@ -48,8 +43,24 @@ export function SideBySideView({
 		}, 30)
 	}, [])
 
+	const handleViewReady = useCallback(
+		(view: CMEditorView) => {
+			editorScrollRef.current?.scrollDOM.removeEventListener("scroll", handleEditorScroll)
+			editorScrollRef.current = view
+			view.scrollDOM.addEventListener("scroll", handleEditorScroll)
+		},
+		[handleEditorScroll],
+	)
+
+	useEffect(() => {
+		return () => {
+			if (syncTimerRef.current) clearTimeout(syncTimerRef.current)
+			editorScrollRef.current?.scrollDOM.removeEventListener("scroll", handleEditorScroll)
+		}
+	}, [handleEditorScroll])
+
 	return (
-		<div className="side-by-side-view" onScroll={handleEditorScroll}>
+		<div className="side-by-side-view">
 			<div className="side-by-side-editor">
 				<EditorView
 					content={content}
@@ -63,8 +74,9 @@ export function SideBySideView({
 			<div className="side-by-side-preview" ref={readingPanelRef}>
 				<ReadingView
 					content={content}
-					plugins={rendererPlugins}
+					renderDelay={80}
 					onWikiLinkClick={onWikiLinkClick}
+					onExternalLinkClick={onExternalLinkClick}
 				/>
 			</div>
 		</div>

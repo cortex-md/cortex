@@ -53,6 +53,11 @@ export interface ThemeTokens {
 			code: string
 			tag: string
 		}
+		selection?: {
+			background: string
+			searchMatch: string
+			searchMatchActive: string
+		}
 		text: {
 			primary: string
 			secondary: string
@@ -97,6 +102,16 @@ export interface ThemeTokens {
 		ui: string
 		editor: string
 		mono: string
+	}
+	typography: {
+		ui: {
+			fontWeight: string
+			lineHeight: string
+		}
+		editor: {
+			fontWeight: string
+			lineHeight: string
+		}
 	}
 	status: {
 		error: string
@@ -153,6 +168,25 @@ export interface ThemeTokens {
 		h4FontSize: string
 		h5FontSize: string
 		h6FontSize: string
+		h1Color?: string
+		h2Color?: string
+		h3Color?: string
+		h4Color?: string
+		h5Color?: string
+		h6Color?: string
+	}
+	markdown?: {
+		contentWidth: string
+		contentGutter: string
+		codePaddingInline: string
+		codePaddingBlock: string
+		callouts: Record<
+			string,
+			{
+				color: string
+				backgroundColor: string
+			}
+		>
 	}
 	sizing: {
 		radius: string

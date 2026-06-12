@@ -10,6 +10,8 @@ This file provides guidance for working with the settings package.
 - JSON persistence to vault's `.cortex/app.json`
 - Pub/sub notifications for settings changes
 
+Appearance settings keep legacy `lineHeight` values parseable for older saved configs, but runtime typography height and weight belong to theme tokens. The appearance UI should expose font families and font sizes only.
+
 ## Key Export
 
 ```typescript

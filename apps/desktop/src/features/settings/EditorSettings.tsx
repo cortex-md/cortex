@@ -3,12 +3,12 @@ import {
 	FolderPicker,
 	type FolderPickerOption,
 	Input,
-	Label,
 	NativeSelect,
 	NativeSelectOption,
 	Switch,
 } from "@cortex/ui"
 import type { UpdateSettingFn } from "."
+import { SettingsBlock, SettingsField, SettingsPage } from "./SettingsPrimitives"
 
 interface EditorSectionProps {
 	settings: EditorSettings
@@ -18,84 +18,64 @@ interface EditorSectionProps {
 
 export function EditorSection({ settings, onUpdate, vaultFolders = [] }: EditorSectionProps) {
 	return (
-		<section>
-			<div className="mb-6">
-				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-					Indentation
-				</h3>
-				<div className="flex items-center justify-between px-0 py-2 gap-4">
-					<label htmlFor="tab-size">Tab Size</label>
+		<SettingsPage>
+			<SettingsBlock title="Indentation" description="Control how tabs and spaces are inserted.">
+				<SettingsField label="Tab size" htmlFor="tab-size" controlClassName="max-w-[120px]">
 					<Input
 						id="tab-size"
 						type="number"
 						min={1}
 						max={8}
 						value={settings.tabSize}
+						className="w-24"
 						onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
 							onUpdate("editor", "tabSize", Number.parseInt(e.target.value, 10))
 						}
 					/>
-				</div>
+				</SettingsField>
 
-				<div className="flex items-center justify-between px-0 py-2 gap-4">
-					<Label htmlFor="use-spaces" className="flex-1">
-						Use spaces instead of tabs
-					</Label>
+				<SettingsField label="Use spaces instead of tabs" htmlFor="use-spaces">
 					<Switch
 						id="use-spaces"
 						checked={settings.useSpaces}
 						onCheckedChange={(checked) => onUpdate("editor", "useSpaces", checked)}
 					/>
-				</div>
-			</div>
+				</SettingsField>
+			</SettingsBlock>
 
-			<div className="mb-6">
-				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-					Editor Behavior
-				</h3>
-				<div className="flex items-center justify-between px-0 py-2 gap-4">
-					<Label htmlFor="word-wrap" className="flex-1">
-						Word wrap
-					</Label>
+			<SettingsBlock title="Editor Behavior" description="Adjust the default editor experience.">
+				<SettingsField label="Word wrap" htmlFor="word-wrap">
 					<Switch
 						id="word-wrap"
 						checked={settings.wordWrap}
 						onCheckedChange={(checked) => onUpdate("editor", "wordWrap", checked)}
 					/>
-				</div>
+				</SettingsField>
 
-				<div className="flex items-center justify-between px-0 py-2 gap-4">
-					<Label htmlFor="line-numbers" className="flex-1">
-						Show line numbers
-					</Label>
+				<SettingsField label="Show line numbers" htmlFor="line-numbers">
 					<Switch
 						id="line-numbers"
 						checked={settings.showLineNumbers}
 						onCheckedChange={(checked) => onUpdate("editor", "showLineNumbers", checked)}
 					/>
-				</div>
+				</SettingsField>
 
-				<div className="flex items-center justify-between px-0 py-2 gap-4">
-					<Label htmlFor="auto-save" className="flex-1">
-						Auto-save
-					</Label>
+				<SettingsField label="Auto-save" htmlFor="auto-save">
 					<Switch
 						id="auto-save"
 						checked={settings.autoSave}
 						onCheckedChange={(checked) => onUpdate("editor", "autoSave", checked)}
 					/>
-				</div>
-			</div>
+				</SettingsField>
+			</SettingsBlock>
 
-			<div className="mb-6">
-				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-					Images
-				</h3>
-				<div className="flex items-center justify-between px-0 py-2 gap-4">
-					<Label htmlFor="image-storage" className="flex-1">
-						Image storage location
-					</Label>
+			<SettingsBlock
+				title="Images"
+				description="Choose where pasted and dropped images are stored."
+			>
+				<SettingsField label="Image storage location" htmlFor="image-storage">
 					<NativeSelect
+						id="image-storage"
 						value={settings.imageStorageLocation}
 						onChange={(event) => onUpdate("editor", "imageStorageLocation", event.target.value)}
 					>
@@ -103,19 +83,23 @@ export function EditorSection({ settings, onUpdate, vaultFolders = [] }: EditorS
 						<NativeSelectOption value="root">Vault root</NativeSelectOption>
 						<NativeSelectOption value="custom">Custom folder</NativeSelectOption>
 					</NativeSelect>
-				</div>
+				</SettingsField>
 
 				{settings.imageStorageLocation === "custom" && (
-					<div className="px-0 py-2">
+					<SettingsField
+						label="Custom image folder"
+						description="Images will be saved relative to the active vault."
+						controlClassName="max-w-[360px]"
+					>
 						<FolderPicker
 							options={vaultFolders}
 							value={settings.imageStorageCustomPath}
 							onChange={(value) => onUpdate("editor", "imageStorageCustomPath", value)}
 							placeholder="Select a folder..."
 						/>
-					</div>
+					</SettingsField>
 				)}
-			</div>
-		</section>
+			</SettingsBlock>
+		</SettingsPage>
 	)
 }

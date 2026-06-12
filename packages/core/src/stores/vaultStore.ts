@@ -117,7 +117,10 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 		try {
 			const files = await getPlatform().vault.scanVault(vault.path)
 			set({ files })
-		} catch (_e) {}
+		} catch (error) {
+			console.error("[Vault refresh failed]", { vaultPath: vault.path, error })
+			set({ error: String(error) })
+		}
 	},
 
 	loadRecentVaults: async () => {
@@ -126,15 +129,25 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 			const entries = await platform.vault.readVaultRegistry()
 			const sorted = [...entries].sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0))
 			set({ recentVaults: sorted })
-			await platform.vault.refreshMenuRecents().catch(() => {})
-		} catch (_e) {}
+			try {
+				await platform.vault.refreshMenuRecents()
+			} catch (error) {
+				console.error("[Recent vault menu refresh failed]", { error })
+			}
+		} catch (error) {
+			console.error("[Recent vault load failed]", { error })
+			set({ error: String(error) })
+		}
 	},
 
 	removeRecentVault: async (uuid) => {
 		try {
 			await getPlatform().vault.removeFromVaultRegistry(uuid)
 			await get().loadRecentVaults()
-		} catch (_e) {}
+		} catch (error) {
+			console.error("[Recent vault removal failed]", { uuid, error })
+			set({ error: String(error) })
+		}
 	},
 
 	createFile: async (parentPath, name) => {

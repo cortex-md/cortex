@@ -17,15 +17,9 @@ import {
 } from "@codemirror/language"
 import { search, searchKeymap } from "@codemirror/search"
 import { Compartment, EditorState } from "@codemirror/state"
-import {
-	drawSelection,
-	dropCursor,
-	EditorView,
-	highlightActiveLine,
-	keymap,
-	lineNumbers,
-} from "@codemirror/view"
-import { buildHighlightStyle, type SyntaxTokens } from "./highlight"
+import { dropCursor, EditorView, highlightActiveLine, keymap, lineNumbers } from "@codemirror/view"
+import { GFM } from "@lezer/markdown"
+import { buildHighlightStyle } from "./highlight"
 import { livePreviewExtension } from "./livePreview"
 import { defaultMarkdownKeymapExtension } from "./markdownKeymap"
 
@@ -57,7 +51,6 @@ const codeLanguages = [
 
 export interface EditorConfig {
 	fontSize: number
-	lineHeight: number
 	wordWrap: boolean
 	tabSize: number
 	useSpaces: boolean
@@ -66,7 +59,6 @@ export interface EditorConfig {
 
 export const DEFAULT_EDITOR_CONFIG: EditorConfig = {
 	fontSize: 16,
-	lineHeight: 1.5,
 	wordWrap: true,
 	tabSize: 2,
 	useSpaces: true,
@@ -79,40 +71,142 @@ const indentCompartment = new Compartment()
 const lineNumbersCompartment = new Compartment()
 const pluginExtensionsCompartment = new Compartment()
 
-function typographyExtension(fontSize: number, lineHeight: number) {
-	return EditorView.theme({
+export function buildEditorTypographyRules(fontSize: number) {
+	return {
 		"&": {
 			fontSize: `var(--editor-font-size, ${fontSize}px)`,
-			fontFamily: "var(--font-editor)",
+			fontFamily:
+				'var(--font-editor, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif)',
+			fontWeight: "var(--editor-font-weight, 400)",
 			background: "transparent",
 			height: "100%",
 		},
 		"&.cm-focused": { outline: "none" },
-		".cm-scroller": { overflow: "auto", fontFamily: "inherit", lineHeight: String(lineHeight) },
+		".cm-scroller": {
+			overflow: "auto",
+			fontFamily: "inherit",
+			lineHeight: "var(--editor-line-height, 27px)",
+		},
 		".cm-content": {
 			padding: "24px 0",
 			caretColor: "var(--accent)",
-			maxWidth: "720px",
+			maxWidth: "var(--markdown-content-width, 720px)",
 			marginInline: "auto",
 		},
-		".cm-line": { padding: "0 40px" },
+		".cm-line": { padding: "0 var(--markdown-content-gutter, 40px)" },
 		".cm-activeLine": {
 			backgroundColor: "rgba(255,255,255,0.02)",
-			padding: "0 40px",
+			padding: "0 var(--markdown-content-gutter, 40px)",
 		},
 		".cm-cursor": {
 			borderLeftColor: "var(--accent)",
 			borderLeftWidth: "2px",
 		},
-		".cm-selectionBackground, ::selection": {
-			backgroundColor: "color-mix(in srgb, var(--accent) 20%, transparent)",
+		".cm-content ::selection": {
+			backgroundColor: "var(--editor-selection-bg, var(--bg-selected))",
+		},
+		".cm-cursorLayer": {
+			zIndex: "10",
+			pointerEvents: "none",
 		},
 		".cm-gutters": {
 			background: "transparent",
 			borderRight: "none",
 			color: "var(--text-muted)",
 		},
-	})
+		".cm-panels": {
+			backgroundColor: "var(--bg-elevated)",
+			color: "var(--text-primary)",
+			fontFamily: "var(--font-ui)",
+			fontSize: "var(--ui-font-size, 14px)",
+		},
+		".cm-panel.cm-search": {
+			display: "flex",
+			flexWrap: "wrap",
+			alignItems: "center",
+			gap: "6px",
+			padding: "8px 40px 8px 10px",
+			backgroundColor: "var(--bg-elevated)",
+			borderBottom: "1px solid var(--border-subtle)",
+			boxShadow: "var(--shadow-raised)",
+			position: "relative",
+		},
+		".cm-panel.cm-search br": {
+			display: "none",
+		},
+		".cm-panel.cm-search .cm-textfield": {
+			height: "28px",
+			minWidth: "180px",
+			padding: "0 8px",
+			color: "var(--text-primary)",
+			backgroundColor: "var(--input-bg)",
+			border: "1px solid var(--input-border)",
+			borderRadius: "4px",
+			font: "inherit",
+			outline: "none",
+		},
+		".cm-panel.cm-search .cm-textfield:focus": {
+			borderColor: "var(--border-focus)",
+			boxShadow: "0 0 0 2px var(--input-focus-ring)",
+		},
+		".cm-panel.cm-search .cm-button": {
+			height: "28px",
+			padding: "0 9px",
+			color: "var(--text-secondary)",
+			backgroundImage: "none",
+			backgroundColor: "var(--bg-secondary)",
+			border: "1px solid var(--border-subtle)",
+			borderRadius: "4px",
+			font: "inherit",
+			cursor: "default",
+		},
+		".cm-panel.cm-search .cm-button:hover": {
+			color: "var(--text-primary)",
+			backgroundColor: "var(--bg-hover)",
+			borderColor: "var(--border)",
+		},
+		".cm-panel.cm-search label": {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "4px",
+			color: "var(--text-muted)",
+			whiteSpace: "nowrap",
+		},
+		'.cm-panel.cm-search input[type="checkbox"]': {
+			accentColor: "var(--accent)",
+		},
+		'.cm-panel.cm-search [name="close"]': {
+			position: "absolute",
+			top: "8px",
+			right: "8px",
+			width: "28px",
+			height: "28px",
+			padding: "0",
+			color: "var(--text-muted)",
+			background: "transparent",
+			border: "none",
+			borderRadius: "4px",
+			fontSize: "18px",
+			lineHeight: "28px",
+			cursor: "default",
+		},
+		'.cm-panel.cm-search [name="close"]:hover': {
+			color: "var(--text-primary)",
+			backgroundColor: "var(--bg-hover)",
+		},
+		".cm-searchMatch": {
+			backgroundColor: "var(--editor-search-match-bg, var(--accent-subtle))",
+			outline: "1px solid var(--accent-border)",
+		},
+		".cm-searchMatch.cm-searchMatch-selected": {
+			backgroundColor: "var(--editor-search-match-active-bg, var(--bg-selected))",
+			outline: "1px solid var(--accent)",
+		},
+	}
+}
+
+function typographyExtension(fontSize: number) {
+	return EditorView.theme(buildEditorTypographyRules(fontSize))
 }
 
 export interface BaseExtensionsOptions {
@@ -122,13 +216,11 @@ export interface BaseExtensionsOptions {
 }
 
 export function baseExtensions(
-	syntaxTokens: SyntaxTokens,
 	config: EditorConfig = DEFAULT_EDITOR_CONFIG,
 	{ livePreview = true, resolveImageUrl, filePath }: BaseExtensionsOptions = {},
 ) {
 	return [
 		history(),
-		drawSelection(),
 		dropCursor(),
 		indentOnInput(),
 		bracketMatching(),
@@ -139,13 +231,14 @@ export function baseExtensions(
 		EditorState.allowMultipleSelections.of(true),
 		keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap, ...searchKeymap]),
 		defaultMarkdownKeymapExtension(),
-		buildHighlightStyle(syntaxTokens),
+		buildHighlightStyle(),
 		...(livePreview ? [livePreviewExtension(resolveImageUrl, filePath)] : []),
 		markdown({
 			base: markdownLanguage,
 			codeLanguages,
+			extensions: GFM,
 		}),
-		typographyCompartment.of(typographyExtension(config.fontSize, config.lineHeight)),
+		typographyCompartment.of(typographyExtension(config.fontSize)),
 		lineWrappingCompartment.of(config.wordWrap ? EditorView.lineWrapping : []),
 		indentCompartment.of(indentUnit.of(config.useSpaces ? " ".repeat(config.tabSize) : "\t")),
 		lineNumbersCompartment.of(config.showLineNumbers ? lineNumbers() : []),
@@ -156,7 +249,7 @@ export function baseExtensions(
 export function reconfigureEditor(view: EditorView, config: EditorConfig) {
 	view.dispatch({
 		effects: [
-			typographyCompartment.reconfigure(typographyExtension(config.fontSize, config.lineHeight)),
+			typographyCompartment.reconfigure(typographyExtension(config.fontSize)),
 			lineWrappingCompartment.reconfigure(config.wordWrap ? EditorView.lineWrapping : []),
 			indentCompartment.reconfigure(
 				indentUnit.of(config.useSpaces ? " ".repeat(config.tabSize) : "\t"),

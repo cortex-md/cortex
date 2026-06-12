@@ -165,13 +165,15 @@ export function insertTable(view: EditorView): boolean {
 	return true
 }
 
-export function insertCallout(view: EditorView): boolean {
+export function insertCallout(view: EditorView, type = "note"): boolean {
 	const { state } = view
 	const { from } = state.selection.main
+	const normalizedType = type.trim().toUpperCase() || "NOTE"
+	const marker = `> [!${normalizedType}]\n> `
 
 	view.dispatch({
-		changes: { from, insert: "> [!NOTE]\n> " },
-		selection: { anchor: from + 12 },
+		changes: { from, insert: marker },
+		selection: { anchor: from + marker.length },
 	})
 	return true
 }

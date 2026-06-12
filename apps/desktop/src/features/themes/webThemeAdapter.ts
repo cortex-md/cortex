@@ -1,6 +1,6 @@
 import type { ThemeAdapter } from "@cortex/theme"
 
-const THEME_CLASS_REGEX = /theme-\w+/g
+const THEME_CLASS_REGEX = /(?:^|\s)theme-[\w-]+(?=\s|$)/g
 const OVERRIDE_STYLE_ID = "cortex-theme-overrides"
 
 export class WebThemeAdapter implements ThemeAdapter {

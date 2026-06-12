@@ -1,8 +1,16 @@
 import { useVaultStore, type VaultRegistryEntry } from "@cortex/core"
 import type { GeneralSettings } from "@cortex/settings"
-import { Button, isValidLucideIconName, Label, LucideIcon, Switch } from "@cortex/ui"
+import { Button, isValidLucideIconName, LucideIcon, Switch } from "@cortex/ui"
 import { Trash2, Vault } from "lucide-react"
 import type { UpdateSettingFn } from "."
+import {
+	SettingsBlock,
+	SettingsEmptyState,
+	SettingsField,
+	SettingsList,
+	SettingsListItem,
+	SettingsPage,
+} from "./SettingsPrimitives"
 
 interface GeneralSectionProps {
 	settings: GeneralSettings
@@ -36,7 +44,7 @@ function VaultRow({ entry }: { entry: VaultRegistryEntry }) {
 	}
 
 	return (
-		<div className="flex items-center gap-3 px-0 py-2 group">
+		<SettingsListItem>
 			<span className="flex items-center gap-2 min-w-0 flex-1">
 				{entry.color && (
 					<span
@@ -50,30 +58,30 @@ function VaultRow({ entry }: { entry: VaultRegistryEntry }) {
 					<Vault size={16} className="shrink-0 text-text-muted" />
 				)}
 				<span className="flex flex-col min-w-0">
-					<span className="truncate text-xs font-medium">{entry.name}</span>
-					<span className="truncate text-[10px] text-text-muted">{entry.path}</span>
+					<span className="truncate text-sm font-medium text-foreground">{entry.name}</span>
+					<span className="truncate text-xs text-muted-foreground">{entry.path}</span>
 				</span>
 			</span>
-			<span className="text-[10px] text-text-muted whitespace-nowrap">
+			<span className="text-xs text-muted-foreground whitespace-nowrap">
 				{formatLastOpened(entry.lastOpened)}
 			</span>
 			<span className="flex items-center gap-1">
 				{!isActive && (
-					<Button variant="ghost" size="sm" onClick={handleOpen} className="text-xs h-6 px-2">
+					<Button variant="ghost" size="sm" onClick={handleOpen} className="h-7 px-2">
 						Open
 					</Button>
 				)}
-				{isActive && <span className="text-[10px] text-accent font-medium px-2">Active</span>}
+				{isActive && <span className="px-2 text-xs font-medium text-accent">Active</span>}
 				<Button
 					variant="ghost"
 					size="icon"
 					onClick={handleRemove}
-					className="h-6 w-6 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity"
+					className="h-7 w-7 text-text-muted opacity-0 transition-opacity group-hover:opacity-100"
 				>
 					<Trash2 size={12} />
 				</Button>
 			</span>
-		</div>
+		</SettingsListItem>
 	)
 }
 
@@ -81,37 +89,28 @@ export function GeneralSection({ settings, onUpdate }: GeneralSectionProps) {
 	const { recentVaults } = useVaultStore()
 
 	return (
-		<section>
-			<div className="mb-6">
-				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-					Startup
-				</h3>
-				<div className="flex items-center justify-between px-0 py-2 gap-4">
-					<Label htmlFor="auto-open-vault" className="flex-1">
-						Open last vault on startup
-					</Label>
+		<SettingsPage>
+			<SettingsBlock title="Startup" description="Choose what Cortex opens when the app launches.">
+				<SettingsField label="Open last vault on startup" htmlFor="auto-open-vault">
 					<Switch
 						id="auto-open-vault"
 						checked={settings.autoOpenLastVault}
 						onCheckedChange={(checked) => onUpdate("general", "autoOpenLastVault", checked)}
 					/>
-				</div>
-			</div>
+				</SettingsField>
+			</SettingsBlock>
 
-			<div className="mb-6">
-				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-					Vaults
-				</h3>
+			<SettingsBlock title="Vaults" description="Recently opened vaults on this device.">
 				{recentVaults.length === 0 ? (
-					<p className="text-xs text-text-muted py-2">No recent vaults</p>
+					<SettingsEmptyState>No recent vaults</SettingsEmptyState>
 				) : (
-					<div className="flex flex-col">
+					<SettingsList>
 						{recentVaults.map((entry) => (
 							<VaultRow key={entry.uuid} entry={entry} />
 						))}
-					</div>
+					</SettingsList>
 				)}
-			</div>
-		</section>
+			</SettingsBlock>
+		</SettingsPage>
 	)
 }

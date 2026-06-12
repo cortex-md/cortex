@@ -17,5 +17,5 @@
 		"baseUrl": "."
 	},
 	"include": ["src"],
-	"references": [{ "path": "../plugin-api" }, { "path": "../platform" }]
+	"references": [{ "path": "../plugin-api" }, { "path": "../platform" }, { "path": "../renderer" }]
 }

@@ -5,28 +5,41 @@ import type {
 	ViewRegistration,
 	ViewState,
 } from "cortex-plugin-api"
-import { useCallback, useReducer } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 interface Props {
 	registration: ViewRegistration
+	state?: Record<string, unknown>
+	onStateChange?: (state: Record<string, unknown>) => void
 }
 
-export function PluginViewRenderer({ registration }: Props) {
-	const [state, dispatch] = useReducer(
-		(current: Record<string, unknown>, action: { type: string; payload?: unknown }) => {
-			if (registration.reduce) {
-				return registration.reduce(current, action.type, action.payload)
-			}
-			return current
-		},
+export function PluginViewRenderer({ registration, state, onStateChange }: Props) {
+	const [internalState, setInternalState] = useState<Record<string, unknown>>(
 		registration.initialState ?? {},
 	)
 
-	const viewDispatch: ViewDispatch = useCallback((action: string, payload?: unknown) => {
-		dispatch({ type: action, payload })
-	}, [])
+	useEffect(() => {
+		setInternalState(registration.initialState ?? {})
+	}, [registration.initialState])
 
-	const viewState: ViewState = { state }
+	const currentState = state ?? internalState
+
+	const viewDispatch: ViewDispatch = useCallback(
+		(action: string, payload?: unknown) => {
+			const nextState = registration.reduce
+				? registration.reduce(currentState, action, payload)
+				: currentState
+
+			if (state !== undefined) {
+				onStateChange?.(nextState)
+			} else {
+				setInternalState(nextState)
+			}
+		},
+		[currentState, onStateChange, registration, state],
+	)
+
+	const viewState: ViewState = { state: currentState }
 	const descriptor = registration.render(viewState, viewDispatch)
 
 	return <>{renderDescriptor(descriptor, viewDispatch)}</>

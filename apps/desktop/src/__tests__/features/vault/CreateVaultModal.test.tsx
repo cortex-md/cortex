@@ -49,8 +49,11 @@ describe("CreateVaultModal", () => {
 
 		await userEvent.click(screen.getByRole("button", { name: "Continue" }))
 		await userEvent.click(screen.getByRole("switch", { name: "Ignore images" }))
-		await userEvent.type(screen.getByPlaceholderText("node_modules/, *.log, docs/**/*.tmp"), "node_modules/")
-		await userEvent.click(screen.getByRole("button", { name: "Add" }))
+		await userEvent.type(
+			screen.getByPlaceholderText("Search files, folders, or add a pattern..."),
+			"node_modules/",
+		)
+		await userEvent.click(screen.getByRole("button", { name: 'Add pattern "node_modules/"' }))
 		await userEvent.click(screen.getByRole("button", { name: "Create vault" }))
 
 		await waitFor(() => {

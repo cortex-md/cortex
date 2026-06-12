@@ -122,7 +122,11 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 bun install                # Install dependencies
 bun run check             # Lint + format + organize imports (all at once)
 bun run check:fix         # Auto-fix all issues
+bun run check:boundaries  # Validate workspace dependencies, layers, and cycles
 bun run typecheck         # TypeScript compilation check across monorepo
+bun run test:frontend     # Run all deterministic frontend suites
+bun run test:rust         # Run the Rust workspace suite
+bun run test              # Run frontend and Rust suites
 bun run tauri dev         # Start Tauri dev server (from apps/desktop/)
 ```
 
@@ -249,11 +253,62 @@ The `NoteCache` class (in `@cortex/core`) manages editor file state:
 UI doesn't directly access files; it reads/writes through noteCache.
 
 ### Theme System: Injected CSS Variables
-`@cortex/theme` generates concrete CSS variables (no nested var() references):
+`@cortex/theme` owns theme tokens and generates CSS variables:
 - `initThemeManager("ink")` called before React render
 - Injects `<style data-theme="ink">` with all variables as hex values
-- `getComputedStyle(document.body)` returns concrete values for syntax highlighting
 - Supports runtime theme switching via `setActiveTheme("paper")`
+- Typography defaults are theme tokens. UI and editor font families default to the OS system font
+  stack; Settings may override only `--font-ui`, `--font-editor`, `--ui-font-size`, and
+  `--editor-font-size`. Font weights and line heights stay theme-owned through
+  `--ui-font-weight`, `--ui-line-height`, `--editor-font-weight`, and `--editor-line-height`.
+- Markdown surfaces share `--markdown-content-width`, `--markdown-content-gutter`,
+  `--markdown-code-padding-inline`, and `--markdown-code-padding-block`. Live Preview, Reading View,
+  and Side-by-Side must keep these aligned. These values and built-in callout colors live in
+  `ThemeTokens.markdown`. Heading colors are theme-owned through `--h1-color` through `--h6-color`,
+  falling back to `--syntax-heading` for existing community themes.
+- Markdown code spans and fenced code blocks use `--font-editor` and the editor font size. Keep
+  smaller typography only for code block chrome such as language badges and copy buttons.
+- Editor selection and CodeMirror search matches use `--editor-selection-bg`,
+  `--editor-search-match-bg`, and `--editor-search-match-active-bg`. Built-in themes define these
+  through `ThemeTokens.semantic.selection`; community themes may override the CSS variables.
+- Callout definitions are shared by Live Preview and the renderer through `@cortex/renderer`.
+  Plugins register or override callout types with `api.markdown.registerCalloutType(...)`; later
+  registrations win and disposing restores the previous definition. Keep standard aliases intact,
+  use `--callout-<type>-color` and `--callout-<type>-bg` for theme defaults, and let explicit plugin
+  colors take precedence.
+- `@cortex/renderer` owns Markdown semantics, structured YAML frontmatter parsing, callout models,
+  and reactive Markdown registries. `@cortex/editor` projects those semantics into CodeMirror, and
+  must not create a renderer or reparse table cells inside widgets.
+- Live Preview uses one block `StateField` and one visible-range `ViewPlugin`. Document changes
+  perform one block traversal; visual updates perform one viewport traversal. Selection changes
+  rebuild block decorations only when a block changes source/widget mode. Do not override
+  CodeMirror's default arrow-key, pointer, or cursor placement behavior for Live Preview.
+- Plugins extend every Markdown surface through `api.markdown.registerInline(...)` and
+  `api.markdown.registerSemantic(...)`. Semantic output is limited to validated portable nodes;
+  arbitrary DOM, HAST, CodeMirror widgets, event handlers, and inline styles are not public API.
+- Semantic registrations compose by priority over portable text nodes. `registerInline(...)` is the
+  regex convenience layer over the same portable-node transformation path.
+- `api.markdown.registerProcessor(...)` is the advanced Unified escape hatch for explicitly selected
+  `reading-view` and `export` surfaces. Processors declare one `remark` or `rehype` phase, run in
+  priority order on cloned trees, and always run before HTML sanitization. Live Preview-specific
+  behavior belongs in semantic registrations or `api.editor.registerExtension(...)`.
+- Live Preview block state keeps ordered indexes for callouts, blockquotes, code, and replacement
+  blocks. Visual passes query only visible ranges and record syntax-node, candidate-block, and
+  decoration metrics; do not reintroduce full-block filters in the visible `ViewPlugin`.
+- CodeMirror widgets with interactive controls must consume pointer events before CodeMirror moves
+  the selection. Hover and active state must be scoped to the owning widget or Markdown block.
+- CodeMirror block decorations must be provided by a `StateField`; `ViewPlugin` decoration facets
+  may only provide inline marks, replacements, and widgets.
+- Any selection overlapping a rendered block forces source mode while the selection exists. Widgets
+  may reveal source on direct pointer interaction, but they must not remap ordinary cursor movement.
+- Live Preview CSS must not add vertical padding, margins, transforms, or non-baseline alignment to
+  editable `.cm-line` content or inline marks. Block chrome should be painted with non-interactive
+  pseudo-elements behind the line so CodeMirror's coordinate mapping remains native.
+- Shared Markdown semantics belong in `packages/editor/src/markdown.css`; Live Preview-specific
+  projection styles belong in `packages/editor/src/livePreview/styles.css`. Desktop CSS owns only
+  Reading View, Side-by-Side, and shell layout.
+- The editor Markdown language must keep the Lezer GFM extensions enabled so tables,
+  strikethrough, task lists, and autolinks exist in the syntax tree used by Live Preview.
 
 ## Common Development Tasks
 
@@ -328,7 +383,8 @@ assets as individual GitHub Release assets, not only a ZIP archive.
 - Config: `@cortex/editor/src/createEditor.ts`
 
 ### Keyboard Shortcuts
-- Defined in `apps/desktop/src/App.tsx` and component files
+- App command and hotkey wiring lives in `apps/desktop/src/hooks/useAppCommands.ts`
+- Feature-local shortcuts remain in their owning component files
 - Use native event handlers (`onKeyDown` checks `event.key`, `event.metaKey`)
 - No library (too opinionated for this app)
 

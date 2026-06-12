@@ -1,6 +1,7 @@
 import { getPlatform } from "@cortex/platform"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SettingsManager } from "../SettingsManager"
+import { AppearanceSettingsSchema } from "../types"
 
 vi.mock("@cortex/platform", () => ({
 	getPlatform: vi.fn(() => ({
@@ -82,6 +83,21 @@ describe("get()", () => {
 	it("returns default value for unset key", () => {
 		const manager = new SettingsManager()
 		expect(manager.get("appearance", "uiFontSize")).toBe(14)
+	})
+})
+
+describe("appearance schema", () => {
+	it("uses system font defaults", () => {
+		const appearance = AppearanceSettingsSchema.parse({})
+
+		expect(appearance.uiFontFamily).toBe("System Default")
+		expect(appearance.editorFontFamily).toBe("System Default")
+	})
+
+	it("accepts legacy lineHeight settings", () => {
+		const appearance = AppearanceSettingsSchema.parse({ lineHeight: 1.8 })
+
+		expect(appearance.lineHeight).toBe(1.8)
 	})
 })
 

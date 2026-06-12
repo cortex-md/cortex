@@ -49,15 +49,18 @@ export interface UIState {
 	openMarketplace: (tab?: MarketplaceTab) => void
 }
 
-const MIN_SIDEBAR_WIDTH = 180
-const MAX_SIDEBAR_WIDTH = 400
+export const LEFT_SIDEBAR_WIDTH_BOUNDS = {
+	min: 180,
+	max: 400,
+}
+
 const DEFAULT_LEFT_SIDEBAR_LAYOUT: LeftSidebarLayout = {
 	collapsed: false,
 	width: 240,
 }
 
-function clampLeftSidebarWidth(width: number): number {
-	return Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, width))
+export function clampLeftSidebarWidth(width: number): number {
+	return Math.min(LEFT_SIDEBAR_WIDTH_BOUNDS.max, Math.max(LEFT_SIDEBAR_WIDTH_BOUNDS.min, width))
 }
 
 export const useUIStore = create<UIState>()(

@@ -11,6 +11,7 @@ import { getPlatform } from "@cortex/platform"
 import type { AppearanceSettings } from "@cortex/settings"
 import { getThemeManager } from "@cortex/theme"
 import { AppearanceSection } from "../../../features/settings/AppearanceSettings"
+import { buildAppearanceOverrides } from "../../../features/settings/applyAppearance"
 
 const openMarketplace = vi.fn()
 const onUpdate = vi.fn()
@@ -67,5 +68,24 @@ describe("AppearanceSection", () => {
 		await waitFor(() => {
 			expect(onUpdate).toHaveBeenCalledWith("appearance", "accentColor", "#3b82f6")
 		})
+	})
+
+	it("keeps line height out of settings UI and runtime overrides", async () => {
+		setupAppearance()
+		render(<AppearanceSection settings={appearanceSettings} onUpdate={onUpdate} />)
+
+		expect(await screen.findAllByRole("option", { name: "Inter" })).toHaveLength(2)
+		expect(screen.getByLabelText("UI font")).toBeInTheDocument()
+		expect(screen.getByText("UI font size")).toBeInTheDocument()
+		expect(screen.getByLabelText("Editor font")).toBeInTheDocument()
+		expect(screen.getByText("Editor font size")).toBeInTheDocument()
+		expect(screen.queryByText("Line Height")).not.toBeInTheDocument()
+
+		const overrides = buildAppearanceOverrides({ ...appearanceSettings, lineHeight: 1.8 })
+
+		expect(overrides).not.toHaveProperty("--ui-line-height")
+		expect(overrides).not.toHaveProperty("--editor-line-height")
+		expect(overrides).not.toHaveProperty("--ui-font-weight")
+		expect(overrides).not.toHaveProperty("--editor-font-weight")
 	})
 })

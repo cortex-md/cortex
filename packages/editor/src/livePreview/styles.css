@@ -1,83 +1,62 @@
-.cm-h1 {
-	font-size: 1.35em;
-	font-weight: 700;
-	line-height: 1.3;
-}
-
-.cm-h2 {
-	font-size: 1.2em;
-	font-weight: 600;
-	line-height: 1.4;
-}
-
-.cm-h3 {
-	font-size: 1.1em;
-	font-weight: 600;
-	line-height: 1.4;
-}
-
-.cm-h4,
-.cm-h5,
-.cm-h6 {
-	font-size: 1em;
-	font-weight: 600;
-}
-
-.cm-bold {
-	font-weight: 700;
-}
-
-.cm-italic {
-	font-style: italic;
-}
-
-.cm-strikethrough {
-	text-decoration: line-through;
-}
-
-.cm-inline-code {
-	font-family: var(--font-mono);
-	background: var(--bg-code);
-	border-radius: 3px;
-	padding: 2px 5px;
-	font-size: 0.9em;
-}
-
-.cm-link {
-	color: var(--link);
-	text-decoration: underline;
-	text-underline-offset: 2px;
-	cursor: pointer;
-}
-
-.cm-link:hover {
-	color: var(--link-hover);
-}
-
-.cm-wiki-link {
-	color: var(--accent-text);
-	cursor: pointer;
-}
-
-.cm-wiki-link:hover {
-	color: var(--accent);
-	text-decoration: underline;
-	text-underline-offset: 2px;
-}
-
-.cm-blockquote {
-	margin-left: 38px;
-	border-left: 2px solid var(--accent);
-	padding-left: 14px;
+.cm-line.cm-blockquote {
 	color: var(--text-secondary);
 }
 
-.cm-hr-line {
-	border-bottom: 1px solid var(--border);
-	margin-inline: 40px;
-	/* biome-ignore lint/complexity/noImportantStyles: override CodeMirror default padding */
-	padding: 0 !important;
-	min-height: 1px;
+.cm-callout-widget {
+	margin-inline: var(--markdown-content-gutter, 40px);
+}
+
+.cm-line.cm-blockquote,
+.cm-line.cm-callout-line,
+.cm-line.cm-codeblock-line,
+.cm-line.cm-table-line,
+.cm-frontmatter-line {
+	position: relative;
+	isolation: isolate;
+}
+
+.cm-line.cm-blockquote::before,
+.cm-line.cm-callout-line::before,
+.cm-line.cm-codeblock-line::before,
+.cm-line.cm-table-line::before,
+.cm-frontmatter-line::before {
+	content: "";
+	position: absolute;
+	inset: 0 var(--markdown-content-gutter, 40px);
+	z-index: -1;
+	pointer-events: none;
+}
+
+.cm-line.cm-blockquote::before {
+	width: 2px;
+	right: auto;
+	background: var(--accent);
+}
+
+.cm-line.cm-callout-line {
+	color: var(--text-secondary);
+}
+
+.cm-line.cm-callout-line::before {
+	background: var(--callout-bg, var(--accent-subtle));
+	border-left: 3px solid var(--callout-color, var(--accent));
+}
+
+.cm-line.cm-callout-line:not(.cm-callout-line + .cm-callout-line)::before {
+	border-top-left-radius: 6px;
+	border-top-right-radius: 6px;
+}
+
+.cm-line.cm-callout-line:not(:has(+ .cm-callout-line))::before {
+	border-bottom-left-radius: 6px;
+	border-bottom-right-radius: 6px;
+}
+
+.cm-hr-widget {
+	height: 1px;
+	background: var(--border);
+	margin-inline: var(--markdown-content-gutter, 40px);
+	margin-block: calc(var(--editor-line-height, 27px) / 2);
 }
 
 .cm-checkbox {
@@ -86,79 +65,55 @@
 	margin-right: 4px;
 }
 
-.cm-codeblock-line {
-	background: var(--bg-code);
-	margin-inline: 24px;
-	padding-left: 16px;
-	padding-right: 16px;
-	position: relative;
-	font-family: var(--font-mono);
-	font-size: 0.9em;
+.cm-line.cm-codeblock-line {
+	font-family: var(--font-editor);
+	font-size: 1em;
+	line-height: inherit;
 }
 
-.cm-codeblock-line:not(.cm-codeblock-line + .cm-codeblock-line) {
-	padding-top: 8px;
+.cm-line.cm-codeblock-line::before {
+	background: var(--bg-code);
+}
+
+.cm-line.cm-codeblock-line:not(.cm-codeblock-line + .cm-codeblock-line)::before {
 	border-top-left-radius: 6px;
 	border-top-right-radius: 6px;
 }
 
-.cm-codeblock-line:not(:has(+ .cm-codeblock-line)) {
-	padding-bottom: 8px;
+.cm-line.cm-codeblock-line:not(:has(+ .cm-codeblock-line))::before {
 	border-bottom-left-radius: 6px;
 	border-bottom-right-radius: 6px;
-}
-
-.cm-codeblock-lang {
-	position: absolute;
-	top: 8px;
-	right: 12px;
-	font-family: var(--font-mono);
-	font-size: 0.75em;
-	color: var(--text-muted);
-	padding: 2px 8px;
-	border-radius: 4px;
-	opacity: 0.8;
-	pointer-events: none;
-	user-select: none;
-	transition: opacity 0.15s ease;
-	z-index: 10;
-}
-
-.cm-codeblock-lang[data-cursor-in-block="true"] {
-	opacity: 0;
 }
 
 .cm-codeblock-copy {
 	position: absolute;
 	top: 8px;
 	right: 12px;
-	font-family: var(--font-mono);
+	z-index: 30;
+	font-family: var(--font-ui);
 	font-size: 0.75em;
+	border-radius: 4px;
+	user-select: none;
+	transition:
+		opacity 120ms ease,
+		color 120ms ease,
+		border-color 120ms ease,
+		background-color 120ms ease;
+}
+
+.cm-codeblock-copy {
 	color: var(--text-muted);
 	background: var(--bg-elevated);
 	border: 1px solid var(--border-subtle);
-	border-radius: 4px;
 	padding: 2px 10px;
 	opacity: 0;
 	cursor: pointer;
-	transition: all 0.15s ease;
-	user-select: none;
 	pointer-events: none;
-	z-index: 11;
 }
 
-.cm-codeblock-copy[data-cursor-in-block="true"] {
+.cm-codeblock-copy[data-controls-visible="true"] {
 	opacity: 0.9;
 	pointer-events: auto;
-}
-
-.cm-content:has(.cm-codeblock-line:hover) .cm-codeblock-copy {
-	opacity: 0.9;
-	pointer-events: auto;
-}
-
-.cm-content:has(.cm-codeblock-line:hover) .cm-codeblock-lang {
-	opacity: 0;
 }
 
 .cm-codeblock-copy:hover {
@@ -172,7 +127,42 @@
 	border-color: var(--status-success);
 }
 
-/* Images */
+.cm-table-widget {
+	margin-inline: var(--markdown-content-gutter, 40px);
+	overflow-x: auto;
+	border-radius: 6px;
+	font-family: var(--font-editor);
+	font-size: 1em;
+	line-height: inherit;
+}
+
+.cm-line.cm-table-line {
+	font-family: var(--font-editor);
+	font-size: 1em;
+	line-height: inherit;
+}
+
+.cm-line.cm-table-line::before {
+	background: var(--bg-secondary);
+}
+
+.cm-line.cm-table-header-line::before {
+	border-top-left-radius: 6px;
+	border-top-right-radius: 6px;
+}
+
+.cm-line.cm-table-header-line {
+	font-weight: 600;
+}
+
+.cm-line.cm-table-delimiter-line {
+	color: var(--text-muted);
+}
+
+.cm-line.cm-table-line:not(:has(+ .cm-table-line))::before {
+	border-bottom-left-radius: 6px;
+	border-bottom-right-radius: 6px;
+}
 
 .cm-image-container {
 	display: block;
@@ -181,13 +171,13 @@
 }
 
 .cm-image {
+	display: block;
 	max-width: 60%;
 	max-height: 320px;
 	border-radius: 6px;
-	display: block;
 	object-fit: contain;
 	cursor: pointer;
-	transition: opacity 0.15s ease;
+	transition: opacity 120ms ease;
 }
 
 .cm-image:hover {
@@ -206,85 +196,27 @@
 	line-height: 1.4;
 }
 
-/* Frontmatter Properties Card */
-
 .cm-frontmatter-card {
-	background: var(--bg-secondary);
-	border: 1px solid var(--border-subtle);
-	border-radius: 8px;
-	margin-bottom: 16px;
-	overflow: hidden;
+	margin-inline: var(--markdown-content-gutter, 40px);
 }
-
-.cm-frontmatter-header {
-	font-family: var(--font-ui);
-	font-size: 0.7em;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	color: var(--text-muted);
-	padding: 8px 14px 4px;
-}
-
-.cm-frontmatter-fields {
-	padding: 2px 14px 10px;
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-}
-
-.cm-frontmatter-row {
-	display: flex;
-	align-items: baseline;
-	gap: 12px;
-	font-family: var(--font-ui);
-	font-size: 0.82em;
-	line-height: 1.6;
-}
-
-.cm-frontmatter-key {
-	color: var(--text-secondary);
-	min-width: 80px;
-	flex-shrink: 0;
-}
-
-.cm-frontmatter-value {
-	color: var(--text-primary);
-	display: flex;
-	flex-wrap: wrap;
-	gap: 4px;
-	align-items: center;
-}
-
-.cm-frontmatter-tag {
-	display: inline-flex;
-	align-items: center;
-	padding: 1px 8px;
-	border-radius: 10px;
-	font-size: 0.9em;
-	background: color-mix(in srgb, var(--accent) 12%, transparent);
-	color: var(--accent-text);
-	border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
-}
-
-/* Frontmatter raw YAML (cursor inside) */
 
 .cm-frontmatter-line {
-	background: var(--bg-secondary);
-	position: relative;
-	font-family: var(--font-mono);
-	font-size: 0.85em;
+	font-family: var(--font-editor);
+	font-size: 1em;
+	line-height: inherit;
 	color: var(--text-secondary);
 }
 
-.cm-frontmatter-line:not(.cm-frontmatter-line + .cm-frontmatter-line) {
-	border-top-left-radius: 6px;
-	border-top-right-radius: 6px;
-	padding-top: 4px;
+.cm-frontmatter-line::before {
+	background: var(--bg-secondary);
 }
 
-.cm-frontmatter-line:not(:has(+ .cm-frontmatter-line)) {
+.cm-frontmatter-line:not(.cm-frontmatter-line + .cm-frontmatter-line)::before {
+	border-top-left-radius: 6px;
+	border-top-right-radius: 6px;
+}
+
+.cm-frontmatter-line:not(:has(+ .cm-frontmatter-line))::before {
 	border-bottom-left-radius: 6px;
 	border-bottom-right-radius: 6px;
-	padding-bottom: 4px;
 }

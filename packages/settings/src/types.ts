@@ -4,9 +4,9 @@ export const AppearanceSettingsSchema = z.object({
 	theme: z.string().default("default"),
 	colorscheme: z.enum(["light", "dark", "system"]).default("system"),
 	accentColor: z.string().default("#e8a83c"),
-	uiFontFamily: z.string().default("DM Sans"),
+	uiFontFamily: z.string().default("System Default"),
 	uiFontSize: z.number().min(10).max(24).default(14),
-	editorFontFamily: z.string().default("ui-sans-serif"),
+	editorFontFamily: z.string().default("System Default"),
 	editorFontSize: z.number().min(10).max(24).default(16),
 	lineHeight: z.number().min(1).max(2).default(1.5),
 })

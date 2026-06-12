@@ -7,7 +7,7 @@ const validPluginCapabilities: PluginCapability[] = [
 	"vault:delete",
 	"vault:watch",
 	"editor:extensions",
-	"renderer:plugins",
+	"markdown:extensions",
 	"ui:views",
 	"ui:sidebar",
 	"ui:statusbar",

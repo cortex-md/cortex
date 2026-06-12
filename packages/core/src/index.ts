@@ -10,11 +10,14 @@ export { type AuthState, useAuthStore } from "./stores/authStore"
 export { type BookmarksState, useBookmarksStore } from "./stores/bookmarksStore"
 export { type DevicesState, useDevicesStore } from "./stores/devicesStore"
 export {
+	type DragPosition,
 	type DragSource,
 	type DragSourceType,
 	type DragState,
 	type DropTarget,
+	type DropTargetType,
 	type DropZone,
+	type FileDragSource,
 	type SidebarViewDragSource,
 	type TabDragSource,
 	useDragStore,
@@ -55,6 +58,8 @@ export {
 	useTagsStore,
 } from "./stores/tagsStore"
 export {
+	clampLeftSidebarWidth,
+	LEFT_SIDEBAR_WIDTH_BOUNDS,
 	type LeftSidebarLayout,
 	type LeftSidebarView,
 	type MarketplaceTab,
@@ -76,6 +81,7 @@ export {
 	type Tab,
 	type TabType,
 	useWorkspaceStore,
+	type ViewTabState,
 	type WorkspaceState,
 } from "./stores/workspaceStore"
 export type {

@@ -1,14 +1,9 @@
-import {
-	isSyncImagePath,
-	normalizeSyncPathPattern,
-	shouldIgnoreSyncPath,
-	useSyncStore,
-	useVaultStore,
-} from "@cortex/core"
+import { isSyncImagePath, shouldIgnoreSyncPath, useSyncStore, useVaultStore } from "@cortex/core"
 import type { FileEntry } from "@cortex/platform"
-import { Badge, Button, Field, FieldLabel, FolderPicker, Input, Switch } from "@cortex/ui"
-import { FileIcon, FolderIcon, PlusIcon, XIcon } from "lucide-react"
-import { type ChangeEvent, type KeyboardEvent, useMemo, useState } from "react"
+import { Badge, FolderPicker } from "@cortex/ui"
+import { FileIcon, FolderIcon, XIcon } from "lucide-react"
+import { useMemo } from "react"
+import { SettingsBlock, SettingsEmptyState } from "./SettingsPrimitives"
 
 function fileEntryToRelativePath(entry: FileEntry, vaultPath: string): string {
 	const relative = entry.path.replace(`${vaultPath}/`, "")
@@ -21,9 +16,6 @@ export function ExcludedPathsSettings() {
 	const syncPreferences = useSyncStore((s) => s.syncPreferences)
 	const excludedPaths = syncPreferences.excludedPaths
 	const toggleExcludedPath = useSyncStore((s) => s.toggleExcludedPath)
-	const updateSyncPreference = useSyncStore((s) => s.updateSyncPreference)
-	const [patternInput, setPatternInput] = useState("")
-	const normalizedPatternInput = normalizeSyncPathPattern(patternInput)
 
 	const availableOptions = useMemo(() => {
 		if (!vault?.path) return []
@@ -39,60 +31,11 @@ export function ExcludedPathsSettings() {
 			}))
 	}, [files, vault?.path, syncPreferences])
 
-	const handleAddPattern = async () => {
-		if (!normalizedPatternInput || excludedPaths.includes(normalizedPatternInput)) return
-		await toggleExcludedPath(normalizedPatternInput, true)
-		setPatternInput("")
-	}
-
-	const handlePatternKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-		if (event.key === "Enter") {
-			event.preventDefault()
-			handleAddPattern()
-		}
-	}
-
 	return (
-		<div>
-			<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-				Excluded from Sync
-			</h3>
-			<p className="text-xs text-text-muted mb-3">
-				Files and folders excluded from sync will not be uploaded to the remote vault.
-			</p>
-
-			<Field orientation="horizontal" className="items-center justify-between py-2 mb-3">
-				<FieldLabel htmlFor="ignore-sync-images">Ignore images</FieldLabel>
-				<Switch
-					id="ignore-sync-images"
-					checked={syncPreferences.ignoreImages}
-					onCheckedChange={(checked) => updateSyncPreference("ignoreImages", checked)}
-				/>
-			</Field>
-
-			<Field className="mb-3">
-				<FieldLabel htmlFor="sync-ignore-pattern">Ignore pattern</FieldLabel>
-				<div className="flex gap-2">
-					<Input
-						id="sync-ignore-pattern"
-						value={patternInput}
-						onChange={(event: ChangeEvent<HTMLInputElement>) => setPatternInput(event.target.value)}
-						onKeyDown={handlePatternKeyDown}
-						placeholder="node_modules/, *.log, docs/**/*.tmp"
-					/>
-					<Button
-						variant="secondary"
-						size="sm"
-						onClick={handleAddPattern}
-						disabled={!normalizedPatternInput || excludedPaths.includes(normalizedPatternInput)}
-						className="shrink-0"
-					>
-						<PlusIcon size={14} />
-						Add
-					</Button>
-				</div>
-			</Field>
-
+		<SettingsBlock
+			title="Excluded from Sync"
+			description="Files, folders, and patterns excluded from sync will not be uploaded to the remote vault."
+		>
 			{excludedPaths.length > 0 && (
 				<div className="flex flex-wrap gap-1.5 mb-3">
 					{excludedPaths.map((path) => (
@@ -118,13 +61,16 @@ export function ExcludedPathsSettings() {
 					))}
 				</div>
 			)}
+			{excludedPaths.length === 0 && <SettingsEmptyState>No excluded paths</SettingsEmptyState>}
 
 			<FolderPicker
 				options={availableOptions}
 				value=""
 				onChange={(path) => toggleExcludedPath(path, true)}
-				placeholder="Search files and folders to exclude..."
+				placeholder="Search files, folders, or add a pattern..."
+				allowCustomValue
+				getCustomValueLabel={(value) => `Add pattern "${value}"`}
 			/>
-		</div>
+		</SettingsBlock>
 	)
 }

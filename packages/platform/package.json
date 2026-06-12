@@ -4,11 +4,7 @@
 	"version": "0.1.0",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts",
-		"./adapters/tauri": "./src/adapters/tauri/index.ts"
-	},
-	"dependencies": {
-		"@cortex/ipc": "workspace:*"
+		".": "./src/index.ts"
 	},
 	"devDependencies": {
 		"typescript": "^5.7.0"

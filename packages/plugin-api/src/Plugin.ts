@@ -1,14 +1,15 @@
 import type {
-	CodeBlockHandler,
+	CalloutTypeRegistration,
 	ContextMenuItemRegistration,
 	Disposable,
-	LivePreviewDeclaration,
+	MarkdownInlineRegistration,
+	MarkdownProcessorRegistration,
+	MarkdownSemanticRegistration,
 	PluginAPI,
 	PluginCommand,
 	PluginManifest,
 	PluginNotification,
 	PluginNotificationResult,
-	RendererPlugin,
 	RibbonActionRegistration,
 	SettingsTabRegistration,
 	SidebarItemRegistration,
@@ -38,20 +39,26 @@ export abstract class CortexPlugin {
 		return disposable
 	}
 
-	registerLivePreview(declaration: LivePreviewDeclaration): Disposable {
-		const disposable = this.api.editor.registerLivePreview(declaration)
+	registerMarkdownInline(registration: MarkdownInlineRegistration): Disposable {
+		const disposable = this.api.markdown.registerInline(registration)
 		this._disposables.add(disposable)
 		return disposable
 	}
 
-	registerMarkdownProcessor(plugin: RendererPlugin): Disposable {
-		const disposable = this.api.renderer.registerPlugin(plugin)
+	registerMarkdownSemantic(registration: MarkdownSemanticRegistration): Disposable {
+		const disposable = this.api.markdown.registerSemantic(registration)
 		this._disposables.add(disposable)
 		return disposable
 	}
 
-	registerCodeBlockProcessor(language: string, handler: CodeBlockHandler): Disposable {
-		const disposable = this.api.renderer.registerCodeBlockProcessor(language, handler)
+	registerCalloutType(registration: CalloutTypeRegistration): Disposable {
+		const disposable = this.api.markdown.registerCalloutType(registration)
+		this._disposables.add(disposable)
+		return disposable
+	}
+
+	registerMarkdownProcessor(processor: MarkdownProcessorRegistration): Disposable {
+		const disposable = this.api.markdown.registerProcessor(processor)
 		this._disposables.add(disposable)
 		return disposable
 	}
@@ -109,7 +116,12 @@ export abstract class CortexPlugin {
 			for (const disposable of this._disposables) {
 				try {
 					disposable.dispose()
-				} catch (_) {}
+				} catch (error) {
+					console.error("[Plugin disposal failed]", {
+						pluginId: this.manifest.id,
+						error,
+					})
+				}
 			}
 		} finally {
 			this._disposables.clear()

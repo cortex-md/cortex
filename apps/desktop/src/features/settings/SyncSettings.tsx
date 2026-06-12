@@ -36,6 +36,7 @@ import {
 import { MembersPanel } from "../sync/MembersPanel"
 import { VaultLinkModal } from "../sync/VaultLinkModal"
 import { ExcludedPathsSettings } from "./ExcludedPathsSettings"
+import { SettingsBlock, SettingsField, SettingsPage } from "./SettingsPrimitives"
 
 export type SyncSettingsView = "overview" | "preferences" | "members" | "self-host"
 
@@ -188,35 +189,6 @@ function buildEnvironmentFile(
 		.join("\n")
 }
 
-function SyncPage({ children }: { children: ReactNode }) {
-	return <section className="mx-auto flex w-full max-w-5xl flex-col gap-4">{children}</section>
-}
-
-function SettingsBlock({
-	title,
-	description,
-	action,
-	children,
-}: {
-	title: string
-	description?: string
-	action?: ReactNode
-	children: ReactNode
-}) {
-	return (
-		<div className="rounded-lg border border-border bg-muted/20 p-4">
-			<div className="mb-4 flex items-start justify-between gap-3">
-				<div>
-					<h3 className="m-0 text-sm font-semibold text-foreground">{title}</h3>
-					{description && <p className="m-0 mt-1 text-xs text-muted-foreground">{description}</p>}
-				</div>
-				{action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
-			</div>
-			<div className="flex flex-col gap-3">{children}</div>
-		</div>
-	)
-}
-
 function SignedOutNotice() {
 	const closeSettings = useUIStore((s) => s.closeSettings)
 	const openAuth = useUIStore((s) => s.openAuth)
@@ -263,14 +235,13 @@ function SyncToggleSection() {
 			title="Sync"
 			description="Enable or disable sync for this vault without changing its remote link."
 		>
-			<Field orientation="horizontal" className="items-center justify-between py-2">
-				<FieldLabel htmlFor="sync-enabled">Enable sync for this vault</FieldLabel>
+			<SettingsField label="Enable sync for this vault" htmlFor="sync-enabled">
 				<Switch
 					id="sync-enabled"
 					checked={syncEnabled}
 					onCheckedChange={(checked) => vault?.path && setSyncEnabled(vault.path, checked)}
 				/>
-			</Field>
+			</SettingsField>
 		</SettingsBlock>
 	)
 }
@@ -328,16 +299,19 @@ function ServerSection() {
 			title="Connection"
 			description="Choose Cortex Cloud or point this vault at a self-hosted sync server."
 		>
-			<Field orientation="horizontal" className="items-center justify-between py-2">
-				<FieldLabel htmlFor="self-hosted-sync">Self-hosted sync</FieldLabel>
+			<SettingsField label="Self-hosted sync" htmlFor="self-hosted-sync">
 				<Switch
 					id="self-hosted-sync"
 					checked={syncConfig.selfHosted}
 					onCheckedChange={handleSelfHostToggle}
 				/>
-			</Field>
-			<Field>
-				<FieldLabel htmlFor="server-url">Sync URL</FieldLabel>
+			</SettingsField>
+			<SettingsField
+				label="Sync URL"
+				description="Remote vaults and login use this URL for the active vault only."
+				htmlFor="server-url"
+				controlClassName="max-w-[440px]"
+			>
 				<div className="flex gap-2">
 					<Input
 						id="server-url"
@@ -358,10 +332,7 @@ function ServerSection() {
 						{saving ? <Loader2 size={14} className="animate-spin" /> : "Save"}
 					</Button>
 				</div>
-				<FieldDescription>
-					Remote vaults and login use this URL for the active vault only.
-				</FieldDescription>
-			</Field>
+			</SettingsField>
 		</SettingsBlock>
 	)
 }
@@ -370,6 +341,7 @@ function SyncPreferencesSection() {
 	const { syncPreferences, updateSyncPreference } = useSyncStore()
 
 	const preferences = [
+		{ key: "ignoreImages" as const, label: "Ignore images" },
 		{ key: "syncSettings" as const, label: "App settings" },
 		{ key: "syncHotkeys" as const, label: "Keyboard shortcuts" },
 		{ key: "syncWorkspace" as const, label: "Workspace layout" },
@@ -379,17 +351,17 @@ function SyncPreferencesSection() {
 
 	return (
 		<SettingsBlock
-			title="Metadata"
-			description="Choose which vault metadata should travel with your notes."
+			title="Preferences"
+			description="Choose what sync should include for this vault."
 		>
 			{preferences.map(({ key, label }) => (
-				<Field key={key} orientation="horizontal" className="items-center justify-between py-2">
-					<FieldLabel>{label}</FieldLabel>
+				<SettingsField key={key} label={label} htmlFor={`sync-preference-${key}`}>
 					<Switch
+						id={`sync-preference-${key}`}
 						checked={syncPreferences[key]}
 						onCheckedChange={(checked) => updateSyncPreference(key, checked)}
 					/>
-				</Field>
+				</SettingsField>
 			))}
 		</SettingsBlock>
 	)
@@ -463,35 +435,34 @@ function MembersSection({
 }) {
 	if (!authenticated) {
 		return (
-			<SyncPage>
+			<SettingsPage>
 				<SignedOutNotice />
-			</SyncPage>
+			</SettingsPage>
 		)
 	}
 
 	if (!linkedVaultId) {
 		return (
-			<SyncPage>
+			<SettingsPage>
 				<VaultLinkSection
 					linkedVaultId={linkedVaultId}
 					remoteVaultRole={linkedVaultRole}
 					engineState="idle"
 					onOpenLink={onOpenLink}
 				/>
-			</SyncPage>
+			</SettingsPage>
 		)
 	}
 
 	return (
-		<SyncPage>
-			<div>
-				<h3 className="m-0 text-sm font-semibold text-foreground">Members</h3>
-				<p className="m-0 mt-1 text-xs text-muted-foreground">
-					Manage access and invitations for the linked remote vault.
-				</p>
-			</div>
-			<MembersPanel vaultId={linkedVaultId} currentUserRole={linkedVaultRole} />
-		</SyncPage>
+		<SettingsPage>
+			<SettingsBlock
+				title="Members"
+				description="Manage access and invitations for the linked remote vault."
+			>
+				<MembersPanel vaultId={linkedVaultId} currentUserRole={linkedVaultRole} />
+			</SettingsBlock>
+		</SettingsPage>
 	)
 }
 
@@ -652,7 +623,7 @@ export function SyncSection({ view = "overview" }: { view?: SyncSettingsView }) 
 
 	if (view === "overview") {
 		content = (
-			<SyncPage>
+			<SettingsPage>
 				<SyncToggleSection />
 				{syncConfig.enabled && !authenticated && <SignedOutNotice />}
 				{syncConfig.enabled && authenticated && (
@@ -663,22 +634,20 @@ export function SyncSection({ view = "overview" }: { view?: SyncSettingsView }) 
 						onOpenLink={() => setLinkModalOpen(true)}
 					/>
 				)}
-			</SyncPage>
+			</SettingsPage>
 		)
 	}
 
 	if (view === "preferences") {
 		content = syncConfig.enabled ? (
-			<SyncPage>
+			<SettingsPage>
 				<SyncPreferencesSection />
-				<div className="rounded-lg border border-border bg-muted/20 p-4">
-					<ExcludedPathsSettings />
-				</div>
-			</SyncPage>
+				<ExcludedPathsSettings />
+			</SettingsPage>
 		) : (
-			<SyncPage>
+			<SettingsPage>
 				<SyncDisabledNotice description="Enable sync in the Sync page to configure content preferences." />
-			</SyncPage>
+			</SettingsPage>
 		)
 	}
 
@@ -691,18 +660,18 @@ export function SyncSection({ view = "overview" }: { view?: SyncSettingsView }) 
 				onOpenLink={() => setLinkModalOpen(true)}
 			/>
 		) : (
-			<SyncPage>
+			<SettingsPage>
 				<SyncDisabledNotice description="Enable sync in the Sync page before managing members." />
-			</SyncPage>
+			</SettingsPage>
 		)
 	}
 
 	if (view === "self-host") {
 		content = (
-			<SyncPage>
+			<SettingsPage>
 				<ServerSection />
 				{syncConfig.selfHosted && <SelfHostedEnvironmentSection />}
-			</SyncPage>
+			</SettingsPage>
 		)
 	}
 

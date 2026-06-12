@@ -6,7 +6,6 @@ import {
 	useVaultStore,
 	useWorkspaceStore,
 } from "@cortex/core"
-import type { FileEntry } from "@cortex/platform"
 import { getPlatform } from "@cortex/platform"
 import {
 	Button,
@@ -21,6 +20,7 @@ import {
 	ContextMenuTrigger,
 	Input,
 } from "@cortex/ui"
+import { type Rect, useVirtualizer, type Virtualizer } from "@tanstack/react-virtual"
 import {
 	ChevronRightIcon,
 	ClipboardCopyIcon,
@@ -34,34 +34,37 @@ import {
 	PencilIcon,
 	TrashIcon,
 } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { NativeMenuActions } from "@/utils/context-menu"
+import { reportAppError } from "@/utils/reportAppError"
+import { useInternalDragSource } from "../split-view/useInternalDragSource"
 import { NoteHistoryPanel } from "../sync/NoteHistoryPanel"
+import {
+	buildFileTree,
+	type FileTreeNode,
+	type FileTreeRow,
+	flattenVisibleFileTree,
+} from "./fileTree"
 import { buildFileContextMenuItems, buildRootContextMenuItems } from "./NativeMenuActions"
 
-interface TreeNode {
-	name: string
-	path: string
-	isDir: boolean
-	children: TreeNode[]
-}
+const emptyTags: string[] = []
 
-function buildTree(entries: FileEntry[], parentPath: string): TreeNode[] {
-	const sep = "/"
-	const children = entries.filter((e) => {
-		const parent = e.path.substring(0, e.path.lastIndexOf(sep))
-		return parent === parentPath
-	})
-	children.sort((a, b) => {
-		if (a.isDir !== b.isDir) return a.isDir ? -1 : 1
-		return a.name.localeCompare(b.name)
-	})
-	return children.map((e) => ({
-		name: e.name,
-		path: e.path,
-		isDir: e.isDir,
-		children: e.isDir ? buildTree(entries, e.path) : [],
-	}))
+function observeTreeElementRect(
+	instance: Virtualizer<HTMLDivElement, Element>,
+	callback: (rect: Rect) => void,
+): () => void {
+	const element = instance.scrollElement
+	const update = () => {
+		callback({
+			width: element?.clientWidth || 320,
+			height: element?.clientHeight || 600,
+		})
+	}
+	update()
+	if (!element || typeof ResizeObserver === "undefined") return () => undefined
+	const observer = new ResizeObserver(update)
+	observer.observe(element)
+	return () => observer.disconnect()
 }
 
 interface InlineInputProps {
@@ -132,7 +135,7 @@ interface FileActions {
 }
 
 function showNativeFileContextMenu(
-	node: TreeNode,
+	node: FileTreeNode,
 	position: { x: number; y: number },
 	actions: FileActions,
 ) {
@@ -197,7 +200,7 @@ function showNativeFileContextMenu(
 }
 
 interface TreeNodeRowProps {
-	node: TreeNode
+	node: FileTreeNode
 	depth: number
 	isActive: boolean
 	isExpanded: boolean
@@ -223,16 +226,28 @@ function TreeNodeRow({
 	onConfirmRename,
 	onCancelRename,
 }: TreeNodeRowProps) {
+	const canDragFile = !node.isDir && !isRenaming
+	const dragProps = useInternalDragSource(
+		() => ({
+			type: "file",
+			filePath: node.path,
+		}),
+		{ disabled: !canDragFile },
+	)
+
 	return (
 		<Button
 			variant={"ghost"}
 			role="treeitem"
+			aria-level={depth + 1}
+			aria-expanded={node.isDir ? isExpanded : undefined}
 			tabIndex={0}
 			size={"sm"}
 			className={`file-tree-item flex items-center text-left gap-1 px-1.5 w-full rounded-sm text-text-secondary text-xs hover:bg-bg-hover hover:text-text-primary select-none outline-none focus-visible:ring-1 focus-visible:ring-border-focus ${
 				isActive ? "active bg-accent text-primary" : ""
 			}`}
 			style={{ paddingLeft: `${depth * 12 + 6}px` }}
+			{...dragProps}
 			onClick={() => {
 				if (isRenaming) return
 				if (node.isDir) onToggle(node.path)
@@ -283,14 +298,16 @@ function TreeNodeRow({
 	)
 }
 
+const MemoizedTreeNodeRow = memo(TreeNodeRow)
+
 interface TreeNodeProps {
-	node: TreeNode
+	node: FileTreeNode
 	depth: number
-	expanded: Set<string>
-	onToggle: (path: string) => void
-	activeFilePath: string | null
+	isActive: boolean
+	isExpanded: boolean
+	isRenaming: boolean
 	onOpenFile: (path: string) => void
-	renamingPath: string | null
+	onToggle: (path: string) => void
 	onStartRename: (path: string) => void
 	onConfirmRename: (oldPath: string, newName: string) => void
 	onCancelRename: () => void
@@ -300,21 +317,17 @@ interface TreeNodeProps {
 	onCopyPath: (path: string, kind: "relative" | "absolute") => void
 	onNewFile: (parentPath: string) => void
 	onNewFolder: (parentPath: string) => void
-	creatingIn: string | null
-	creatingType: "file" | "folder" | null
-	onConfirmCreate: (parentPath: string, name: string) => void
-	onCancelCreate: () => void
 	onViewHistory: (path: string) => void
 }
 
 function TreeNodeView({
 	node,
 	depth,
-	expanded,
-	onToggle,
-	activeFilePath,
+	isActive,
+	isExpanded,
+	isRenaming,
 	onOpenFile,
-	renamingPath,
+	onToggle,
 	onStartRename,
 	onConfirmRename,
 	onCancelRename,
@@ -324,20 +337,14 @@ function TreeNodeView({
 	onCopyPath,
 	onNewFile,
 	onNewFolder,
-	creatingIn,
-	creatingType,
-	onConfirmCreate,
-	onCancelCreate,
 	onViewHistory,
 }: TreeNodeProps) {
-	const getTagsForFile = useTagsStore((s) => s.getTagsForFile)
-	const getTagColor = useTagsStore((s) => s.getTagColor)
-	const isExpanded = expanded.has(node.path)
-	const isActive = !node.isDir && activeFilePath === node.path
-	const isRenaming = renamingPath === node.path
-	const isCreatingHere = creatingIn === node.path
-	const fileTags = !node.isDir ? getTagsForFile(node.path) : []
-	const tagColors = fileTags.map((tag) => ({ tag, color: getTagColor(tag) }))
+	const fileTags = useTagsStore((state) => state.fileTags[node.path] ?? emptyTags)
+	const tagColorsByName = useTagsStore((state) => state.tagColors)
+	const tagColors = useMemo(
+		() => fileTags.map((tag) => ({ tag, color: tagColorsByName[tag] ?? null })),
+		[fileTags, tagColorsByName],
+	)
 
 	const rowProps = {
 		node,
@@ -375,12 +382,12 @@ function TreeNodeView({
 						showNativeFileContextMenu(node, { x: e.clientX, y: e.clientY }, fileActions)
 					}}
 				>
-					<TreeNodeRow {...rowProps} />
+					<MemoizedTreeNodeRow {...rowProps} />
 				</div>
 			) : (
 				<ContextMenu>
 					<ContextMenuTrigger asChild>
-						<TreeNodeRow {...rowProps} />
+						<MemoizedTreeNodeRow {...rowProps} />
 					</ContextMenuTrigger>
 					<ContextMenuContent>
 						{!node.isDir && (
@@ -463,60 +470,13 @@ function TreeNodeView({
 					</ContextMenuContent>
 				</ContextMenu>
 			)}
-
-			{node.isDir && isExpanded && (
-				<>
-					{isCreatingHere && creatingType && (
-						<div
-							className="flex items-center gap-1 h-[26px] px-1.5"
-							style={{ paddingLeft: `${(depth + 1) * 12 + 6}px` }}
-						>
-							{creatingType === "folder" ? (
-								<FolderPlusIcon size={12} className="text-text-muted flex-shrink-0" />
-							) : (
-								<FilePlusIcon size={12} className="text-text-muted flex-shrink-0" />
-							)}
-							<InlineInput
-								defaultValue={creatingType === "folder" ? "New Folder" : "Untitled.md"}
-								onConfirm={(name) => onConfirmCreate(node.path, name)}
-								onCancel={onCancelCreate}
-								selectBaseName={creatingType === "file"}
-							/>
-						</div>
-					)}
-					{node.children.map((child) => (
-						<TreeNodeView
-							key={child.path}
-							node={child}
-							depth={depth + 1}
-							expanded={expanded}
-							onToggle={onToggle}
-							activeFilePath={activeFilePath}
-							onOpenFile={onOpenFile}
-							renamingPath={renamingPath}
-							onStartRename={onStartRename}
-							onConfirmRename={onConfirmRename}
-							onCancelRename={onCancelRename}
-							onDelete={onDelete}
-							onDuplicate={onDuplicate}
-							onReveal={onReveal}
-							onCopyPath={onCopyPath}
-							onNewFile={onNewFile}
-							onNewFolder={onNewFolder}
-							creatingIn={creatingIn}
-							creatingType={creatingType}
-							onConfirmCreate={onConfirmCreate}
-							onCancelCreate={onCancelCreate}
-							onViewHistory={onViewHistory}
-						/>
-					))}
-				</>
-			)}
 		</>
 	)
 }
 
-function SyncExcludeMenuItem({ node }: { node: TreeNode }) {
+const MemoizedTreeNodeView = memo(TreeNodeView)
+
+function SyncExcludeMenuItem({ node }: { node: FileTreeNode }) {
 	const vaultPath = useVaultStore((s) => s.vault?.path)
 	const syncPreferences = useSyncStore((s) => s.syncPreferences)
 
@@ -554,14 +514,14 @@ export function FileSidebar() {
 	const activePane = panes[activePaneId]
 	const activeTab = activePane?.tabs.find((t) => t.id === activePane.activeTabId)
 
-	const handleToggle = (path: string) => {
+	const handleToggle = useCallback((path: string) => {
 		setExpanded((prev) => {
 			const next = new Set(prev)
 			if (next.has(path)) next.delete(path)
 			else next.add(path)
 			return next
 		})
-	}
+	}, [])
 
 	const ensureExpanded = useCallback((path: string) => {
 		setExpanded((prev) => {
@@ -599,7 +559,15 @@ export function FileSidebar() {
 					const filePath = await createFile(parentPath, name)
 					openTab(filePath)
 				}
-			} catch (_e) {}
+			} catch (error) {
+				await reportAppError({
+					operation: "create-file-entry",
+					source: "file-explorer",
+					cause: error,
+					userMessage: "The file or folder could not be created.",
+					context: { parentPath, name },
+				})
+			}
 			setCreatingIn(null)
 			setCreatingType(null)
 		},
@@ -610,13 +578,22 @@ export function FileSidebar() {
 		setCreatingIn(null)
 		setCreatingType(null)
 	}, [])
+	const handleCancelRename = useCallback(() => setRenamingPath(null), [])
 
 	const handleConfirmRename = useCallback(
 		async (oldPath: string, newName: string) => {
 			try {
 				const newPath = await renameFile(oldPath, newName)
 				updateTabPath(oldPath, newPath)
-			} catch (_e) {}
+			} catch (error) {
+				await reportAppError({
+					operation: "rename-file-entry",
+					source: "file-explorer",
+					cause: error,
+					userMessage: "The file or folder could not be renamed.",
+					context: { oldPath, newName },
+				})
+			}
 			setRenamingPath(null)
 		},
 		[renameFile, updateTabPath],
@@ -632,7 +609,17 @@ export function FileSidebar() {
 			)
 			if (!confirmed) return
 			closeTabsByPath(filePath)
-			await deleteFile(filePath)
+			try {
+				await deleteFile(filePath)
+			} catch (error) {
+				await reportAppError({
+					operation: "delete-file-entry",
+					source: "file-explorer",
+					cause: error,
+					userMessage: `"${name}" could not be deleted.`,
+					context: { filePath },
+				})
+			}
 		},
 		[deleteFile, closeTabsByPath],
 	)
@@ -642,7 +629,15 @@ export function FileSidebar() {
 			try {
 				const newPath = await duplicateFile(filePath)
 				openTab(newPath)
-			} catch (_e) {}
+			} catch (error) {
+				await reportAppError({
+					operation: "duplicate-file",
+					source: "file-explorer",
+					cause: error,
+					userMessage: "The note could not be duplicated.",
+					context: { filePath },
+				})
+			}
 		},
 		[duplicateFile, openTab],
 	)
@@ -664,11 +659,42 @@ export function FileSidebar() {
 		[vault],
 	)
 
+	const vaultPath = vault?.path ?? ""
+	const tree = useMemo(() => buildFileTree(files, vaultPath), [files, vaultPath])
+	const rows = useMemo<FileTreeRow[]>(() => {
+		if (!vault) return []
+		const visibleRows = flattenVisibleFileTree(tree, expanded, creatingIn, creatingType)
+		if (creatingIn !== vault.path || !creatingType) return visibleRows
+		return [
+			{
+				kind: "create",
+				parentPath: vault.path,
+				depth: 0,
+				createType: creatingType,
+			},
+			...visibleRows,
+		]
+	}, [creatingIn, creatingType, expanded, tree, vault])
+	const treeScrollRef = useRef<HTMLDivElement>(null)
+	const rowVirtualizer = useVirtualizer({
+		count: rows.length,
+		getScrollElement: () => treeScrollRef.current,
+		estimateSize: () => 26,
+		overscan: 8,
+		initialRect: { width: 320, height: 600 },
+		observeElementRect: observeTreeElementRect,
+		getItemKey: (index) => {
+			const row = rows[index]
+			return row?.kind === "node"
+				? row.node.path
+				: `${row?.parentPath ?? "root"}:${row?.createType ?? "create"}`
+		},
+	})
+
 	if (!vault) {
 		return
 	}
 
-	const tree = buildTree(files, vault.path)
 	const isCreatingAtRoot = creatingIn === vault.path
 
 	const handleRootContextMenu = (e: React.MouseEvent) => {
@@ -711,56 +737,70 @@ export function FileSidebar() {
 				</div>
 			</div>
 			<div
+				ref={treeScrollRef}
 				className="flex-1 overflow-y-auto px-1 pb-1"
 				role="tree"
 				onContextMenu={handleRootContextMenu}
 			>
-				{isCreatingAtRoot && creatingType && (
-					<div className="flex items-center gap-1 h-[26px] px-1.5">
-						{creatingType === "folder" ? (
-							<FolderPlusIcon size={12} className="text-text-muted flex-shrink-0" />
-						) : (
-							<FilePlusIcon size={12} className="text-text-muted flex-shrink-0" />
-						)}
-						<InlineInput
-							defaultValue={creatingType === "folder" ? "New Folder" : "Untitled.md"}
-							onConfirm={(name) => handleConfirmCreate(vault.path, name)}
-							onCancel={handleCancelCreate}
-							selectBaseName={creatingType === "file"}
-						/>
-					</div>
-				)}
 				{tree.length === 0 && !isCreatingAtRoot ? (
 					<div className="flex items-center justify-center p-8 text-xs text-text-muted">
 						No files
 					</div>
 				) : (
-					tree.map((node) => (
-						<TreeNodeView
-							key={node.path}
-							node={node}
-							depth={0}
-							expanded={expanded}
-							onToggle={handleToggle}
-							activeFilePath={activeTab?.filePath ?? null}
-							onOpenFile={openTab}
-							renamingPath={renamingPath}
-							onStartRename={setRenamingPath}
-							onConfirmRename={handleConfirmRename}
-							onCancelRename={() => setRenamingPath(null)}
-							onDelete={handleDelete}
-							onDuplicate={handleDuplicate}
-							onReveal={handleReveal}
-							onCopyPath={handleCopyPath}
-							onNewFile={handleNewFile}
-							onNewFolder={handleNewFolder}
-							creatingIn={creatingIn}
-							creatingType={creatingType}
-							onConfirmCreate={handleConfirmCreate}
-							onCancelCreate={handleCancelCreate}
-							onViewHistory={setHistoryFilePath}
-						/>
-					))
+					<div className="relative w-full" style={{ height: `${rowVirtualizer.getTotalSize()}px` }}>
+						{rowVirtualizer.getVirtualItems().map((virtualRow) => {
+							const row = rows[virtualRow.index]
+							return (
+								<div
+									key={virtualRow.key}
+									className="absolute left-0 top-0 w-full"
+									style={{
+										height: `${virtualRow.size}px`,
+										transform: `translateY(${virtualRow.start}px)`,
+									}}
+								>
+									{row.kind === "create" ? (
+										<div
+											className="flex items-center gap-1 h-[26px] px-1.5"
+											style={{ paddingLeft: `${row.depth * 12 + 6}px` }}
+										>
+											{row.createType === "folder" ? (
+												<FolderPlusIcon size={12} className="text-text-muted flex-shrink-0" />
+											) : (
+												<FilePlusIcon size={12} className="text-text-muted flex-shrink-0" />
+											)}
+											<InlineInput
+												defaultValue={row.createType === "folder" ? "New Folder" : "Untitled.md"}
+												onConfirm={(name) => handleConfirmCreate(row.parentPath, name)}
+												onCancel={handleCancelCreate}
+												selectBaseName={row.createType === "file"}
+											/>
+										</div>
+									) : (
+										<MemoizedTreeNodeView
+											node={row.node}
+											depth={row.depth}
+											isActive={!row.node.isDir && activeTab?.filePath === row.node.path}
+											isExpanded={expanded.has(row.node.path)}
+											isRenaming={renamingPath === row.node.path}
+											onToggle={handleToggle}
+											onOpenFile={openTab}
+											onStartRename={setRenamingPath}
+											onConfirmRename={handleConfirmRename}
+											onCancelRename={handleCancelRename}
+											onDelete={handleDelete}
+											onDuplicate={handleDuplicate}
+											onReveal={handleReveal}
+											onCopyPath={handleCopyPath}
+											onNewFile={handleNewFile}
+											onNewFolder={handleNewFolder}
+											onViewHistory={setHistoryFilePath}
+										/>
+									)}
+								</div>
+							)
+						})}
+					</div>
 				)}
 			</div>
 			<NoteHistoryPanel

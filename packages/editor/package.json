@@ -7,7 +7,6 @@
 		".": "./src/index.ts"
 	},
 	"dependencies": {
-		"@cortex/core": "workspace:*",
 		"@cortex/renderer": "workspace:*",
 		"@codemirror/autocomplete": "^6.18.6",
 		"@codemirror/commands": "^6.8.0",
@@ -30,7 +29,6 @@
 	},
 	"devDependencies": {
 		"@types/react": "^19.1.8",
-		"cortex-plugin-api": "workspace:*",
 		"react": "^19.1.0",
 		"typescript": "~5.8.3"
 	}

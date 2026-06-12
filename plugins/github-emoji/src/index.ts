@@ -1,7 +1,6 @@
 import type { ViewDescriptor, ViewDispatch, ViewState } from "cortex-plugin-api"
 import { CortexPlugin } from "cortex-plugin-api"
 import { EMOJI_CATEGORIES, GITHUB_EMOJI_MAP } from "./emojiMap"
-import { remarkEmojiPlugin } from "./emojiRemarkPlugin"
 
 const EMOJI_COUNT = Object.keys(GITHUB_EMOJI_MAP).length
 
@@ -144,30 +143,14 @@ function renderEmojiView(viewState: ViewState, _dispatch: ViewDispatch): ViewDes
 
 export default class GitHubEmojiPlugin extends CortexPlugin {
 	onload() {
-		this.registerLivePreview({
-			id: "emoji-preview",
-			inlineRules: [
-				{
-					pattern: ":([a-z0-9_+-]+):",
-					flags: "gi",
-					replacement: {
-						type: "widget",
-						render: (match) => {
-							const emoji = GITHUB_EMOJI_MAP[match[1].toLowerCase()]
-							return {
-								tag: "span",
-								textContent: emoji ?? match[0],
-								className: "cm-emoji-widget",
-							}
-						},
-					},
-				},
-			],
-		})
-
-		this.registerMarkdownProcessor({
-			name: "github-emoji",
-			remarkPlugins: [remarkEmojiPlugin],
+		this.registerMarkdownInline({
+			id: "github-emoji",
+			pattern: ":([a-z0-9_+-]+):",
+			flags: "gi",
+			replacement: {
+				type: "text",
+				content: (match) => GITHUB_EMOJI_MAP[match[1].toLowerCase()] ?? match[0],
+			},
 		})
 
 		this.addCommand({

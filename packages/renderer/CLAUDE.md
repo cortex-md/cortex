@@ -16,20 +16,25 @@ const renderer = createRenderer()
 const html = await renderer.render(markdownString)
 ```
 
-`createRenderer(options?)` builds and caches the unified pipeline. The returned
+`createRenderer(options?)` builds a unified pipeline. `getSharedRenderer()` caches one processor
+per reactive Markdown registry version. The returned
 `Renderer` object is reusable — call `render()` repeatedly.
 
 ## Pipeline Order
 
 1. `remark-parse` — Markdown → mdast
-2. `remarkFrontmatter` — strips YAML `---` front matter nodes, saves parsed fields to `file.data`
+2. `remarkFrontmatter` — parses YAML structurally and saves fields to `file.data`
 3. `remark-gfm` — GFM tables, strikethrough, task lists syntax
-4. `remark-rehype` — mdast → hast
-5. `rehypeFrontmatter` — injects a Properties card (hast div) from parsed frontmatter data
-6. `rehypeWikiLinks` — `[[note]]` / `[[note|label]]` → `<a data-wiki-link="note">`
-7. `rehypeTaskList` — adds `data-task-item` and checkbox `<input>` to list items
-8. `rehype-highlight` — syntax highlighting via highlight.js (adds `hljs-*` classes)
-9. `rehype-stringify` — hast → HTML string
+4. Surface-targeted remark processors on cloned trees
+5. Native frontmatter extraction
+6. `remark-rehype` — mdast → hast
+7. Surface-targeted rehype processors on cloned trees
+8. Shared inline and semantic portable-node transforms
+9. Shared Markdown URL policy, including image-only `data:` URLs
+10. `rehype-sanitize` — protocol, tag, and attribute allowlists
+11. Trusted native frontmatter, callout, wiki link, and task-list transforms
+12. `rehype-highlight` — syntax highlighting via highlight.js
+13. `rehype-stringify` — hast → HTML string
 
 ## Plugins
 
@@ -40,29 +45,15 @@ const html = await renderer.render(markdownString)
 | `src/plugins/wikiLinks.ts` | rehype | Transforms `[[link]]` text into `<a data-wiki-link>` elements |
 | `src/plugins/taskList.ts` | rehype | Enhances GFM task list items with `data-task-item` and checkbox inputs |
 
-### Adding a Plugin
-
-1. Create `src/plugins/myPlugin.ts` exporting a unified `Plugin` function
-2. Add it to the pipeline in `src/pipeline.ts` at the appropriate stage
-3. Or expose it via `RendererPlugin` interface for consumer-provided plugins
-
-## RendererPlugin Interface
-
-```typescript
-interface RendererPlugin {
-  name: string
-  remarkPlugins?: UnifiedPlugin[]
-  rehypePlugins?: UnifiedPlugin[]
-}
-
-createRenderer({ plugins: [myPlugin] })
-```
+Plugins register shared Markdown behavior through `api.markdown`. Inline and semantic registrations
+compose over portable text nodes and are applied to Live Preview, Reading View, and export.
+Processor registrations declare a single phase plus `reading-view` and/or `export` targets; failures
+are isolated and repeated slow/failing processors are disabled for the session.
 
 ## CSS Classes
 
 The renderer produces `hljs-*` classes on code blocks. Map these to `--syntax-*`
-CSS variables in the consuming app's stylesheet (see `apps/desktop/src/styles.css`
-`.reading-view .hljs-*` rules).
+CSS variables in `packages/editor/src/markdown.css`.
 
 Wiki links use `data-wiki-link` attribute — style with `.reading-view a[data-wiki-link]`.
 Task list items use `data-task-item="checked|unchecked"`.
@@ -81,3 +72,5 @@ Frontmatter Properties card uses these classes (style under `.reading-view`):
 - No React, no DOM APIs — pure string in, string out
 - Pipeline is created once per `createRenderer()` call and reused
 - `allowDangerousHtml: false` in remark-rehype — raw HTML in Markdown is stripped
+- Public processor output must pass through `rehype-sanitize`
+- URL handling must use `sanitizeMarkdownUrl`

@@ -11,6 +11,13 @@ import {
 import { Button, LucideIcon, Switch } from "@cortex/ui"
 import { FolderOpen, Store } from "lucide-react"
 import { useCallback } from "react"
+import {
+	SettingsBlock,
+	SettingsEmptyState,
+	SettingsList,
+	SettingsListItem,
+	SettingsPage,
+} from "./SettingsPrimitives"
 
 function PluginRow({ record }: { record: PluginRecord }) {
 	const { vault } = useVaultStore()
@@ -32,23 +39,27 @@ function PluginRow({ record }: { record: PluginRecord }) {
 	)
 
 	return (
-		<div className="flex items-center gap-3 px-0 py-3 group">
+		<SettingsListItem>
 			<div className="w-8 h-8 rounded-lg bg-bg-tertiary flex items-center justify-center shrink-0">
 				<LucideIcon name={record.manifest.icon} size={16} className="text-text-muted" />
 			</div>
 			<div className="flex flex-col min-w-0 flex-1">
 				<div className="flex items-center gap-2">
-					<span className="text-xs font-medium truncate">{record.manifest.name}</span>
-					<span className="text-[10px] text-text-muted">v{record.manifest.version}</span>
-					<span className="text-[10px] text-text-muted">by {record.manifest.author}</span>
+					<span className="text-sm font-medium truncate text-foreground">
+						{record.manifest.name}
+					</span>
+					<span className="text-xs text-muted-foreground">v{record.manifest.version}</span>
+					<span className="text-xs text-muted-foreground">by {record.manifest.author}</span>
 				</div>
-				<span className="text-[10px] text-text-muted truncate">{record.manifest.description}</span>
+				<span className="text-xs text-muted-foreground truncate">
+					{record.manifest.description}
+				</span>
 				{hasError && record.error && (
-					<span className="text-[10px] text-red-500 truncate">{record.error}</span>
+					<span className="text-xs text-red-500 truncate">{record.error}</span>
 				)}
 			</div>
 			<Switch checked={isEnabled} onCheckedChange={handleToggle} />
-		</div>
+		</SettingsListItem>
 	)
 }
 
@@ -77,60 +88,50 @@ export function PluginsSection() {
 	}
 
 	return (
-		<section>
-			<div className="mb-6">
-				<h3 className="text-[10px] font-bold m-0 mb-3 text-text-muted uppercase tracking-wide">
-					Core Plugins
-				</h3>
+		<SettingsPage>
+			<SettingsBlock
+				title="Core Plugins"
+				description="Built-in plugin modules shipped with Cortex."
+			>
 				{corePlugins.length === 0 ? (
-					<p className="text-xs text-text-muted py-2">No core plugins installed</p>
+					<SettingsEmptyState>No core plugins installed</SettingsEmptyState>
 				) : (
-					<div className="flex flex-col divide-y divide-border">
+					<SettingsList>
 						{corePlugins.map((record) => (
 							<PluginRow key={record.manifest.id} record={record} />
 						))}
-					</div>
+					</SettingsList>
 				)}
-			</div>
+			</SettingsBlock>
 
-			<div className="mb-6">
-				<div className="flex items-center justify-between mb-3">
-					<h3 className="text-[10px] font-bold m-0 text-text-muted uppercase tracking-wide">
-						Community Plugins
-					</h3>
-					<div className="flex items-center gap-1">
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={() => openMarketplace("plugins")}
-							className="text-xs h-6 px-2 gap-1.5"
-						>
+			<SettingsBlock
+				title="Community Plugins"
+				description="Vault-scoped plugins installed in this workspace."
+				action={
+					<>
+						<Button variant="ghost" size="sm" onClick={() => openMarketplace("plugins")}>
 							<Store size={12} />
 							Browse
 						</Button>
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={handleOpenPluginsFolder}
-							className="text-xs h-6 px-2 gap-1.5"
-						>
+						<Button variant="ghost" size="sm" onClick={handleOpenPluginsFolder}>
 							<FolderOpen size={12} />
 							Open folder
 						</Button>
-					</div>
-				</div>
+					</>
+				}
+			>
 				{communityPlugins.length === 0 ? (
-					<p className="text-xs text-text-muted py-2">
+					<SettingsEmptyState>
 						No community plugins installed. Place plugins in vault/.cortex/plugins/ to get started.
-					</p>
+					</SettingsEmptyState>
 				) : (
-					<div className="flex flex-col divide-y divide-border">
+					<SettingsList>
 						{communityPlugins.map((record) => (
 							<PluginRow key={record.manifest.id} record={record} />
 						))}
-					</div>
+					</SettingsList>
 				)}
-			</div>
-		</section>
+			</SettingsBlock>
+		</SettingsPage>
 	)
 }

@@ -4,9 +4,9 @@ import { createCommandsAPI } from "./apis/CommandsAPI"
 import { createDataAPI } from "./apis/DataAPI"
 import { createEditorAPI } from "./apis/EditorAPI"
 import { createHotkeysAPI } from "./apis/HotkeysAPI"
+import { createMarkdownAPI } from "./apis/MarkdownAPI"
 import { createMetadataAPI } from "./apis/MetadataAPI"
 import { createNotificationsAPI } from "./apis/NotificationsAPI"
-import { createRendererAPI } from "./apis/RendererAPI"
 import { createSettingsAPI } from "./apis/SettingsAPI"
 import { createThemeAPI } from "./apis/ThemeAPI"
 import { createVaultAPI } from "./apis/VaultAPI"
@@ -22,7 +22,7 @@ export function createPluginAPI(pluginId: string, getVaultPath: () => string | n
 		() => null,
 		() => null,
 	)
-	const renderer = createRendererAPI()
+	const markdown = createMarkdownAPI(pluginId)
 	const hotkeys = createHotkeysAPI(pluginId)
 	const metadata = createMetadataAPI()
 	const theme = createThemeAPI()
@@ -44,7 +44,7 @@ export function createPluginAPI(pluginId: string, getVaultPath: () => string | n
 		vault,
 		data,
 		editor,
-		renderer,
+		markdown,
 		hotkeys,
 		metadata,
 		theme,
