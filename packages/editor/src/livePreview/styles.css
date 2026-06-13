@@ -47,7 +47,7 @@
 .cm-line.cm-horizontal-rule-line::before {
 	content: "";
 	position: absolute;
-	inset-inline: 0;
+	inset-inline: var(--markdown-content-gutter, 40px);
 	top: 50%;
 	height: 1px;
 	background: var(--border);
@@ -164,6 +164,13 @@
 	color: var(--text-muted);
 }
 
+.cm-line.cm-table-delimiter-line {
+	block-size: 1px;
+	min-block-size: 1px;
+	line-height: 1px;
+	overflow: hidden;
+}
+
 .cm-line.cm-table-rendered-line {
 	display: grid;
 	inline-size: 100%;
@@ -195,18 +202,9 @@
 }
 
 .cm-table-delimiter-cell {
-	position: relative;
 	color: transparent;
-}
-
-.cm-table-delimiter-cell::before {
-	content: "";
-	position: absolute;
-	inset-inline: 0.75em;
-	top: 50%;
-	height: 1px;
-	background: var(--border);
-	pointer-events: none;
+	padding-inline: 0;
+	box-shadow: none;
 }
 
 .cm-image-container {

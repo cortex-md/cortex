@@ -119,13 +119,13 @@ export function buildEditorTypographyRules(
 			borderLeftWidth: "2px",
 		},
 		".cm-fat-cursor": {
-			backgroundColor: "var(--accent)",
+			background: "var(--accent) !important",
 			borderRadius: "1px",
 			boxSizing: "border-box",
 		},
 		"&:not(.cm-focused) .cm-fat-cursor": {
-			backgroundColor: "transparent",
-			outline: "1px solid var(--accent)",
+			background: "transparent !important",
+			outline: "1px solid var(--accent) !important",
 		},
 		".cm-content ::selection": {
 			backgroundColor: "var(--editor-selection-bg, var(--bg-selected))",

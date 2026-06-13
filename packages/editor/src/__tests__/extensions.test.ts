@@ -27,7 +27,11 @@ describe("buildEditorTypographyRules", () => {
 			backgroundColor: "var(--editor-selection-bg, var(--bg-selected))",
 		})
 		expect(rules[".cm-fat-cursor"]).toMatchObject({
-			backgroundColor: "var(--accent)",
+			background: "var(--accent) !important",
+		})
+		expect(rules["&:not(.cm-focused) .cm-fat-cursor"]).toMatchObject({
+			background: "transparent !important",
+			outline: "1px solid var(--accent) !important",
 		})
 		expect(rules[".cm-selectionBackground"]).toMatchObject({
 			backgroundColor: "var(--editor-selection-bg, var(--bg-selected)) !important",
