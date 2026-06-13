@@ -1,8 +1,9 @@
 import { isSyncImagePath, shouldIgnoreSyncPath, useSyncStore, useVaultStore } from "@cortex/core"
 import type { FileEntry } from "@cortex/platform"
-import { Badge, FolderPicker } from "@cortex/ui"
+import { Badge, Button } from "@cortex/ui"
 import { FileIcon, FolderIcon, XIcon } from "lucide-react"
 import { useMemo } from "react"
+import { PathPatternPicker } from "../../components/shared/PathPatternPicker"
 import {
 	SettingsEmptyState,
 	SettingsGroup,
@@ -57,13 +58,15 @@ export function ExcludedPathsSettings() {
 										<FileIcon className="size-3 shrink-0 text-text-muted" />
 									)}
 									<span className="text-xs">{path}</span>
-									<button
-										type="button"
+									<Button
+										variant="ghost"
+										size="icon-xs"
 										onClick={() => toggleExcludedPath(path, false)}
-										className="ml-0.5 rounded-sm p-0.5 hover:bg-bg-hover"
+										aria-label={`Remove ${path}`}
+										className="-mr-0.5 ml-0.5 size-5"
 									>
 										<XIcon className="size-3" />
-									</button>
+									</Button>
 								</Badge>
 							))}
 						</div>
@@ -72,10 +75,9 @@ export function ExcludedPathsSettings() {
 						<SettingsEmptyState className="px-0 pt-0">No excluded paths</SettingsEmptyState>
 					)}
 
-					<FolderPicker
+					<PathPatternPicker
 						options={availableOptions}
-						value=""
-						onChange={(path) => toggleExcludedPath(path, true)}
+						onSelect={(path) => toggleExcludedPath(path, true)}
 						placeholder="Search files, folders, or add a pattern..."
 						allowCustomValue
 						getCustomValueLabel={(value) => `Add pattern "${value}"`}
