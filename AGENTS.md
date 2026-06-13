@@ -349,6 +349,17 @@ UI doesn't directly access files; it reads/writes through noteCache.
 - Standard Settings pages use a page header in the scroll area followed by section headings outside
   `SettingsGroup` surfaces. Rows share 56px minimum height and thematic dividers. Compact layouts
   use grouped `NativeSelect`; Marketplace remains a separate full-height browser.
+- Sync dialogs and recovery panels use bounded flex or grid layouts. Every nested scroll viewport
+  needs `min-h-0` through its parent chain so logs, versions, diffs, and deleted notes scroll
+  independently.
+- Settings controls inside clipped groups use the portaled `Select` and `Combobox` primitives.
+  Reusable settings-specific compositions belong in `apps/desktop/src/components/shared`.
+- The sync overview never exposes remote vault IDs. Prefer already-loaded vault metadata, sync
+  state, device state, and file lists; fetch devices only for a visible, authenticated linked
+  overview when the store is empty.
+- Self-hosted environment settings use one controlled disclosure across Server, Database,
+  Authentication, and Storage. Keep secret values in the OS keychain and preserve `.env` copy and
+  export behavior.
 - The note header owns the editable filename title and display-only breadcrumb. It shares the note
   scroll container across Editing, Live Preview, Reading, and Side-by-Side modes. Title renames must
   go through `vaultStore.renameFile` so NoteCache, tabs, bookmarks, and filesystem state move

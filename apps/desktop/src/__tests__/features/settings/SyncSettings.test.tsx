@@ -1,6 +1,13 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
+
+const platformMocks = vi.hoisted(() => ({
+	showConfirm: vi.fn().mockResolvedValue(true),
+	keychainGet: vi.fn().mockResolvedValue(null),
+	keychainSet: vi.fn().mockResolvedValue(undefined),
+	keychainDelete: vi.fn().mockResolvedValue(undefined),
+}))
 
 vi.mock("@cortex/core", () => ({
 	DEFAULT_SYNC_SERVER_URL: "http://localhost:8080",
@@ -15,12 +22,12 @@ vi.mock("@cortex/core", () => ({
 vi.mock("@cortex/platform", () => ({
 	getPlatform: vi.fn(() => ({
 		dialog: {
-			showConfirm: vi.fn().mockResolvedValue(true),
+			showConfirm: platformMocks.showConfirm,
 		},
 		keychain: {
-			get: vi.fn().mockResolvedValue(null),
-			set: vi.fn().mockResolvedValue(undefined),
-			delete: vi.fn().mockResolvedValue(undefined),
+			get: platformMocks.keychainGet,
+			set: platformMocks.keychainSet,
+			delete: platformMocks.keychainDelete,
 		},
 	})),
 }))
@@ -77,6 +84,7 @@ function setupMocks(
 		deviceEntries?: Array<{ id: string; revoked: boolean }>
 		devicesLoading?: boolean
 		files?: Array<{ name: string; path: string; isDir: boolean }>
+		selfHostedEnvironment?: Record<string, string>
 	} = {},
 ) {
 	vi.mocked(useUIStore).mockImplementation(((selector?: (state: unknown) => unknown) => {
@@ -125,7 +133,7 @@ function setupMocks(
 				selfHosted: overrides.selfHosted ?? false,
 				serverUrl: "https://sync.example.com",
 				offlineMode: false,
-				selfHostedEnvironment: {},
+				selfHostedEnvironment: overrides.selfHostedEnvironment ?? {},
 			},
 		}
 		return selector ? selector(state) : state
@@ -272,12 +280,106 @@ describe("SyncSection", () => {
 		expect(fetchDevices).toHaveBeenCalledTimes(1)
 	})
 
-	it("shows self-host settings with closed environment groups", () => {
+	it("shows four closed self-host environment groups", () => {
 		setupMocks({ authenticated: false, syncEnabled: true, selfHosted: true })
 		render(<SyncSection view="self-host" />)
 
 		expect(screen.getByText("Connection")).toBeInTheDocument()
 		expect(screen.getByText("Environment")).toBeInTheDocument()
-		expect(screen.getByRole("button", { name: "Server" })).toHaveAttribute("aria-expanded", "false")
+		for (const groupName of ["Server", "Database", "Authentication", "Storage"]) {
+			expect(screen.getByRole("button", { name: groupName })).toHaveAttribute(
+				"aria-expanded",
+				"false",
+			)
+		}
+		expect(screen.queryByRole("button", { name: "Sync Limits" })).not.toBeInTheDocument()
+	})
+
+	it("keeps one self-host environment group open at a time", async () => {
+		setupMocks({ authenticated: false, syncEnabled: true, selfHosted: true })
+		render(<SyncSection view="self-host" />)
+
+		const serverTrigger = screen.getByRole("button", { name: "Server" })
+		const databaseTrigger = screen.getByRole("button", { name: "Database" })
+
+		await userEvent.click(serverTrigger)
+
+		expect(serverTrigger).toHaveAttribute("aria-expanded", "true")
+		expect(screen.getByRole("textbox", { name: "Host" })).toBeInTheDocument()
+
+		await userEvent.click(databaseTrigger)
+
+		expect(serverTrigger).toHaveAttribute("aria-expanded", "false")
+		expect(databaseTrigger).toHaveAttribute("aria-expanded", "true")
+		expect(screen.getByRole("textbox", { name: "PostgreSQL URL" })).toBeInTheDocument()
+		expect(screen.queryByRole("textbox", { name: "Host" })).not.toBeInTheDocument()
+	})
+
+	it("updates environment values and stores secrets in the keychain", async () => {
+		setupMocks({
+			authenticated: false,
+			syncEnabled: true,
+			selfHosted: true,
+			selfHostedEnvironment: {
+				CORTEX_DATABASE_URL: "postgres://old",
+			},
+		})
+		render(<SyncSection view="self-host" />)
+
+		await userEvent.click(screen.getByRole("button", { name: "Database" }))
+		fireEvent.change(screen.getByRole("textbox", { name: "PostgreSQL URL" }), {
+			target: { value: "postgres://new" },
+		})
+
+		await waitFor(() => {
+			expect(updateSelfHostedEnvironment).toHaveBeenCalledWith(
+				"/vault",
+				"CORTEX_DATABASE_URL",
+				"postgres://new",
+			)
+		})
+
+		await userEvent.click(screen.getByRole("button", { name: "Authentication" }))
+		fireEvent.change(screen.getByLabelText("Access token secret"), {
+			target: { value: "secret-value" },
+		})
+
+		await waitFor(() => {
+			expect(platformMocks.keychainSet).toHaveBeenCalledWith(
+				"sync-env-secret:vault-id:CORTEX_AUTH_ACCESS_TOKEN_SECRET",
+				"secret-value",
+			)
+		})
+	})
+
+	it("copies and exports the self-host environment file", async () => {
+		const writeText = vi.fn().mockResolvedValue(undefined)
+		const createObjectURL = vi.fn(() => "blob:environment")
+		const revokeObjectURL = vi.fn()
+		const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {})
+		Object.defineProperty(navigator, "clipboard", {
+			configurable: true,
+			value: { writeText },
+		})
+		Object.defineProperty(URL, "createObjectURL", {
+			configurable: true,
+			value: createObjectURL,
+		})
+		Object.defineProperty(URL, "revokeObjectURL", {
+			configurable: true,
+			value: revokeObjectURL,
+		})
+		setupMocks({ authenticated: false, syncEnabled: true, selfHosted: true })
+		render(<SyncSection view="self-host" />)
+
+		await userEvent.click(screen.getByRole("button", { name: "Copy .env" }))
+
+		expect(writeText).toHaveBeenCalledWith(expect.stringContaining("CORTEX_SERVER_HOST=0.0.0.0"))
+
+		await userEvent.click(screen.getByRole("button", { name: "Export" }))
+
+		expect(createObjectURL).toHaveBeenCalled()
+		expect(click).toHaveBeenCalled()
+		expect(revokeObjectURL).toHaveBeenCalledWith("blob:environment")
 	})
 })

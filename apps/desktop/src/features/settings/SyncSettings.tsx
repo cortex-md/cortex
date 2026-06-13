@@ -9,23 +9,19 @@ import {
 } from "@cortex/core"
 import { getPlatform } from "@cortex/platform"
 import {
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-	AccordionTrigger,
 	Alert,
 	AlertDescription,
 	AlertTitle,
 	Badge,
 	Button,
-	Field,
-	FieldDescription,
-	FieldGroup,
-	FieldLabel,
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
 	Input,
 	Switch,
 } from "@cortex/ui"
 import {
+	ChevronRight,
 	ClipboardCopy,
 	Clock3,
 	Cloud,
@@ -65,131 +61,213 @@ interface SelfHostedEnvironmentField {
 	secret?: boolean
 }
 
-interface SelfHostedEnvironmentGroup {
+interface SelfHostedEnvironmentSubsection {
 	id: string
 	label: string
 	fields: SelfHostedEnvironmentField[]
+}
+
+interface SelfHostedEnvironmentGroup {
+	id: string
+	label: string
+	description: string
+	sections: SelfHostedEnvironmentSubsection[]
 }
 
 const selfHostedEnvironmentGroups: SelfHostedEnvironmentGroup[] = [
 	{
 		id: "server",
 		label: "Server",
-		fields: [
-			{ key: "CORTEX_SERVER_HOST", label: "Host", defaultValue: "0.0.0.0" },
-			{ key: "CORTEX_SERVER_PORT", label: "Port", defaultValue: "8080" },
-			{ key: "CORTEX_SERVER_SHUTDOWN_TIMEOUT", label: "Shutdown timeout", defaultValue: "15s" },
+		description: "Runtime, sync limits, collaboration, operations, and subscriptions.",
+		sections: [
+			{
+				id: "runtime",
+				label: "Runtime",
+				fields: [
+					{ key: "CORTEX_SERVER_HOST", label: "Host", defaultValue: "0.0.0.0" },
+					{ key: "CORTEX_SERVER_PORT", label: "Port", defaultValue: "8080" },
+					{
+						key: "CORTEX_SERVER_SHUTDOWN_TIMEOUT",
+						label: "Shutdown timeout",
+						defaultValue: "15s",
+					},
+				],
+			},
+			{
+				id: "sync-limits",
+				label: "Sync limits",
+				fields: [
+					{
+						key: "CORTEX_SYNC_MAX_DELTAS_BEFORE_SNAPSHOT",
+						label: "Deltas before snapshot",
+						defaultValue: "10",
+					},
+					{
+						key: "CORTEX_SYNC_MAX_DELTA_SIZE_RATIO",
+						label: "Delta size ratio",
+						defaultValue: "0.5",
+					},
+					{
+						key: "CORTEX_SYNC_MAX_FILE_SIZE",
+						label: "Max file size",
+						defaultValue: "104857600",
+					},
+					{
+						key: "CORTEX_SYNC_MAX_SNAPSHOTS_PER_FILE",
+						label: "Snapshots per file",
+						defaultValue: "50",
+					},
+					{
+						key: "CORTEX_SYNC_EVENT_RETENTION",
+						label: "Event retention",
+						defaultValue: "720h",
+					},
+				],
+			},
+			{
+				id: "collaboration",
+				label: "Collaboration",
+				fields: [
+					{
+						key: "CORTEX_COLLAB_MAX_PEERS_PER_ROOM",
+						label: "Max peers per room",
+						defaultValue: "10",
+					},
+					{
+						key: "CORTEX_COLLAB_FLUSH_INTERVAL",
+						label: "Flush interval",
+						defaultValue: "10s",
+					},
+				],
+			},
+			{
+				id: "operations",
+				label: "Operations",
+				fields: [
+					{ key: "CORTEX_METRICS_ENABLED", label: "Metrics enabled", defaultValue: "true" },
+					{ key: "CORTEX_METRICS_PATH", label: "Metrics path", defaultValue: "/metrics" },
+					{
+						key: "CORTEX_RATE_LIMIT_REQUESTS_PER_SECOND",
+						label: "Requests per second",
+						defaultValue: "100",
+					},
+					{ key: "CORTEX_RATE_LIMIT_BURST", label: "Burst", defaultValue: "200" },
+				],
+			},
+			{
+				id: "subscription",
+				label: "Subscription",
+				fields: [
+					{
+						key: "CORTEX_SUBSCRIPTION_ENABLED",
+						label: "Enabled",
+						defaultValue: "false",
+					},
+					{
+						key: "CORTEX_SUBSCRIPTION_API_KEY",
+						label: "API key",
+						defaultValue: "",
+						secret: true,
+					},
+					{
+						key: "CORTEX_SUBSCRIPTION_PRODUCT_ID",
+						label: "Product ID",
+						defaultValue: "",
+					},
+					{
+						key: "CORTEX_SUBSCRIPTION_CACHE_TTL",
+						label: "Cache TTL",
+						defaultValue: "5m",
+					},
+				],
+			},
 		],
 	},
 	{
 		id: "database",
 		label: "Database",
-		fields: [
+		description: "PostgreSQL connection and pool sizing.",
+		sections: [
 			{
-				key: "CORTEX_DATABASE_URL",
-				label: "PostgreSQL URL",
-				defaultValue: "postgres://cortex:cortex@localhost:5432/cortex_sync?sslmode=disable",
+				id: "database",
+				label: "Database",
+				fields: [
+					{
+						key: "CORTEX_DATABASE_URL",
+						label: "PostgreSQL URL",
+						defaultValue: "postgres://cortex:cortex@localhost:5432/cortex_sync?sslmode=disable",
+					},
+					{ key: "CORTEX_DATABASE_MAX_CONNS", label: "Max connections", defaultValue: "25" },
+					{ key: "CORTEX_DATABASE_MIN_CONNS", label: "Min connections", defaultValue: "5" },
+				],
 			},
-			{ key: "CORTEX_DATABASE_MAX_CONNS", label: "Max connections", defaultValue: "25" },
-			{ key: "CORTEX_DATABASE_MIN_CONNS", label: "Min connections", defaultValue: "5" },
+		],
+	},
+	{
+		id: "authentication",
+		label: "Authentication",
+		description: "Access tokens, refresh lifetime, and issuer identity.",
+		sections: [
+			{
+				id: "authentication",
+				label: "Authentication",
+				fields: [
+					{
+						key: "CORTEX_AUTH_ACCESS_TOKEN_SECRET",
+						label: "Access token secret",
+						defaultValue: "change-me-in-production",
+						secret: true,
+					},
+					{
+						key: "CORTEX_AUTH_ACCESS_TOKEN_EXPIRY",
+						label: "Access token expiry",
+						defaultValue: "15m",
+					},
+					{
+						key: "CORTEX_AUTH_REFRESH_TOKEN_EXPIRY",
+						label: "Refresh token expiry",
+						defaultValue: "2160h",
+					},
+					{ key: "CORTEX_AUTH_ISSUER", label: "Issuer", defaultValue: "cortex-sync" },
+				],
+			},
 		],
 	},
 	{
 		id: "storage",
-		label: "Storage / S3",
-		fields: [
-			{ key: "CORTEX_S3_PROVIDER", label: "Provider", defaultValue: "minio" },
-			{ key: "CORTEX_S3_ENDPOINT", label: "Endpoint", defaultValue: "localhost:9000" },
+		label: "Storage",
+		description: "S3-compatible snapshot and asset storage.",
+		sections: [
 			{
-				key: "CORTEX_S3_ACCESS_KEY",
-				label: "Access key",
-				defaultValue: "minioadmin",
-				secret: true,
+				id: "storage",
+				label: "Storage",
+				fields: [
+					{ key: "CORTEX_S3_PROVIDER", label: "Provider", defaultValue: "minio" },
+					{ key: "CORTEX_S3_ENDPOINT", label: "Endpoint", defaultValue: "localhost:9000" },
+					{
+						key: "CORTEX_S3_ACCESS_KEY",
+						label: "Access key",
+						defaultValue: "minioadmin",
+						secret: true,
+					},
+					{
+						key: "CORTEX_S3_SECRET_KEY",
+						label: "Secret key",
+						defaultValue: "minioadmin",
+						secret: true,
+					},
+					{ key: "CORTEX_S3_BUCKET", label: "Bucket", defaultValue: "cortex-snapshots" },
+					{ key: "CORTEX_S3_USE_SSL", label: "Use SSL", defaultValue: "false" },
+					{ key: "CORTEX_S3_REGION", label: "Region", defaultValue: "us-east-1" },
+				],
 			},
-			{
-				key: "CORTEX_S3_SECRET_KEY",
-				label: "Secret key",
-				defaultValue: "minioadmin",
-				secret: true,
-			},
-			{ key: "CORTEX_S3_BUCKET", label: "Bucket", defaultValue: "cortex-snapshots" },
-			{ key: "CORTEX_S3_USE_SSL", label: "Use SSL", defaultValue: "false" },
-			{ key: "CORTEX_S3_REGION", label: "Region", defaultValue: "us-east-1" },
-		],
-	},
-	{
-		id: "auth",
-		label: "Auth",
-		fields: [
-			{
-				key: "CORTEX_AUTH_ACCESS_TOKEN_SECRET",
-				label: "Access token secret",
-				defaultValue: "change-me-in-production",
-				secret: true,
-			},
-			{ key: "CORTEX_AUTH_ACCESS_TOKEN_EXPIRY", label: "Access token expiry", defaultValue: "15m" },
-			{
-				key: "CORTEX_AUTH_REFRESH_TOKEN_EXPIRY",
-				label: "Refresh token expiry",
-				defaultValue: "2160h",
-			},
-			{ key: "CORTEX_AUTH_ISSUER", label: "Issuer", defaultValue: "cortex-sync" },
-		],
-	},
-	{
-		id: "limits",
-		label: "Sync Limits",
-		fields: [
-			{
-				key: "CORTEX_SYNC_MAX_DELTAS_BEFORE_SNAPSHOT",
-				label: "Deltas before snapshot",
-				defaultValue: "10",
-			},
-			{ key: "CORTEX_SYNC_MAX_DELTA_SIZE_RATIO", label: "Delta size ratio", defaultValue: "0.5" },
-			{ key: "CORTEX_SYNC_MAX_FILE_SIZE", label: "Max file size", defaultValue: "104857600" },
-			{
-				key: "CORTEX_SYNC_MAX_SNAPSHOTS_PER_FILE",
-				label: "Snapshots per file",
-				defaultValue: "50",
-			},
-			{ key: "CORTEX_SYNC_EVENT_RETENTION", label: "Event retention", defaultValue: "720h" },
-		],
-	},
-	{
-		id: "collab",
-		label: "Collab",
-		fields: [
-			{ key: "CORTEX_COLLAB_MAX_PEERS_PER_ROOM", label: "Max peers per room", defaultValue: "10" },
-			{ key: "CORTEX_COLLAB_FLUSH_INTERVAL", label: "Flush interval", defaultValue: "10s" },
-		],
-	},
-	{
-		id: "ops",
-		label: "Metrics / Rate Limit",
-		fields: [
-			{ key: "CORTEX_METRICS_ENABLED", label: "Metrics enabled", defaultValue: "true" },
-			{ key: "CORTEX_METRICS_PATH", label: "Metrics path", defaultValue: "/metrics" },
-			{
-				key: "CORTEX_RATE_LIMIT_REQUESTS_PER_SECOND",
-				label: "Requests per second",
-				defaultValue: "100",
-			},
-			{ key: "CORTEX_RATE_LIMIT_BURST", label: "Burst", defaultValue: "200" },
-		],
-	},
-	{
-		id: "subscription",
-		label: "Subscription",
-		fields: [
-			{ key: "CORTEX_SUBSCRIPTION_ENABLED", label: "Enabled", defaultValue: "false" },
-			{ key: "CORTEX_SUBSCRIPTION_API_KEY", label: "API key", defaultValue: "", secret: true },
-			{ key: "CORTEX_SUBSCRIPTION_PRODUCT_ID", label: "Product ID", defaultValue: "" },
-			{ key: "CORTEX_SUBSCRIPTION_CACHE_TTL", label: "Cache TTL", defaultValue: "5m" },
 		],
 	},
 ]
 
-const selfHostedEnvironmentFields = selfHostedEnvironmentGroups.flatMap((group) => group.fields)
+const selfHostedEnvironmentFields = selfHostedEnvironmentGroups.flatMap((group) =>
+	group.sections.flatMap((section) => section.fields),
+)
 
 function syncSecretKey(vaultId: string, key: string): string {
 	return `sync-env-secret:${vaultId}:${key}`
@@ -605,12 +683,101 @@ function MembersSection({
 	)
 }
 
+interface SelfHostedEnvironmentDisclosureProps {
+	group: SelfHostedEnvironmentGroup
+	open: boolean
+	values: Record<string, string>
+	secrets: Record<string, string>
+	onOpenChange: (open: boolean) => void
+	onFieldChange: (field: SelfHostedEnvironmentField, value: string) => Promise<void>
+}
+
+function SelfHostedEnvironmentDisclosure({
+	group,
+	open,
+	values,
+	secrets,
+	onOpenChange,
+	onFieldChange,
+}: SelfHostedEnvironmentDisclosureProps) {
+	const fieldCount = group.sections.reduce((count, section) => count + section.fields.length, 0)
+	const showSubsectionLabels = group.sections.length > 1
+
+	return (
+		<Collapsible open={open} onOpenChange={onOpenChange} className="border-b last:border-b-0">
+			<CollapsibleTrigger asChild>
+				<Button
+					variant="ghost"
+					aria-label={group.label}
+					className="h-auto w-full justify-between rounded-none px-4 py-3 text-left hover:bg-muted/50 [&[data-state=open]_.self-host-chevron]:rotate-90"
+				>
+					<div className="min-w-0">
+						<p className="m-0 text-[13px] font-medium text-foreground">{group.label}</p>
+						<p className="m-0 mt-0.5 truncate text-xs font-normal text-muted-foreground">
+							{group.description}
+						</p>
+					</div>
+					<div className="flex shrink-0 items-center gap-2">
+						<Badge variant="secondary">{fieldCount}</Badge>
+						<ChevronRight className="self-host-chevron size-4 text-muted-foreground transition-transform duration-200" />
+					</div>
+				</Button>
+			</CollapsibleTrigger>
+			<CollapsibleContent
+				forceMount
+				aria-hidden={!open}
+				inert={!open}
+				className="grid grid-rows-[0fr] transition-[grid-template-rows,visibility] duration-200 ease-out data-[state=closed]:invisible data-[state=open]:grid-rows-[1fr] data-[state=open]:visible"
+			>
+				<div className="min-h-0 overflow-hidden border-t border-settings-group-divider">
+					{group.sections.map((section) => (
+						<div key={section.id}>
+							{showSubsectionLabels && (
+								<div className="border-b border-settings-group-divider bg-muted/30 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+									{section.label}
+								</div>
+							)}
+							<div className="divide-y divide-settings-group-divider">
+								{section.fields.map((field) => {
+									const value = field.secret
+										? (secrets[field.key] ?? "")
+										: (values[field.key] ?? "")
+									return (
+										<SettingsField
+											key={field.key}
+											label={field.label}
+											description={field.key}
+											htmlFor={field.key}
+											controlClassName="max-w-[420px]"
+										>
+											<Input
+												id={field.key}
+												type={field.secret ? "password" : "text"}
+												value={value}
+												onChange={(event: ChangeEvent<HTMLInputElement>) =>
+													void onFieldChange(field, event.target.value)
+												}
+												placeholder={field.defaultValue}
+											/>
+										</SettingsField>
+									)
+								})}
+							</div>
+						</div>
+					))}
+				</div>
+			</CollapsibleContent>
+		</Collapsible>
+	)
+}
+
 function SelfHostedEnvironmentSection() {
 	const vault = useVaultStore((s) => s.vault)
 	const syncConfig = useRemoteVaultStore((s) => s.syncConfig)
 	const updateSelfHostedEnvironment = useRemoteVaultStore((s) => s.updateSelfHostedEnvironment)
 	const [secrets, setSecrets] = useState<Record<string, string>>({})
 	const [copied, setCopied] = useState(false)
+	const [openGroupId, setOpenGroupId] = useState<string | null>(null)
 
 	useEffect(() => {
 		let cancelled = false
@@ -702,39 +869,17 @@ function SelfHostedEnvironmentSection() {
 			}
 		>
 			<SettingsGroup>
-				<SettingsGroupContent>
-					<Accordion type="multiple">
-						{selfHostedEnvironmentGroups.map((group) => (
-							<AccordionItem key={group.id} value={group.id}>
-								<AccordionTrigger>{group.label}</AccordionTrigger>
-								<AccordionContent>
-									<FieldGroup className="gap-3">
-										{group.fields.map((field) => {
-											const value = field.secret
-												? (secrets[field.key] ?? "")
-												: (syncConfig.selfHostedEnvironment[field.key] ?? "")
-											return (
-												<Field key={field.key}>
-													<FieldLabel htmlFor={field.key}>{field.label}</FieldLabel>
-													<Input
-														id={field.key}
-														type={field.secret ? "password" : "text"}
-														value={value}
-														onChange={(event: ChangeEvent<HTMLInputElement>) =>
-															handleFieldChange(field, event.target.value)
-														}
-														placeholder={field.defaultValue}
-													/>
-													<FieldDescription>{field.key}</FieldDescription>
-												</Field>
-											)
-										})}
-									</FieldGroup>
-								</AccordionContent>
-							</AccordionItem>
-						))}
-					</Accordion>
-				</SettingsGroupContent>
+				{selfHostedEnvironmentGroups.map((group) => (
+					<SelfHostedEnvironmentDisclosure
+						key={group.id}
+						group={group}
+						open={openGroupId === group.id}
+						values={syncConfig.selfHostedEnvironment}
+						secrets={secrets}
+						onOpenChange={(open) => setOpenGroupId(open ? group.id : null)}
+						onFieldChange={handleFieldChange}
+					/>
+				))}
 			</SettingsGroup>
 		</SettingsSection>
 	)
