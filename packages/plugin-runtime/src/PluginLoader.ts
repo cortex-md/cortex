@@ -4,6 +4,11 @@ import { CortexPlugin } from "cortex-plugin-api"
 import { validatePluginManifestCapabilities } from "./manifestCapabilities"
 import { createPluginAPI } from "./PluginAPIFactory"
 import { usePluginStore } from "./pluginStore"
+import {
+	installPluginMarkdownStyles,
+	removePluginMarkdownStyles,
+	scopePluginMarkdownStyles,
+} from "./pluginStyles"
 
 interface PluginInstance {
 	plugin: CortexPlugin
@@ -21,6 +26,7 @@ interface PluginModule {
 const bundledPlugins = new Map<string, PluginModule>()
 const communityPluginLoadErrors = new Map<string, string>()
 const communityPluginDirs = new Map<string, string>()
+const communityPluginStyles = new Map<string, string>()
 
 function reportPluginOperationError(operation: string, pluginId: string, error: unknown): void {
 	console.error("[Plugin operation failed]", {
@@ -58,6 +64,7 @@ export async function enablePlugin(
 
 		await api.settings.load()
 		await plugin.onload()
+		installPluginMarkdownStyles(pluginId, communityPluginStyles.get(pluginId) ?? null)
 
 		instances.set(pluginId, { plugin, manifest: record.manifest })
 		store.setPluginStatus(pluginId, "enabled")
@@ -69,6 +76,7 @@ export async function enablePlugin(
 
 export async function disablePlugin(pluginId: string): Promise<void> {
 	const instance = instances.get(pluginId)
+	removePluginMarkdownStyles(pluginId)
 	if (!instance) return
 
 	try {
@@ -124,6 +132,7 @@ export async function discoverCommunityPlugins(pluginsDir: string): Promise<void
 			communityPluginLoadErrors.delete(pluginId)
 			bundledPlugins.delete(pluginId)
 			communityPluginDirs.delete(pluginId)
+			communityPluginStyles.delete(pluginId)
 
 			if (!manifest.id) {
 				communityPluginLoadErrors.set(pluginId, "manifest.json is missing id")
@@ -134,6 +143,7 @@ export async function discoverCommunityPlugins(pluginsDir: string): Promise<void
 				continue
 			}
 			validatePluginManifestCapabilities(manifest)
+			const pluginStyles = await readCommunityPluginStyles(dir.path, manifest)
 
 			const mainPath = resolvePluginMainPath(dir.path, manifest.main)
 			if (!mainPath) {
@@ -147,6 +157,7 @@ export async function discoverCommunityPlugins(pluginsDir: string): Promise<void
 			if (loadedModule) {
 				bundledPlugins.set(manifest.id, loadedModule)
 				communityPluginDirs.set(manifest.id, dir.path)
+				if (pluginStyles) communityPluginStyles.set(manifest.id, pluginStyles)
 				usePluginStore.getState().registerPlugin(manifest)
 			}
 		} catch (error) {
@@ -160,9 +171,27 @@ export async function discoverCommunityPlugins(pluginsDir: string): Promise<void
 		await disablePlugin(pluginId)
 		bundledPlugins.delete(pluginId)
 		communityPluginDirs.delete(pluginId)
+		communityPluginStyles.delete(pluginId)
 		communityPluginLoadErrors.delete(pluginId)
 		usePluginStore.getState().unregisterPlugin(pluginId)
 	}
+}
+
+async function readCommunityPluginStyles(
+	pluginDir: string,
+	manifest: PluginManifest,
+): Promise<string | null> {
+	let source: string
+	try {
+		source = await getPlatform().fs.readFile(`${pluginDir}/styles.css`)
+	} catch {
+		return null
+	}
+	if (!source.trim()) return null
+	if (!manifest.capabilities?.includes("markdown:extensions")) {
+		throw new Error('styles.css requires the "markdown:extensions" capability')
+	}
+	return scopePluginMarkdownStyles(source)
 }
 
 export async function reloadCommunityPlugins(

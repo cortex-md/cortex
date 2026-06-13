@@ -184,6 +184,8 @@ export function generateCSSVariables(theme: Theme): Record<string, string> {
 	vars["--tag-padding"] = t.tag.padding
 
 	vars["--heading-font-weight"] = t.heading.fontWeight
+	vars["--normal-weight"] = t.typography.editor.fontWeight
+	vars["--inline-title-margin-bottom"] = t.heading.inlineTitleMarginBottom ?? "1rem"
 	vars["--h1-font-size"] = t.heading.h1FontSize
 	vars["--h2-font-size"] = t.heading.h2FontSize
 	vars["--h3-font-size"] = t.heading.h3FontSize
@@ -203,8 +205,13 @@ export function generateCSSVariables(theme: Theme): Record<string, string> {
 	vars["--editor-paragraph-spacing"] = t.sizing.editorParagraphSpacing
 	vars["--markdown-content-width"] = t.markdown?.contentWidth ?? "720px"
 	vars["--markdown-content-gutter"] = t.markdown?.contentGutter ?? "40px"
+	vars["--markdown-block-radius"] = t.markdown?.blockRadius ?? "6px"
+	vars["--markdown-block-spacing"] = t.markdown?.blockSpacing ?? "1em"
 	vars["--markdown-code-padding-inline"] = t.markdown?.codePaddingInline ?? "16px"
 	vars["--markdown-code-padding-block"] = t.markdown?.codePaddingBlock ?? "8px"
+	vars["--markdown-callout-padding-block"] = t.markdown?.calloutPaddingBlock ?? "12px"
+	vars["--markdown-callout-padding-inline-start"] = t.markdown?.calloutPaddingInlineStart ?? "24px"
+	vars["--markdown-callout-padding-inline-end"] = t.markdown?.calloutPaddingInlineEnd ?? "12px"
 
 	return vars
 }

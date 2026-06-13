@@ -142,6 +142,36 @@ describe("flushAll()", () => {
 	})
 })
 
+describe("renamePath()", () => {
+	it("moves cache state, snapshots, and open tab ownership to the new path", async () => {
+		const newPath = "/vault/renamed.md"
+		await seedEntry()
+		noteCache.openTab(FILE_PATH)
+		noteCache.takeSnapshot(FILE_PATH, "manual")
+
+		noteCache.renamePath(FILE_PATH, newPath)
+
+		expect(noteCache.getEntry(FILE_PATH)).toBeUndefined()
+		expect(noteCache.getEntry(newPath)).toMatchObject({
+			filePath: newPath,
+			openTabCount: 1,
+		})
+		expect(noteCache.getSnapshots(newPath)).toHaveLength(1)
+	})
+
+	it("moves a pending save so it cannot write to the old path", async () => {
+		const newPath = "/vault/renamed.md"
+		await seedEntry()
+		noteCache.write(FILE_PATH, "modified content")
+
+		noteCache.renamePath(FILE_PATH, newPath)
+		await vi.advanceTimersByTimeAsync(2001)
+
+		expect(mockWriteFile).toHaveBeenCalledWith(newPath, "modified content")
+		expect(mockWriteFile).not.toHaveBeenCalledWith(FILE_PATH, "modified content")
+	})
+})
+
 describe("openTab() / closeTab()", () => {
 	it("increments openTabCount when file is already in cache", async () => {
 		await seedEntry()

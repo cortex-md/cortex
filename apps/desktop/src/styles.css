@@ -602,6 +602,12 @@ body[data-platform="windows"] .file-tree-item.active {
 	margin-inline: auto;
 }
 
+.reading-view-parent-scroll {
+	height: auto;
+	overflow: visible;
+	padding-top: 8px;
+}
+
 .marketplace-readme {
 	padding: 20px;
 }
@@ -637,6 +643,13 @@ body[data-platform="windows"] .file-tree-item.active {
 	overflow: hidden;
 }
 
+.side-by-side-view-parent-scroll {
+	height: auto;
+	min-height: 100%;
+	overflow: visible;
+	align-items: stretch;
+}
+
 .side-by-side-editor {
 	flex: 1;
 	overflow: hidden;
@@ -652,6 +665,80 @@ body[data-platform="windows"] .file-tree-item.active {
 	height: auto;
 	min-height: 100%;
 	overflow: visible;
+}
+
+.side-by-side-view-parent-scroll .side-by-side-editor,
+.side-by-side-view-parent-scroll .side-by-side-preview {
+	overflow: visible;
+}
+
+.note-document-scroll {
+	flex: 1;
+	min-height: 0;
+	overflow: auto;
+	background: var(--bg-primary);
+}
+
+.note-document-surface {
+	min-height: calc(100% - 96px);
+}
+
+.note-header {
+	max-width: var(--markdown-content-width, 720px);
+	margin-inline: auto;
+	padding: 24px var(--markdown-content-gutter, 40px) var(--inline-title-margin-bottom, 1rem);
+	font-size: var(--editor-font-size, 16px);
+}
+
+.note-header-title-group {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+}
+
+.note-header-breadcrumb {
+	width: 100%;
+	height: 20px;
+	opacity: 0;
+	pointer-events: auto;
+	transition: opacity 120ms ease;
+}
+
+.note-header-breadcrumb:hover,
+.note-header-breadcrumb:focus-within {
+	opacity: 1;
+}
+
+.note-header-title {
+	height: auto;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+	text-align: left;
+	font-family: var(--font-editor);
+	font-size: calc(var(--h1-font-size, 1.125em) + 0.075em);
+	font-weight: 700;
+	line-height: 1.3;
+	color: var(--h1-color, var(--syntax-heading, var(--text-primary)));
+}
+
+.note-header-title:hover,
+.note-header-title:focus {
+	background: transparent;
+	border: 0;
+	box-shadow: none;
+}
+
+.note-header-error {
+	min-height: 18px;
+	margin-top: 2px;
+	color: var(--status-error);
+	font-family: var(--font-ui);
+	font-size: 11px;
+	line-height: 18px;
+	text-align: left;
 }
 
 body[data-platform="macos"] .app-shell {

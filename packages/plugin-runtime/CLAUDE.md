@@ -28,6 +28,7 @@ packages/plugin-runtime/
       settingsControls.ts         # Platform-agnostic component contract for settings renderer
     pluginStore.ts       # Zustand store: loaded plugins, enabled state, aggregated registrations
     PluginLoader.ts      # Discovery, lifecycle (load/enable/disable/unload)
+    pluginStyles.ts      # Parses and scopes community styles.css to Markdown surfaces
     PluginAPIFactory.ts  # Creates scoped PluginAPI per plugin
     index.ts
 ```
@@ -103,6 +104,11 @@ vault/.cortex/
 ```
 
 Community plugin discovery only accepts a safe relative `manifest.main` path. Empty paths, absolute paths, Windows drive paths, and any path containing `..` are ignored before the runtime attempts to read or evaluate the bundle. The loader accepts CommonJS bundles and self-contained ESM bundles with a default plugin class export. Bare ESM imports are not resolved by the runtime, so marketplace plugins should publish bundled release assets.
+
+An optional `styles.css` requires the `markdown:extensions` capability. Selectors are parsed with
+`css-tree`, scoped to `.markdown-surface`, and installed only for the enabled plugin lifecycle.
+Global or unscopable at-rules are rejected during discovery, and hot reload replaces the previous
+style element.
 
 Markdown registration IDs are scoped as `<plugin-id>:<registration-id>`. Invalid registrations fail
 before changing renderer state. Loader lifecycle failures emit structured plugin diagnostics instead

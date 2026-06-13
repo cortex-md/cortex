@@ -2,10 +2,11 @@ import {
 	type EditorSelection,
 	type EditorState,
 	type Range,
+	type RangeSet,
 	StateField,
 	type Transaction,
 } from "@codemirror/state"
-import { Decoration, type DecorationSet, EditorView } from "@codemirror/view"
+import { BlockWrapper, Decoration, type DecorationSet, EditorView } from "@codemirror/view"
 import { getCalloutStyleVariables, resolveCalloutType } from "@cortex/renderer"
 import { livePreviewRegistryChanged, toggleCalloutCollapsed } from "./effects"
 import { recordBlockPass } from "./metrics"
@@ -18,13 +19,7 @@ import {
 	type MarkdownBlockIndex,
 	selectionOverlapsBlock,
 } from "./model"
-import {
-	CollapsedCalloutWidget,
-	FrontmatterWidget,
-	HorizontalRuleWidget,
-	ImageWidget,
-	TableWidget,
-} from "./widgets"
+import { HorizontalRuleWidget, ImageWidget, TableDelimiterWidget, TableRowWidget } from "./widgets"
 
 export interface LivePreviewBlockState {
 	blocks: MarkdownBlock[]
@@ -32,6 +27,7 @@ export interface LivePreviewBlockState {
 	replacementBlocks: MarkdownBlock[]
 	collapsedCallouts: ReadonlyMap<string, boolean>
 	decorations: DecorationSet
+	wrappers: RangeSet<BlockWrapper>
 	replacementIds: string
 }
 
@@ -59,6 +55,76 @@ function calloutLineDecoration(block: CalloutBlock): Decoration {
 	})
 }
 
+function getCalloutCollapsed(
+	block: CalloutBlock,
+	collapsedCallouts: ReadonlyMap<string, boolean>,
+	selection: EditorSelection,
+): boolean {
+	if (selectionOverlapsBlock(selection, block)) return false
+	return collapsedCallouts.get(block.id) ?? block.callout.fold === "collapsed"
+}
+
+function createBlockWrapper(
+	block: MarkdownBlock,
+	collapsedCallouts: ReadonlyMap<string, boolean>,
+	selection: EditorSelection,
+): BlockWrapper | null {
+	if (block.kind === "code") {
+		return BlockWrapper.create({
+			tagName: "div",
+			attributes: {
+				class: "cm-markdown-block cm-codeblock-wrapper",
+				"data-codeblock-id": block.id,
+			},
+		})
+	}
+	if (block.kind === "callout") {
+		const definition = resolveCalloutType(block.callout.type)
+		const styles = getCalloutStyleVariables(definition)
+		const collapsed = getCalloutCollapsed(block, collapsedCallouts, selection)
+		return BlockWrapper.create({
+			tagName: "div",
+			attributes: {
+				class: `cm-markdown-block cm-callout-wrapper${collapsed ? " is-collapsed" : ""}`,
+				"data-callout": block.callout.type,
+				style: `--callout-color: ${styles.color}; --callout-bg: ${styles.backgroundColor}`,
+			},
+		})
+	}
+	if (block.kind === "blockquote") {
+		return BlockWrapper.create({
+			tagName: "div",
+			attributes: { class: "cm-markdown-block cm-blockquote-wrapper" },
+		})
+	}
+	if (block.kind === "table") {
+		return BlockWrapper.create({
+			tagName: "div",
+			attributes: { class: "cm-markdown-block cm-table-wrapper" },
+		})
+	}
+	if (block.kind === "frontmatter") {
+		return BlockWrapper.create({
+			tagName: "div",
+			attributes: { class: "cm-markdown-block cm-frontmatter-wrapper" },
+		})
+	}
+	return null
+}
+
+function buildWrappers(
+	blocks: MarkdownBlock[],
+	collapsedCallouts: ReadonlyMap<string, boolean>,
+	selection: EditorSelection,
+): RangeSet<BlockWrapper> {
+	const ranges: Range<BlockWrapper>[] = []
+	for (const block of blocks) {
+		const wrapper = createBlockWrapper(block, collapsedCallouts, selection)
+		if (wrapper) ranges.push(wrapper.range(block.from, block.to))
+	}
+	return BlockWrapper.set(ranges, true)
+}
+
 function buildDecorations(
 	state: EditorState,
 	blocks: MarkdownBlock[],
@@ -82,7 +148,6 @@ function buildDecorations(
 			if (replaced) {
 				ranges.push(
 					Decoration.replace({
-						block: true,
 						widget: new HorizontalRuleWidget(),
 					}).range(block.from, block.to),
 				)
@@ -106,50 +171,45 @@ function buildDecorations(
 			continue
 		}
 		if (block.kind === "callout") {
-			if (replaced) {
-				ranges.push(
-					Decoration.replace({
-						block: true,
-						widget: new CollapsedCalloutWidget(block),
-					}).range(block.from, block.to),
-				)
-			} else {
-				addLineDecoration(state, ranges, block, calloutLineDecoration(block))
-			}
+			addLineDecoration(state, ranges, block, calloutLineDecoration(block))
 			continue
 		}
 		if (block.kind === "table") {
-			if (replaced) {
-				ranges.push(
-					Decoration.replace({ block: true, widget: new TableWidget(block) }).range(
-						block.from,
-						block.to,
-					),
-				)
-			} else {
-				for (let lineNumber = block.firstLine; lineNumber <= block.lastLine; lineNumber++) {
-					const line = state.doc.line(lineNumber)
-					const classes = ["cm-table-line"]
-					if (lineNumber === block.firstLine) classes.push("cm-table-header-line")
-					if (/^\s*\|?[\s|:-]+\|?\s*$/.test(line.text)) {
-						classes.push("cm-table-delimiter-line")
-					}
-					ranges.push(Decoration.line({ class: classes.join(" ") }).range(line.from))
+			for (let lineNumber = block.firstLine; lineNumber <= block.lastLine; lineNumber++) {
+				const line = state.doc.line(lineNumber)
+				const classes = ["cm-table-line"]
+				if (lineNumber === block.firstLine) classes.push("cm-table-header-line")
+				if (/^\s*\|?[\s|:-]+\|?\s*$/.test(line.text)) {
+					classes.push("cm-table-delimiter-line")
 				}
+				ranges.push(Decoration.line({ class: classes.join(" ") }).range(line.from))
+			}
+			if (replaced) {
+				const headerLine = state.doc.line(block.firstLine)
+				ranges.push(
+					Decoration.replace({
+						widget: new TableRowWidget(block.table.headers, block.table.alignments, true),
+					}).range(headerLine.from, headerLine.to),
+				)
+				const delimiterLine = state.doc.line(block.firstLine + 1)
+				ranges.push(
+					Decoration.replace({
+						widget: new TableDelimiterWidget(block.table.headers.length),
+					}).range(delimiterLine.from, delimiterLine.to),
+				)
+				block.table.rows.forEach((row, index) => {
+					const rowLine = state.doc.line(block.firstLine + index + 2)
+					ranges.push(
+						Decoration.replace({
+							widget: new TableRowWidget(row, block.table.alignments, false),
+						}).range(rowLine.from, rowLine.to),
+					)
+				})
 			}
 			continue
 		}
 		if (block.kind === "frontmatter") {
-			if (replaced) {
-				ranges.push(
-					Decoration.replace({ block: true, widget: new FrontmatterWidget(block) }).range(
-						block.from,
-						block.to,
-					),
-				)
-			} else {
-				addLineDecoration(state, ranges, block, Decoration.line({ class: "cm-frontmatter-line" }))
-			}
+			addLineDecoration(state, ranges, block, Decoration.line({ class: "cm-frontmatter-line" }))
 			continue
 		}
 		if (block.kind === "image" && replaced) {
@@ -171,6 +231,9 @@ function getReplacementIds(
 	for (const block of blocks) {
 		if (blockUsesReplacement(block, collapsedCallouts, selection)) {
 			ids.push(`${block.id}:replaced`)
+		}
+		if (block.kind === "callout" && getCalloutCollapsed(block, collapsedCallouts, selection)) {
+			ids.push(`${block.id}:collapsed`)
 		}
 		if (block.kind === "code" && selectionOverlapsBlock(selection, block)) {
 			ids.push(`${block.id}:source`)
@@ -199,6 +262,7 @@ function createBlockState(
 		collapsedCallouts,
 		replacementIds,
 		decorations: buildDecorations(state, blocks, collapsedCallouts),
+		wrappers: buildWrappers(blocks, collapsedCallouts, state.selection),
 	}
 }
 
@@ -268,20 +332,14 @@ export function createLivePreviewBlockField(
 					blockUsesReplacement(block, collapsedCallouts, transaction.state.selection),
 				),
 				decorations: buildDecorations(transaction.state, value.blocks, collapsedCallouts),
+				wrappers: buildWrappers(value.blocks, collapsedCallouts, transaction.state.selection),
 			}
 		},
 		provide(field) {
-			return EditorView.decorations.from(field, (value) => value.decorations)
+			return [
+				EditorView.decorations.from(field, (value) => value.decorations),
+				EditorView.blockWrappers.from(field, (value) => value.wrappers),
+			]
 		},
 	})
-}
-
-export function getReplacedBlocks(
-	state: EditorState,
-	field: StateField<LivePreviewBlockState>,
-): MarkdownBlock[] {
-	const value = state.field(field)
-	return value.blocks.filter((block) =>
-		blockUsesReplacement(block, value.collapsedCallouts, state.selection),
-	)
 }

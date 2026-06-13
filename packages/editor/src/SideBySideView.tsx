@@ -8,6 +8,7 @@ interface Props {
 	content: string
 	filePath: string
 	editorConfig?: EditorConfig
+	scrollMode?: "internal" | "parent"
 	onChange: (content: string) => void
 	onWikiLinkClick?: (target: string) => void
 	onExternalLinkClick?: (url: string) => void
@@ -17,6 +18,7 @@ export function SideBySideView({
 	content,
 	filePath,
 	editorConfig,
+	scrollMode = "internal",
 	onChange,
 	onWikiLinkClick,
 	onExternalLinkClick,
@@ -47,9 +49,11 @@ export function SideBySideView({
 		(view: CMEditorView) => {
 			editorScrollRef.current?.scrollDOM.removeEventListener("scroll", handleEditorScroll)
 			editorScrollRef.current = view
-			view.scrollDOM.addEventListener("scroll", handleEditorScroll)
+			if (scrollMode === "internal") {
+				view.scrollDOM.addEventListener("scroll", handleEditorScroll)
+			}
 		},
-		[handleEditorScroll],
+		[handleEditorScroll, scrollMode],
 	)
 
 	useEffect(() => {
@@ -60,13 +64,14 @@ export function SideBySideView({
 	}, [handleEditorScroll])
 
 	return (
-		<div className="side-by-side-view">
+		<div className={`side-by-side-view side-by-side-view-${scrollMode}-scroll`}>
 			<div className="side-by-side-editor">
 				<EditorView
 					content={content}
 					filePath={filePath}
 					editorConfig={editorConfig}
 					livePreview={false}
+					scrollMode={scrollMode}
 					onChange={onChange}
 					onViewReady={handleViewReady}
 				/>
@@ -75,6 +80,7 @@ export function SideBySideView({
 				<ReadingView
 					content={content}
 					renderDelay={80}
+					scrollMode={scrollMode}
 					onWikiLinkClick={onWikiLinkClick}
 					onExternalLinkClick={onExternalLinkClick}
 				/>

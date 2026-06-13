@@ -181,6 +181,11 @@ empty `catch` blocks.
 `fileTags[filePath]` and `tagColors` directly instead of subscribing to getter functions or creating
 their own caches.
 
+### Note Path Presentation
+
+Use `getNotePathPresentation(filePath, vaultPath)` for note titles and breadcrumbs. It returns the
+vault-relative segments, omits the vault itself, and removes the Markdown extension from the note.
+
 ## Existing Stores
 
 ### vaultStore
@@ -211,6 +216,11 @@ export interface VaultState {
 ```
 
 **Usage**: `const { vault, files, recentVaults, openVault, closeVault } = useVaultStore()`
+
+`renameFile` is the authority for file and note-title renames. It validates portable filenames,
+flushes the old NoteCache path before the filesystem operation, migrates cache timers and snapshots,
+updates every matching workspace tab, rewrites matching bookmarks, and refreshes the vault tree.
+Callers must not repeat those updates after invoking it.
 
 ### editorStore
 Tracks the currently active file and editor state:

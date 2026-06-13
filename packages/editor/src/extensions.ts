@@ -19,6 +19,7 @@ import { search, searchKeymap } from "@codemirror/search"
 import { Compartment, EditorState } from "@codemirror/state"
 import { dropCursor, EditorView, highlightActiveLine, keymap, lineNumbers } from "@codemirror/view"
 import { GFM } from "@lezer/markdown"
+import type { EditorScrollMode } from "./EditorView"
 import { buildHighlightStyle } from "./highlight"
 import { livePreviewExtension } from "./livePreview"
 import { defaultMarkdownKeymapExtension } from "./markdownKeymap"
@@ -71,7 +72,11 @@ const indentCompartment = new Compartment()
 const lineNumbersCompartment = new Compartment()
 const pluginExtensionsCompartment = new Compartment()
 
-export function buildEditorTypographyRules(fontSize: number) {
+export function buildEditorTypographyRules(
+	fontSize: number,
+	scrollMode: EditorScrollMode = "internal",
+) {
+	const usesParentScroll = scrollMode === "parent"
 	return {
 		"&": {
 			fontSize: `var(--editor-font-size, ${fontSize}px)`,
@@ -79,16 +84,16 @@ export function buildEditorTypographyRules(fontSize: number) {
 				'var(--font-editor, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif)',
 			fontWeight: "var(--editor-font-weight, 400)",
 			background: "transparent",
-			height: "100%",
+			height: usesParentScroll ? "auto" : "100%",
 		},
 		"&.cm-focused": { outline: "none" },
 		".cm-scroller": {
-			overflow: "auto",
+			overflow: usesParentScroll ? "visible" : "auto",
 			fontFamily: "inherit",
 			lineHeight: "var(--editor-line-height, 27px)",
 		},
 		".cm-content": {
-			padding: "24px 0",
+			padding: usesParentScroll ? "8px 0 24px" : "24px 0",
 			caretColor: "var(--accent)",
 			maxWidth: "var(--markdown-content-width, 720px)",
 			marginInline: "auto",
@@ -205,19 +210,25 @@ export function buildEditorTypographyRules(fontSize: number) {
 	}
 }
 
-function typographyExtension(fontSize: number) {
-	return EditorView.theme(buildEditorTypographyRules(fontSize))
+function typographyExtension(fontSize: number, scrollMode: EditorScrollMode) {
+	return EditorView.theme(buildEditorTypographyRules(fontSize, scrollMode))
 }
 
 export interface BaseExtensionsOptions {
 	livePreview?: boolean
 	resolveImageUrl?: (src: string, filePath: string) => string
 	filePath?: string
+	scrollMode?: EditorScrollMode
 }
 
 export function baseExtensions(
 	config: EditorConfig = DEFAULT_EDITOR_CONFIG,
-	{ livePreview = true, resolveImageUrl, filePath }: BaseExtensionsOptions = {},
+	{
+		livePreview = true,
+		resolveImageUrl,
+		filePath,
+		scrollMode = "internal",
+	}: BaseExtensionsOptions = {},
 ) {
 	return [
 		history(),
@@ -238,7 +249,7 @@ export function baseExtensions(
 			codeLanguages,
 			extensions: GFM,
 		}),
-		typographyCompartment.of(typographyExtension(config.fontSize)),
+		typographyCompartment.of(typographyExtension(config.fontSize, scrollMode)),
 		lineWrappingCompartment.of(config.wordWrap ? EditorView.lineWrapping : []),
 		indentCompartment.of(indentUnit.of(config.useSpaces ? " ".repeat(config.tabSize) : "\t")),
 		lineNumbersCompartment.of(config.showLineNumbers ? lineNumbers() : []),
@@ -246,10 +257,14 @@ export function baseExtensions(
 	]
 }
 
-export function reconfigureEditor(view: EditorView, config: EditorConfig) {
+export function reconfigureEditor(
+	view: EditorView,
+	config: EditorConfig,
+	scrollMode: EditorScrollMode = "internal",
+) {
 	view.dispatch({
 		effects: [
-			typographyCompartment.reconfigure(typographyExtension(config.fontSize)),
+			typographyCompartment.reconfigure(typographyExtension(config.fontSize, scrollMode)),
 			lineWrappingCompartment.reconfigure(config.wordWrap ? EditorView.lineWrapping : []),
 			indentCompartment.reconfigure(
 				indentUnit.of(config.useSpaces ? " ".repeat(config.tabSize) : "\t"),

@@ -27,8 +27,8 @@ function createBlockWidgetEditor(content: string): EditorView {
 	return view
 }
 
-describe("block live preview widgets", () => {
-	it("renders tables as widgets and expanded callouts on source lines", () => {
+describe("block live preview projections", () => {
+	it("renders tables and expanded callouts on source lines", () => {
 		const content = `| Name | Style |
 | --- | --- |
 | **Bold** | *Italic* |
@@ -40,8 +40,10 @@ describe("block live preview widgets", () => {
 tail`
 
 		expect(() => createBlockWidgetEditor(content)).not.toThrow()
-		expect(document.querySelector(".cm-table-widget strong")?.textContent).toBe("Bold")
-		expect(document.querySelector(".cm-table-widget em")?.textContent).toBe("Italic")
+		expect(document.querySelector(".cm-table-wrapper strong")?.textContent).toBe("Bold")
+		expect(document.querySelector(".cm-table-wrapper em")?.textContent).toBe("Italic")
+		expect(document.querySelectorAll(".cm-table-row-widget")).toHaveLength(2)
+		expect(document.querySelectorAll(".cm-table-cell-widget")).toHaveLength(4)
 		expect(document.querySelectorAll(".cm-callout-line").length).toBeGreaterThan(1)
 		expect(
 			Array.from(document.querySelectorAll(".cm-bold")).some(
@@ -59,14 +61,16 @@ tail`
 		const content = "> [!tip]- Folded\n> Hidden\n\ntail"
 		const view = createBlockWidgetEditor(content)
 		const selectionBefore = view.state.selection.main.anchor
-		const callout = document.querySelector(".cm-callout-widget")
+		const callout = document.querySelector(".cm-callout-wrapper")
 		const toggle = callout?.querySelector<HTMLButtonElement>("[data-callout-toggle]")
 
 		expect(callout?.classList.contains("is-collapsed")).toBe(true)
 		toggle?.dispatchEvent(new Event("pointerdown", { bubbles: true, cancelable: true }))
 		toggle?.click()
 
-		expect(document.querySelector(".cm-callout-widget")).toBeNull()
+		expect(document.querySelector(".cm-callout-wrapper")?.classList.contains("is-collapsed")).toBe(
+			false,
+		)
 		expect(document.querySelectorAll(".cm-callout-line").length).toBe(2)
 		expect(view.state.selection.main.anchor).toBe(selectionBefore)
 	})
@@ -82,7 +86,34 @@ tail`
 		toggle?.dispatchEvent(new Event("pointerdown", { bubbles: true, cancelable: true }))
 		toggle?.click()
 
-		expect(document.querySelector(".cm-callout-widget")).not.toBeNull()
+		expect(document.querySelector(".cm-callout-wrapper")?.classList.contains("is-collapsed")).toBe(
+			true,
+		)
 		expect(view.state.selection.main.anchor).toBe(selectionBefore)
+	})
+
+	it("keeps one CodeMirror line for every source line across projected blocks", () => {
+		const content = `---
+title: Navigation
+---
+
+| A | B |
+| --- | --- |
+| One | Two |
+
+> [!tip]- Folded
+> Hidden
+
+![Image](image.png)
+
+---`
+
+		const view = createBlockWidgetEditor(content)
+
+		expect(document.querySelectorAll(".cm-line")).toHaveLength(view.state.doc.lines)
+		expect(document.querySelectorAll(".cm-table-line")).toHaveLength(3)
+		expect(document.querySelectorAll(".cm-table-row-widget")).toHaveLength(2)
+		expect(document.querySelectorAll(".cm-frontmatter-line")).toHaveLength(3)
+		expect(document.querySelectorAll(".cm-callout-line")).toHaveLength(2)
 	})
 })

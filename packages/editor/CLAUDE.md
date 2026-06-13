@@ -25,15 +25,14 @@ packages/editor/
       blockState.ts             # Block StateField and source/widget mode
       visibleDecorations.ts     # One indexed viewport ViewPlugin
       metrics.ts                # Deterministic traversal and decoration counters
-      inlineTree.ts             # Inline snapshots from existing Lezer nodes
-      widgets.ts                # Native block and control widgets
+      widgets.ts                # Inline projection and control widgets
       styles.css                # Live Preview-specific styles
     index.ts
 ```
 
 ## Key Exports
 
-- `EditorView` — React component (props: content, filePath, editorConfig, livePreview, extraExtensions, onChange, onCursorChange, onViewReady)
+- `EditorView` — React component (props: content, filePath, editorConfig, livePreview, extraExtensions, scrollMode, onChange, onCursorChange, onViewReady)
 - `clipboardImageExtension(onImagePaste)` — CM6 extension that intercepts paste events with clipboard images, calls the callback with the Blob and inserts the returned markdown string at cursor
 - `baseExtensions(options)` — Creates CM6 extensions array including the markdown keymap
 - `reconfigureEditor(view, config)` — Reconfigures editor settings via Compartments
@@ -79,7 +78,14 @@ Default bindings (user-customizable via Settings → Hotkeys):
 
 The editor uses one block `StateField` and one visible-range `ViewPlugin`. Block state owns sorted
 indexes by block type; visual updates query those indexes for each visible range instead of filtering
-the entire document. Block widgets reveal source whenever the cursor or selection enters them.
+the entire document. Block geometry is provided by `EditorView.blockWrappers`, so tables,
+frontmatter, code, and callouts retain one CodeMirror line per source line. Replacement decorations
+are limited to individual source lines. Tables render one semantic row widget per Markdown line and
+return the complete block to source mode when the selection enters it.
+
+`scrollMode="internal"` keeps CodeMirror or Reading View responsible for scrolling.
+`scrollMode="parent"` makes the surface auto-height so the desktop note header and content share one
+scroll container.
 
 `registerInline` and `registerSemantic` use the renderer-owned text transformation engine. Portable
 semantic nodes are projected to CodeMirror marks or widgets only for visible lines. Advanced Unified

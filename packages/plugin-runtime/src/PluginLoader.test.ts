@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import type { FileEntry } from "@cortex/platform"
 import { CortexPlugin } from "cortex-plugin-api"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -40,7 +42,12 @@ class BadBundledPlugin extends CortexPlugin {
 	onload() {}
 }
 
-function registerPluginFiles(pluginId: string, main: string) {
+interface PluginFilesOptions {
+	capabilities?: Array<"markdown:extensions">
+	styles?: string
+}
+
+function registerPluginFiles(pluginId: string, main: string, options: PluginFilesOptions = {}) {
 	const pluginDir = `${pluginsDir}/${pluginId}`
 	testState.dirs.set(pluginsDir, [
 		{
@@ -60,9 +67,11 @@ function registerPluginFiles(pluginId: string, main: string) {
 			description: "Test plugin",
 			icon: "puzzle",
 			main: "main.js",
+			capabilities: options.capabilities,
 		}),
 	)
 	testState.files.set(`${pluginDir}/main.js`, main)
+	if (options.styles) testState.files.set(`${pluginDir}/styles.css`, options.styles)
 }
 
 beforeEach(async () => {
@@ -185,5 +194,75 @@ describe("discoverCommunityPlugins", () => {
 			"load-v2",
 		])
 		expect(usePluginStore.getState().plugins["reload-plugin"].status).toBe("enabled")
+	})
+
+	it("scopes plugin styles to markdown surfaces for the enabled lifecycle", async () => {
+		registerPluginFiles(
+			"styled-plugin",
+			[
+				'const { CortexPlugin } = require("cortex-plugin-api")',
+				"module.exports = class StyledPlugin extends CortexPlugin { onload() {} }",
+			].join("\n"),
+			{
+				capabilities: ["markdown:extensions"],
+				styles: ".custom-callout { color: red }",
+			},
+		)
+
+		await discoverCommunityPlugins(pluginsDir)
+		await enablePlugin("styled-plugin", () => null)
+
+		const style = document.head.querySelector<HTMLStyleElement>(
+			'style[data-cortex-plugin-style="styled-plugin"]',
+		)
+		expect(style?.textContent).toContain(":where(.markdown-surface) .custom-callout")
+
+		await disableAllPlugins()
+
+		expect(
+			document.head.querySelector('style[data-cortex-plugin-style="styled-plugin"]'),
+		).toBeNull()
+	})
+
+	it("rejects plugin styles without the markdown capability", async () => {
+		registerPluginFiles("unscoped-plugin", "module.exports = class UnscopedPlugin {}", {
+			styles: ".custom-callout { color: red }",
+		})
+
+		await discoverCommunityPlugins(pluginsDir)
+
+		expect(usePluginStore.getState().plugins["unscoped-plugin"]).toBeUndefined()
+		expect(getCommunityPluginLoadError("unscoped-plugin")).toContain(
+			'styles.css requires the "markdown:extensions" capability',
+		)
+	})
+
+	it("replaces plugin styles during hot reload", async () => {
+		registerPluginFiles(
+			"style-reload-plugin",
+			[
+				'const { CortexPlugin } = require("cortex-plugin-api")',
+				"module.exports = class StyleReloadPlugin extends CortexPlugin { onload() {} }",
+			].join("\n"),
+			{
+				capabilities: ["markdown:extensions"],
+				styles: ".custom-callout { color: red }",
+			},
+		)
+
+		await discoverCommunityPlugins(pluginsDir)
+		await enablePlugin("style-reload-plugin", () => null)
+		testState.files.set(
+			`${pluginsDir}/style-reload-plugin/styles.css`,
+			".custom-callout { color: blue }",
+		)
+
+		await reloadCommunityPlugins(pluginsDir, () => null)
+
+		const styles = document.head.querySelectorAll(
+			'style[data-cortex-plugin-style="style-reload-plugin"]',
+		)
+		expect(styles).toHaveLength(1)
+		expect(styles[0]?.textContent).toContain("blue")
 	})
 })

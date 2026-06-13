@@ -11,6 +11,7 @@ export interface BookmarksState {
 	loadBookmarks: (vaultPath: string) => Promise<void>
 	addBookmark: (vaultPath: string, filePath: string) => Promise<void>
 	removeBookmark: (vaultPath: string, filePath: string) => Promise<void>
+	renameBookmark: (vaultPath: string, oldPath: string, newPath: string) => Promise<void>
 	isBookmarked: (filePath: string) => boolean
 	reorderBookmark: (vaultPath: string, fromIndex: number, toIndex: number) => Promise<void>
 	reset: () => void
@@ -48,6 +49,14 @@ export const useBookmarksStore = create<BookmarksState>()(
 			removeBookmark: async (vaultPath, filePath) => {
 				const { bookmarks } = get()
 				const updated = bookmarks.filter((b) => b !== filePath)
+				set({ bookmarks: updated })
+				await persistBookmarks(vaultPath, updated)
+			},
+
+			renameBookmark: async (vaultPath, oldPath, newPath) => {
+				const { bookmarks } = get()
+				if (!bookmarks.includes(oldPath)) return
+				const updated = bookmarks.map((bookmark) => (bookmark === oldPath ? newPath : bookmark))
 				set({ bookmarks: updated })
 				await persistBookmarks(vaultPath, updated)
 			},

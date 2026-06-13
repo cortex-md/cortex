@@ -185,6 +185,26 @@ class NoteCache {
 		await Promise.all(dirtyPaths.map((p) => this.flush(p)))
 	}
 
+	renamePath(oldPath: string, newPath: string) {
+		if (oldPath === newPath) return
+		const entry = this.entries.get(oldPath)
+		if (!entry) return
+
+		const saveTimer = this.saveTimers.get(oldPath)
+		if (saveTimer) {
+			clearTimeout(saveTimer)
+			this.saveTimers.delete(oldPath)
+		}
+		this.stopSnapshotTimer(oldPath)
+		this.entries.delete(oldPath)
+
+		entry.filePath = newPath
+		this.entries.set(newPath, entry)
+
+		if (entry.dirty) this.scheduleSave(newPath)
+		if (entry.openTabCount > 0) this.startSnapshotTimer(newPath)
+	}
+
 	openTab(filePath: string) {
 		const entry = this.entries.get(filePath)
 		if (entry) {

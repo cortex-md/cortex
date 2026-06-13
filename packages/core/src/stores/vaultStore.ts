@@ -3,8 +3,11 @@ import { getPlatform } from "@cortex/platform"
 import { getSettingsManager, initSettingsManager } from "@cortex/settings"
 import { create } from "zustand"
 import { noteCache } from "../noteCache"
+import { getPortableFileNameError } from "../utils/fileName"
 import { createDefaultFrontmatter } from "../utils/frontmatter"
+import { useBookmarksStore } from "./bookmarksStore"
 import { useSyncStore } from "./syncStore"
+import { useWorkspaceStore } from "./workspaceStore"
 
 export type { VaultMetadata, VaultRegistryEntry }
 
@@ -56,9 +59,14 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 			const files = await platform.vault.scanVault(path)
 
 			const stopWatcher = await platform.fs.startWatching(path, async (event) => {
-				get().refreshFiles()
-				const hash = await platform.fs.hashFile(event.path)
-				await noteCache.handleExternalChange(event.path, hash)
+				void get().refreshFiles()
+				if (event.kind !== "created" && event.kind !== "modified") return
+				try {
+					const hash = await platform.fs.hashFile(event.path)
+					await noteCache.handleExternalChange(event.path, hash)
+				} catch (error) {
+					console.error("[Vault file change failed]", { path: event.path, error })
+				}
 			})
 
 			initSettingsManager()
@@ -176,9 +184,20 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
 	renameFile: async (oldPath, newName) => {
 		const platform = getPlatform()
+		const validationError = getPortableFileNameError(newName)
+		if (validationError) throw new Error(validationError)
 		const parentPath = oldPath.substring(0, oldPath.lastIndexOf("/"))
 		const newPath = `${parentPath}/${newName}`
+		if (oldPath === newPath) return oldPath
+
+		await noteCache.flush(oldPath)
 		await platform.fs.renameFile(oldPath, newPath)
+		noteCache.renamePath(oldPath, newPath)
+		useWorkspaceStore.getState().updateTabPath(oldPath, newPath)
+		const vaultPath = get().vault?.path
+		if (vaultPath) {
+			await useBookmarksStore.getState().renameBookmark(vaultPath, oldPath, newPath)
+		}
 		await get().refreshFiles()
 		return newPath
 	},

@@ -162,6 +162,7 @@ export interface ThemeTokens {
 	}
 	heading: {
 		fontWeight: string
+		inlineTitleMarginBottom?: string
 		h1FontSize: string
 		h2FontSize: string
 		h3FontSize: string
@@ -178,8 +179,13 @@ export interface ThemeTokens {
 	markdown?: {
 		contentWidth: string
 		contentGutter: string
+		blockRadius: string
+		blockSpacing: string
 		codePaddingInline: string
 		codePaddingBlock: string
+		calloutPaddingBlock: string
+		calloutPaddingInlineStart: string
+		calloutPaddingInlineEnd: string
 		callouts: Record<
 			string,
 			{

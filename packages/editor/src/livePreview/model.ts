@@ -1,7 +1,6 @@
 import { syntaxTree } from "@codemirror/language"
 import type { EditorSelection, EditorState } from "@codemirror/state"
 import {
-	type FrontmatterField,
 	type ParsedCallout,
 	parseCallout,
 	parseCalloutMarker,
@@ -26,7 +25,6 @@ interface BaseBlock {
 }
 
 export interface TableModel {
-	source: string
 	headers: InlineSnapshot[]
 	rows: InlineSnapshot[][]
 	alignments: Array<"left" | "center" | "right">
@@ -39,7 +37,6 @@ export interface TableBlock extends BaseBlock {
 
 export interface FrontmatterBlock extends BaseBlock {
 	kind: "frontmatter"
-	fields: FrontmatterField[]
 }
 
 export interface ImageBlock extends BaseBlock {
@@ -51,7 +48,6 @@ export interface ImageBlock extends BaseBlock {
 export interface CalloutBlock extends BaseBlock {
 	kind: "callout"
 	callout: ParsedCallout
-	title: InlineSnapshot | null
 	titleFrom: number
 }
 
@@ -148,7 +144,6 @@ function createTableModel(state: EditorState, node: SyntaxNodeLike): TableModel 
 		.map(parseAlignment)
 
 	return {
-		source: state.doc.sliceString(node.from, node.to),
 		headers: header
 			? childNodes(header, "TableCell").map((cell) => createInlineSnapshot(state, cell))
 			: [],
@@ -168,16 +163,10 @@ function createCalloutBlock(state: EditorState, node: SyntaxNodeLike): CalloutBl
 	const firstLine = state.doc.line(base.firstLine)
 	const marker = parseCalloutMarker(firstLine.text)
 	const titleFrom = marker ? firstLine.from + marker.markerLength : firstLine.to
-	const title =
-		callout.title && titleFrom < firstLine.to
-			? createInlineSnapshot(state, node, titleFrom, firstLine.to)
-			: null
-
 	return {
 		...base,
 		kind: "callout",
 		callout,
-		title,
 		titleFrom,
 	}
 }
@@ -233,7 +222,7 @@ export function collectMarkdownBlocks(
 	const frontmatter = parseFrontmatter(state.doc.toString())
 	if (frontmatter) {
 		const base = createBaseBlock(state, "frontmatter", frontmatter.from, frontmatter.to)
-		blocks.push({ ...base, kind: "frontmatter", fields: frontmatter.fields })
+		blocks.push({ ...base, kind: "frontmatter" })
 	}
 
 	syntaxTree(state).iterate({
@@ -341,20 +330,9 @@ export function selectionOverlapsBlock(
 
 export function blockUsesReplacement(
 	block: MarkdownBlock,
-	collapsedCallouts: ReadonlyMap<string, boolean>,
+	_collapsedCallouts: ReadonlyMap<string, boolean>,
 	selection: EditorSelection,
 ): boolean {
 	if (selectionOverlapsBlock(selection, block)) return false
-	if (
-		block.kind === "table" ||
-		block.kind === "frontmatter" ||
-		block.kind === "image" ||
-		block.kind === "horizontalRule"
-	) {
-		return true
-	}
-	if (block.kind === "callout") {
-		return collapsedCallouts.get(block.id) ?? block.callout.fold === "collapsed"
-	}
-	return false
+	return block.kind === "table" || block.kind === "image" || block.kind === "horizontalRule"
 }

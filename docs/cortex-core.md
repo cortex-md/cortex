@@ -2938,10 +2938,20 @@ meu-plugin/
 ├── main.ts              # Entry point — exporta classe default que estende CortexPlugin
 ├── package.json         # Dev dependencies (bundler, TypeScript, @cortex/plugin-api)
 ├── tsconfig.json
-└── styles.css           # Opcional — escopado automaticamente ao plugin-id
+└── styles.css           # Opcional — escopado automaticamente às superfícies Markdown
 ```
 
 O plugin é distribuído como bundle ESM compilado (`main.js`). O código-fonte em TypeScript não é necessário na distribuição final.
+
+`styles.css` exige a capability `markdown:extensions`. O runtime analisa o arquivo, limita seus
+seletores a `.markdown-surface` e mantém o estilo instalado somente enquanto o plugin está ativo.
+Regras globais como `@import`, `@font-face`, `@keyframes`, `@page` e `@namespace` são rejeitadas.
+
+Plugins podem consumir os tokens compartilhados por Reading View e Live Preview:
+`--markdown-content-width`, `--markdown-content-gutter`, `--markdown-block-radius`,
+`--markdown-block-spacing`, `--markdown-code-padding-inline`, `--markdown-code-padding-block`,
+`--markdown-callout-padding-block`, `--markdown-callout-padding-inline-start` e
+`--markdown-callout-padding-inline-end`.
 
 #### Classe base `CortexPlugin`
 

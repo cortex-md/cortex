@@ -262,10 +262,14 @@ UI doesn't directly access files; it reads/writes through noteCache.
   `--editor-font-size`. Font weights and line heights stay theme-owned through
   `--ui-font-weight`, `--ui-line-height`, `--editor-font-weight`, and `--editor-line-height`.
 - Markdown surfaces share `--markdown-content-width`, `--markdown-content-gutter`,
-  `--markdown-code-padding-inline`, and `--markdown-code-padding-block`. Live Preview, Reading View,
-  and Side-by-Side must keep these aligned. These values and built-in callout colors live in
-  `ThemeTokens.markdown`. Heading colors are theme-owned through `--h1-color` through `--h6-color`,
-  falling back to `--syntax-heading` for existing community themes.
+  `--markdown-block-radius`, `--markdown-block-spacing`, `--markdown-code-padding-inline`,
+  `--markdown-code-padding-block`, and the `--markdown-callout-padding-*` variables. Live Preview,
+  Reading View, and Side-by-Side must keep these aligned. These values and built-in callout colors
+  live in `ThemeTokens.markdown`. Heading colors are theme-owned through `--h1-color` through
+  `--h6-color`, falling back to `--syntax-heading` for existing community themes.
+- Built-in heading scale and inline note title spacing live in `ThemeTokens.heading`, exposed through
+  `--h1-font-size` through `--h6-font-size` and `--inline-title-margin-bottom`. Community themes keep
+  their own heading values.
 - Markdown code spans and fenced code blocks use `--font-editor` and the editor font size. Keep
   smaller typography only for code block chrome such as language badges and copy buttons.
 - Editor selection and CodeMirror search matches use `--editor-selection-bg`,
@@ -295,6 +299,10 @@ UI doesn't directly access files; it reads/writes through noteCache.
 - Live Preview block state keeps ordered indexes for callouts, blockquotes, code, and replacement
   blocks. Visual passes query only visible ranges and record syntax-node, candidate-block, and
   decoration metrics; do not reintroduce full-block filters in the visible `ViewPlugin`.
+- Live Preview uses `EditorView.blockWrappers` for block geometry. Tables, frontmatter, code, and
+  callouts keep their source lines in CodeMirror. Table rows, images, and horizontal rules may use
+  replacement decorations only within one source line. Do not replace ranges containing line
+  breaks.
 - CodeMirror widgets with interactive controls must consume pointer events before CodeMirror moves
   the selection. Hover and active state must be scoped to the owning widget or Markdown block.
 - CodeMirror block decorations must be provided by a `StateField`; `ViewPlugin` decoration facets
@@ -309,6 +317,14 @@ UI doesn't directly access files; it reads/writes through noteCache.
   Reading View, Side-by-Side, and shell layout.
 - The editor Markdown language must keep the Lezer GFM extensions enabled so tables,
   strikethrough, task lists, and autolinks exist in the syntax tree used by Live Preview.
+- Community plugin `styles.css` files require the `markdown:extensions` capability. The runtime
+  parses and scopes them to `.markdown-surface`, installs them only while the plugin is enabled,
+  and rejects global at-rules.
+- The note header owns the editable filename title and display-only breadcrumb. It shares the note
+  scroll container across Editing, Live Preview, Reading, and Side-by-Side modes. Title renames must
+  go through `vaultStore.renameFile` so NoteCache, tabs, bookmarks, and filesystem state move
+  together. The breadcrumb is note-relative, omits the vault and `.md`, and reveals itself through
+  CSS hover only.
 
 ## Common Development Tasks
 

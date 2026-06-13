@@ -504,7 +504,7 @@ function SyncExcludeMenuItem({ node }: { node: FileTreeNode }) {
 export function FileSidebar() {
 	const { vault, files, createFile, createFolder, deleteFile, renameFile, duplicateFile } =
 		useVaultStore()
-	const { openTab, closeTabsByPath, updateTabPath, activePaneId, panes } = useWorkspaceStore()
+	const { openTab, closeTabsByPath, activePaneId, panes } = useWorkspaceStore()
 	const [expanded, setExpanded] = useState<Set<string>>(new Set())
 	const [renamingPath, setRenamingPath] = useState<string | null>(null)
 	const [creatingIn, setCreatingIn] = useState<string | null>(null)
@@ -583,8 +583,7 @@ export function FileSidebar() {
 	const handleConfirmRename = useCallback(
 		async (oldPath: string, newName: string) => {
 			try {
-				const newPath = await renameFile(oldPath, newName)
-				updateTabPath(oldPath, newPath)
+				await renameFile(oldPath, newName)
 			} catch (error) {
 				await reportAppError({
 					operation: "rename-file-entry",
@@ -596,7 +595,7 @@ export function FileSidebar() {
 			}
 			setRenamingPath(null)
 		},
-		[renameFile, updateTabPath],
+		[renameFile],
 	)
 
 	const handleDelete = useCallback(

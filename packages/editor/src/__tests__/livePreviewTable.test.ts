@@ -38,24 +38,24 @@ describe("GFM inline rendering", () => {
 > [!warning]+ **Title**
 > Body with *emphasis* and ~~strike~~.`)
 
-		expect(document.querySelector(".cm-table-widget strong")?.textContent).toBe("bold")
-		expect(document.querySelector(".cm-table-widget em")?.textContent).toBe("italic")
-		expect(document.querySelector(".cm-table-widget a")?.getAttribute("href")).toBe(
-			"https://example.com",
-		)
+		expect(document.querySelector(".cm-table-wrapper strong")?.textContent).toBe("bold")
+		expect(document.querySelector(".cm-table-wrapper em")?.textContent).toBe("italic")
+		expect(document.querySelector(".cm-table-wrapper .markdown-link")?.textContent).toBe("link")
 		expect(document.querySelectorAll(".cm-bold").length).toBeGreaterThanOrEqual(1)
 		expect(document.querySelectorAll(".cm-italic").length).toBeGreaterThanOrEqual(1)
 		expect(document.querySelectorAll(".cm-strikethrough").length).toBeGreaterThanOrEqual(1)
 	})
 
-	it("reveals table source while a selection crosses the block", () => {
+	it("keeps table source visible while a selection crosses the block", () => {
 		const content = "| A | B |\n| --- | --- |\n| **bold** | value |\n\ntail"
 		const view = createEditor(content)
-		expect(document.querySelector(".cm-table-widget")).not.toBeNull()
+		expect(document.querySelector(".cm-table-wrapper")).not.toBeNull()
+		expect(document.querySelector(".cm-table-row-widget")).not.toBeNull()
 
 		view.dispatch({ selection: { anchor: 0, head: content.indexOf("tail") } })
 
-		expect(document.querySelector(".cm-table-widget")).toBeNull()
+		expect(document.querySelector(".cm-table-wrapper")).not.toBeNull()
+		expect(document.querySelector(".cm-table-row-widget")).toBeNull()
 		expect(document.querySelector(".cm-table-line")).not.toBeNull()
 		expect(document.querySelector(".cm-bold")?.textContent).toBe("bold")
 	})

@@ -1,7 +1,8 @@
 use serde::Serialize;
 use std::fs;
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use uuid::Uuid;
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -46,10 +47,55 @@ pub fn delete_file(path: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn rename_file(old_path: String, new_path: String) -> Result<(), String> {
-    if let Some(parent) = Path::new(&new_path).parent() {
+    rename_path(Path::new(&old_path), Path::new(&new_path))
+}
+
+fn rename_path(old_path: &Path, new_path: &Path) -> Result<(), String> {
+    if old_path == new_path {
+        return Ok(());
+    }
+    if let Some(parent) = new_path.parent() {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
-    fs::rename(&old_path, &new_path).map_err(|e| e.to_string())
+
+    let case_only_rename = old_path.parent() == new_path.parent()
+        && old_path.file_name().is_some()
+        && old_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .zip(new_path.file_name().and_then(|name| name.to_str()))
+            .is_some_and(|(old_name, new_name)| {
+                old_name != new_name && old_name.eq_ignore_ascii_case(new_name)
+            });
+
+    if new_path.exists() && !case_only_rename {
+        return Err("Destination already exists".to_string());
+    }
+
+    if !case_only_rename {
+        return fs::rename(old_path, new_path).map_err(|e| e.to_string());
+    }
+
+    let parent = old_path
+        .parent()
+        .ok_or_else(|| "Source path has no parent directory".to_string())?;
+    let temporary_path = unique_rename_path(parent);
+    fs::rename(old_path, &temporary_path).map_err(|e| e.to_string())?;
+    if new_path.exists() {
+        let _ = fs::rename(&temporary_path, old_path);
+        return Err("Destination already exists".to_string());
+    }
+    match fs::rename(&temporary_path, new_path) {
+        Ok(()) => Ok(()),
+        Err(error) => {
+            let _ = fs::rename(&temporary_path, old_path);
+            Err(error.to_string())
+        }
+    }
+}
+
+fn unique_rename_path(parent: &Path) -> PathBuf {
+    parent.join(format!(".cortex-rename-{}", Uuid::new_v4()))
 }
 
 #[tauri::command]
@@ -149,4 +195,49 @@ pub fn list_dir(path: String) -> Result<Vec<FileEntry>, String> {
             .then(a.name.to_lowercase().cmp(&b.name.to_lowercase()))
     });
     Ok(entries)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_directory() -> PathBuf {
+        let path = std::env::temp_dir().join(format!("cortex-fs-test-{}", Uuid::new_v4()));
+        fs::create_dir_all(&path).unwrap();
+        path
+    }
+
+    #[test]
+    fn rename_path_rejects_existing_destination() {
+        let directory = test_directory();
+        let source = directory.join("source.md");
+        let destination = directory.join("destination.md");
+        fs::write(&source, "source").unwrap();
+        fs::write(&destination, "destination").unwrap();
+
+        let result = rename_path(&source, &destination);
+
+        assert_eq!(result.unwrap_err(), "Destination already exists");
+        assert_eq!(fs::read_to_string(&source).unwrap(), "source");
+        assert_eq!(fs::read_to_string(&destination).unwrap(), "destination");
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn rename_path_supports_case_only_changes() {
+        let directory = test_directory();
+        let source = directory.join("Note.md");
+        let destination = directory.join("note.md");
+        fs::write(&source, "content").unwrap();
+
+        rename_path(&source, &destination).unwrap();
+
+        assert_eq!(fs::read_to_string(&destination).unwrap(), "content");
+        let names = fs::read_dir(&directory)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(names, vec!["note.md"]);
+        fs::remove_dir_all(directory).unwrap();
+    }
 }

@@ -14,6 +14,8 @@ export interface CursorInfo {
 	offset: number
 }
 
+export type EditorScrollMode = "internal" | "parent"
+
 interface Props {
 	content: string
 	filePath: string
@@ -21,6 +23,7 @@ interface Props {
 	livePreview?: boolean
 	resolveImageUrl?: (src: string, filePath: string) => string
 	extraExtensions?: Extension[]
+	scrollMode?: EditorScrollMode
 	onChange: (content: string) => void
 	onCursorChange?: (cursor: CursorInfo) => void
 	onViewReady?: (view: CMEditorView) => void
@@ -33,6 +36,7 @@ export function EditorView({
 	livePreview = true,
 	resolveImageUrl,
 	extraExtensions,
+	scrollMode = "internal",
 	onChange,
 	onCursorChange,
 	onViewReady,
@@ -61,6 +65,7 @@ export function EditorView({
 						livePreview,
 						resolveImageUrl,
 						filePath,
+						scrollMode,
 					}),
 					...(extraExtensions ?? []),
 					CMEditorView.updateListener.of((update) => {
@@ -95,8 +100,8 @@ export function EditorView({
 		const view = viewRef.current
 		if (!view) return
 		editorConfigRef.current = editorConfig
-		reconfigureEditor(view, editorConfig)
-	}, [editorConfig])
+		reconfigureEditor(view, editorConfig, scrollMode)
+	}, [editorConfig, scrollMode])
 
 	useEffect(() => {
 		const view = viewRef.current
@@ -109,5 +114,5 @@ export function EditorView({
 		})
 	}, [filePath, content])
 
-	return <div ref={containerRef} style={{ height: "100%", overflow: "hidden" }} />
+	return <div ref={containerRef} className={`editor-view editor-view-${scrollMode}-scroll`} />
 }

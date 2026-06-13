@@ -7,7 +7,7 @@ export {
 	subscribeCalloutTypes,
 } from "@cortex/renderer"
 export { type ClipboardImageHandler, clipboardImageExtension } from "./clipboardImage"
-export { type CursorInfo, EditorView } from "./EditorView"
+export { type CursorInfo, type EditorScrollMode, EditorView } from "./EditorView"
 export {
 	type BaseExtensionsOptions,
 	baseExtensions,

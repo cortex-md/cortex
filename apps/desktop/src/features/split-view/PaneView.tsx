@@ -50,6 +50,7 @@ import { TabBar } from "../tabs/TabBar"
 import { getCoreViewComponent } from "./coreViewRegistry"
 import { DropZoneOverlay } from "./DropZoneOverlay"
 import { EditorContextMenu } from "./EditorContextMenu"
+import { NoteHeader } from "./NoteHeader"
 
 function computeRelativePath(fromDir: string, toFile: string): string {
 	const fromParts = fromDir.split("/").filter(Boolean)
@@ -249,28 +250,41 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 					</Button>
 				) : content === null ? (
 					<div className="flex-1 bg-bg-primary" />
-				) : mode === "reading" ? (
-					<ReadingView content={content} onExternalLinkClick={handleExternalLinkClick} />
-				) : mode === "side-by-side" ? (
-					<SideBySideView
-						content={content}
-						filePath={tab.filePath}
-						editorConfig={editorConfig}
-						onChange={handleChange}
-						onExternalLinkClick={handleExternalLinkClick}
-					/>
 				) : (
-					<EditorView
-						content={content}
-						filePath={tab.filePath}
-						editorConfig={editorConfig}
-						livePreview={mode === "live-preview"}
-						resolveImageUrl={resolveImageUrl}
-						extraExtensions={clipboardExtensions}
-						onChange={handleChange}
-						onCursorChange={isActive ? onCursorChange : undefined}
-						onViewReady={handleViewReady}
-					/>
+					<div className="note-document-scroll">
+						<NoteHeader filePath={tab.filePath} />
+						<div className="note-document-surface">
+							{mode === "reading" ? (
+								<ReadingView
+									content={content}
+									scrollMode="parent"
+									onExternalLinkClick={handleExternalLinkClick}
+								/>
+							) : mode === "side-by-side" ? (
+								<SideBySideView
+									content={content}
+									filePath={tab.filePath}
+									editorConfig={editorConfig}
+									scrollMode="parent"
+									onChange={handleChange}
+									onExternalLinkClick={handleExternalLinkClick}
+								/>
+							) : (
+								<EditorView
+									content={content}
+									filePath={tab.filePath}
+									editorConfig={editorConfig}
+									livePreview={mode === "live-preview"}
+									resolveImageUrl={resolveImageUrl}
+									extraExtensions={clipboardExtensions}
+									scrollMode="parent"
+									onChange={handleChange}
+									onCursorChange={isActive ? onCursorChange : undefined}
+									onViewReady={handleViewReady}
+								/>
+							)}
+						</div>
+					</div>
 				)}
 			</div>
 		</EditorContextMenu>

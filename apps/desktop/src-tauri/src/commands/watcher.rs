@@ -1,4 +1,4 @@
-use notify::{Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{event::ModifyKind, Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs;
@@ -31,6 +31,7 @@ pub fn init(app: &tauri::App) {
 fn event_kind_to_string(kind: &EventKind) -> Option<&'static str> {
     match kind {
         EventKind::Create(_) => Some("created"),
+        EventKind::Modify(ModifyKind::Name(_)) => Some("renamed"),
         EventKind::Modify(_) => Some("modified"),
         EventKind::Remove(_) => Some("deleted"),
         _ => None,

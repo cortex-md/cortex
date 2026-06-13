@@ -68,6 +68,7 @@ export {
 } from "./stores/uiStore"
 export {
 	useVaultStore,
+	type VaultMetadata,
 	type VaultRegistryEntry,
 	type VaultState,
 } from "./stores/vaultStore"
@@ -90,6 +91,12 @@ export type {
 	SyncThemeEntry,
 	SyncThemesManifest,
 } from "./types/syncMetadata"
+export {
+	getNotePathPresentation,
+	getPortableFileNameError,
+	type NotePathPresentation,
+	type NotePathSegment,
+} from "./utils/fileName"
 export {
 	addTagToFrontmatter,
 	createDefaultFrontmatter,

@@ -13,6 +13,16 @@
 	color: var(--text-primary);
 }
 
+.editor-view-internal-scroll {
+	height: 100%;
+	overflow: hidden;
+}
+
+.editor-view-parent-scroll {
+	height: auto;
+	overflow: visible;
+}
+
 .markdown-surface ::selection {
 	background: var(--editor-selection-bg, var(--bg-selected));
 }
@@ -133,10 +143,10 @@
 
 .markdown-surface pre {
 	background: var(--bg-code);
-	border-radius: 6px;
+	border-radius: var(--markdown-block-radius, 6px);
 	padding: var(--markdown-code-padding-block, 8px) var(--markdown-code-padding-inline, 16px);
 	overflow-x: auto;
-	margin-bottom: 1.25em;
+	margin-bottom: var(--markdown-block-spacing, 1em);
 }
 
 .markdown-surface pre code {
@@ -157,13 +167,15 @@
 .markdown-surface .markdown-callout {
 	--callout-color: var(--callout-note-color, var(--accent));
 	--callout-bg: var(--callout-note-bg, var(--accent-subtle));
-	border-radius: 6px;
-	padding: 12px 12px 12px 24px;
+	border-radius: var(--markdown-block-radius, 6px);
+	padding-block: var(--markdown-callout-padding-block, 12px);
+	padding-inline: var(--markdown-callout-padding-inline-start, 24px)
+		var(--markdown-callout-padding-inline-end, 12px);
 	background: var(--callout-bg);
 	box-shadow: inset 3px 0 0 var(--callout-color);
 	color: var(--text-secondary);
 	box-sizing: border-box;
-	margin: 0 0 1em;
+	margin: 0 0 var(--markdown-block-spacing, 1em);
 }
 
 .markdown-surface .markdown-callout-title,

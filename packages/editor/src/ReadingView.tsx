@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react"
 
 interface Props {
 	content: string
+	scrollMode?: "internal" | "parent"
 	renderDelay?: number
 	onWikiLinkClick?: (target: string) => void
 	onExternalLinkClick?: (url: string) => void
@@ -30,6 +31,7 @@ function getRendererRegistryVersion(): string {
 
 export function ReadingView({
 	content,
+	scrollMode = "internal",
 	renderDelay = 0,
 	onWikiLinkClick,
 	onExternalLinkClick,
@@ -120,7 +122,7 @@ export function ReadingView({
 	return (
 		<div
 			ref={containerRef}
-			className="reading-view markdown-surface"
+			className={`reading-view reading-view-${scrollMode}-scroll markdown-surface`}
 			// biome-ignore lint/security/noDangerouslySetInnerHtml: content passes through the renderer sanitizer
 			dangerouslySetInnerHTML={{ __html: html }}
 		/>

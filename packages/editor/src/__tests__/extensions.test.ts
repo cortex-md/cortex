@@ -39,4 +39,12 @@ describe("buildEditorTypographyRules", () => {
 			backgroundColor: "var(--editor-search-match-active-bg, var(--bg-selected))",
 		})
 	})
+
+	it("supports parent-owned scrolling without making the CodeMirror scroller overflow", () => {
+		const rules = buildEditorTypographyRules(16, "parent")
+
+		expect(rules["&"]).toMatchObject({ height: "auto" })
+		expect(rules[".cm-scroller"]).toMatchObject({ overflow: "visible" })
+		expect(rules[".cm-content"]).toMatchObject({ padding: "8px 0 24px" })
+	})
 })

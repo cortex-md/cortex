@@ -13,6 +13,20 @@ describe("generateCSSVariables", () => {
 		expect(vars["--h6-color"]).toBe("#8a8980")
 	})
 
+	it("emits the compact built-in heading scale", () => {
+		const vars = generateCSSVariables(paperTheme)
+
+		expect(vars["--normal-weight"]).toBe("400")
+		expect(vars["--heading-font-weight"]).toBe("600")
+		expect(vars["--inline-title-margin-bottom"]).toBe("1rem")
+		expect(vars["--h1-font-size"]).toBe("1.125em")
+		expect(vars["--h2-font-size"]).toBe("1.05em")
+		expect(vars["--h3-font-size"]).toBe("1em")
+		expect(vars["--h4-font-size"]).toBe("0.9em")
+		expect(vars["--h5-font-size"]).toBe("0.85em")
+		expect(vars["--h6-font-size"]).toBe("0.85em")
+	})
+
 	it("falls back to syntax heading color for older themes", () => {
 		const themeWithoutHeadingColors: Theme = {
 			...paperTheme,
