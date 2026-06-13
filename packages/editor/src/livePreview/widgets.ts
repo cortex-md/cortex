@@ -1,8 +1,7 @@
 import { type EditorView, WidgetType } from "@codemirror/view"
 import { type MarkdownPortableNode, sanitizeMarkdownUrl } from "@cortex/renderer"
 import { toggleCalloutCollapsed } from "./effects"
-import { renderInlineSnapshot } from "./inlineTree"
-import type { ImageBlock, TableBlock } from "./model"
+import type { ImageBlock, TableCellModel } from "./model"
 
 function revealSource(view: EditorView, from: number): void {
 	view.dispatch({ selection: { anchor: from } })
@@ -26,6 +25,10 @@ export class TextWidget extends WidgetType {
 
 	eq(other: TextWidget) {
 		return other.text === this.text && other.className === this.className
+	}
+
+	ignoreEvent() {
+		return false
 	}
 }
 
@@ -81,6 +84,10 @@ export class PortableNodeWidget extends WidgetType {
 	eq(other: PortableNodeWidget) {
 		return JSON.stringify(other.nodes) === JSON.stringify(this.nodes)
 	}
+
+	ignoreEvent() {
+		return false
+	}
 }
 
 export class CheckboxWidget extends WidgetType {
@@ -115,57 +122,25 @@ export class CheckboxWidget extends WidgetType {
 	}
 }
 
-export class TableRowWidget extends WidgetType {
-	constructor(
-		readonly cells: TableBlock["table"]["headers"],
-		readonly alignments: TableBlock["table"]["alignments"],
-		readonly header: boolean,
-	) {
+export class TableCellPlaceholderWidget extends WidgetType {
+	constructor(readonly alignment: TableCellModel["alignment"]) {
 		super()
 	}
 
 	toDOM() {
-		const row = document.createElement("span")
-		row.className = `cm-table-row-widget${this.header ? " is-header" : ""}`
-		row.style.setProperty("--table-column-count", String(Math.max(this.cells.length, 1)))
-		this.cells.forEach((snapshot, index) => {
-			const cell = document.createElement("span")
-			cell.className = "cm-table-cell-widget"
-			cell.dataset.align = this.alignments[index] ?? "left"
-			renderInlineSnapshot(cell, snapshot)
-			row.appendChild(cell)
-		})
-		return row
+		const cell = document.createElement("span")
+		cell.className = "cm-table-cell cm-table-cell-empty"
+		cell.dataset.align = this.alignment
+		cell.textContent = "\u00a0"
+		return cell
 	}
 
-	eq(other: TableRowWidget) {
-		return (
-			other.header === this.header &&
-			JSON.stringify(other.cells) === JSON.stringify(this.cells) &&
-			other.alignments.join("|") === this.alignments.join("|")
-		)
-	}
-}
-
-export class TableDelimiterWidget extends WidgetType {
-	constructor(readonly columnCount: number) {
-		super()
+	eq(other: TableCellPlaceholderWidget) {
+		return other.alignment === this.alignment
 	}
 
-	toDOM() {
-		const row = document.createElement("span")
-		row.className = "cm-table-delimiter-widget"
-		row.style.setProperty("--table-column-count", String(Math.max(this.columnCount, 1)))
-		for (let index = 0; index < this.columnCount; index++) {
-			const cell = document.createElement("span")
-			cell.className = "cm-table-delimiter-cell"
-			row.appendChild(cell)
-		}
-		return row
-	}
-
-	eq(other: TableDelimiterWidget) {
-		return other.columnCount === this.columnCount
+	ignoreEvent() {
+		return false
 	}
 }
 

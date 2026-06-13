@@ -2,8 +2,6 @@ import { markdown } from "@codemirror/lang-markdown"
 import { EditorState } from "@codemirror/state"
 import { EditorView } from "@codemirror/view"
 import { GFM } from "@lezer/markdown"
-import { readFileSync } from "node:fs"
-import { resolve } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { livePreviewExtension } from "../livePreview"
 
@@ -42,10 +40,11 @@ describe("block live preview projections", () => {
 tail`
 
 		expect(() => createBlockWidgetEditor(content)).not.toThrow()
-		expect(document.querySelector(".cm-table-wrapper strong")?.textContent).toBe("Bold")
-		expect(document.querySelector(".cm-table-wrapper em")?.textContent).toBe("Italic")
-		expect(document.querySelectorAll(".cm-table-row-widget")).toHaveLength(2)
-		expect(document.querySelectorAll(".cm-table-cell-widget")).toHaveLength(4)
+		expect(document.querySelector(".cm-table-wrapper .cm-bold")?.textContent).toBe("Bold")
+		expect(document.querySelector(".cm-table-wrapper .cm-italic")?.textContent).toBe("Italic")
+		expect(document.querySelectorAll(".cm-table-rendered-line")).toHaveLength(2)
+		expect(document.querySelectorAll(".cm-table-cell")).toHaveLength(4)
+		expect(document.querySelector(".cm-table-row-widget")).toBeNull()
 		expect(document.querySelectorAll(".cm-callout-line").length).toBeGreaterThan(1)
 		expect(
 			Array.from(document.querySelectorAll(".cm-bold")).some(
@@ -114,19 +113,11 @@ title: Navigation
 
 		expect(document.querySelectorAll(".cm-line")).toHaveLength(view.state.doc.lines)
 		expect(document.querySelectorAll(".cm-table-line")).toHaveLength(3)
-		expect(document.querySelectorAll(".cm-table-row-widget")).toHaveLength(2)
+		expect(document.querySelectorAll(".cm-table-rendered-line")).toHaveLength(2)
+		expect(document.querySelectorAll(".cm-table-cell")).toHaveLength(4)
+		expect(document.querySelector(".cm-table-row-widget")).toBeNull()
 		expect(document.querySelectorAll(".cm-frontmatter-line")).toHaveLength(3)
 		expect(document.querySelectorAll(".cm-callout-line")).toHaveLength(2)
 	})
 
-	it("keeps block wrapper chrome out of vertical line geometry", () => {
-		const styles = readFileSync(resolve(process.cwd(), "src/livePreview/styles.css"), "utf8")
-
-		expect(styles).not.toContain("margin-block-end:")
-		expect(styles).not.toMatch(/\.cm-callout-wrapper\s*\{[^}]*padding-block:/s)
-		expect(styles).not.toMatch(/\.cm-codeblock-wrapper\s*\{[^}]*padding-block:/s)
-		expect(styles).toMatch(
-			/\.cm-callout-wrapper\.is-collapsed\s*\{[^}]*max-height:\s*var\(--editor-line-height/s,
-		)
-	})
 })

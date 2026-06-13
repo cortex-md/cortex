@@ -18,8 +18,9 @@ import {
 	type MarkdownBlock,
 	type MarkdownBlockIndex,
 	selectionOverlapsBlock,
+	type TableRowModel,
 } from "./model"
-import { ImageWidget, TableDelimiterWidget, TableRowWidget } from "./widgets"
+import { ImageWidget, TableCellPlaceholderWidget } from "./widgets"
 
 export interface LivePreviewBlockState {
 	blocks: MarkdownBlock[]
@@ -53,6 +54,46 @@ function calloutLineDecoration(block: CalloutBlock): Decoration {
 			style: `--callout-color: ${styles.color}; --callout-bg: ${styles.backgroundColor}`,
 		},
 	})
+}
+
+function addTableRowDecorations(
+	ranges: Range<Decoration>[],
+	row: TableRowModel,
+	header: boolean,
+	columnCount: number,
+): void {
+	ranges.push(
+		Decoration.line({
+			class: `cm-table-line cm-table-rendered-line${header ? " cm-table-header-line" : ""}`,
+			attributes: { style: `--table-column-count: ${Math.max(columnCount, 1)}` },
+		}).range(row.from),
+	)
+
+	let syntaxFrom = row.from
+	row.cells.forEach((cell, index) => {
+		if (syntaxFrom < cell.from) {
+			ranges.push(Decoration.replace({}).range(syntaxFrom, cell.from))
+		}
+		if (cell.from < cell.to) {
+			ranges.push(
+				Decoration.mark({
+					class: "cm-table-cell",
+					attributes: { "data-align": cell.alignment },
+				}).range(cell.from, cell.to),
+			)
+		} else {
+			ranges.push(
+				Decoration.widget({
+					widget: new TableCellPlaceholderWidget(cell.alignment),
+					side: index,
+				}).range(cell.from),
+			)
+		}
+		syntaxFrom = cell.to
+	})
+	if (syntaxFrom < row.to) {
+		ranges.push(Decoration.replace({}).range(syntaxFrom, row.to))
+	}
 }
 
 function getCalloutCollapsed(
@@ -172,36 +213,34 @@ function buildDecorations(
 			continue
 		}
 		if (block.kind === "table") {
-			for (let lineNumber = block.firstLine; lineNumber <= block.lastLine; lineNumber++) {
-				const line = state.doc.line(lineNumber)
-				const classes = ["cm-table-line"]
-				if (lineNumber === block.firstLine) classes.push("cm-table-header-line")
-				if (/^\s*\|?[\s|:-]+\|?\s*$/.test(line.text)) {
-					classes.push("cm-table-delimiter-line")
+			if (selected) {
+				addLineDecoration(
+					state,
+					ranges,
+					block,
+					Decoration.line({ class: "cm-table-line cm-table-source-line" }),
+				)
+			} else {
+				addTableRowDecorations(
+					ranges,
+					block.table.header,
+					true,
+					block.table.columnCount,
+				)
+				ranges.push(
+					Decoration.line({
+						class: "cm-table-line cm-table-delimiter-line",
+					}).range(block.table.delimiter.from),
+				)
+				ranges.push(
+					Decoration.mark({ class: "cm-table-delimiter-source" }).range(
+						block.table.delimiter.from,
+						block.table.delimiter.to,
+					),
+				)
+				for (const row of block.table.rows) {
+					addTableRowDecorations(ranges, row, false, block.table.columnCount)
 				}
-				ranges.push(Decoration.line({ class: classes.join(" ") }).range(line.from))
-			}
-			if (replaced) {
-				const headerLine = state.doc.line(block.firstLine)
-				ranges.push(
-					Decoration.replace({
-						widget: new TableRowWidget(block.table.headers, block.table.alignments, true),
-					}).range(headerLine.from, headerLine.to),
-				)
-				const delimiterLine = state.doc.line(block.firstLine + 1)
-				ranges.push(
-					Decoration.replace({
-						widget: new TableDelimiterWidget(block.table.headers.length),
-					}).range(delimiterLine.from, delimiterLine.to),
-				)
-				block.table.rows.forEach((row, index) => {
-					const rowLine = state.doc.line(block.firstLine + index + 2)
-					ranges.push(
-						Decoration.replace({
-							widget: new TableRowWidget(row, block.table.alignments, false),
-						}).range(rowLine.from, rowLine.to),
-					)
-				})
 			}
 			continue
 		}
@@ -233,6 +272,9 @@ function getReplacementIds(
 			ids.push(`${block.id}:collapsed`)
 		}
 		if (block.kind === "code" && selectionOverlapsBlock(selection, block)) {
+			ids.push(`${block.id}:source`)
+		}
+		if (block.kind === "table" && selectionOverlapsBlock(selection, block)) {
 			ids.push(`${block.id}:source`)
 		}
 	}

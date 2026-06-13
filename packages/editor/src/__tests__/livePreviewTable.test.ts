@@ -38,9 +38,9 @@ describe("GFM inline rendering", () => {
 > [!warning]+ **Title**
 > Body with *emphasis* and ~~strike~~.`)
 
-		expect(document.querySelector(".cm-table-wrapper strong")?.textContent).toBe("bold")
-		expect(document.querySelector(".cm-table-wrapper em")?.textContent).toBe("italic")
-		expect(document.querySelector(".cm-table-wrapper .markdown-link")?.textContent).toBe("link")
+		expect(document.querySelector(".cm-table-wrapper .cm-bold")?.textContent).toBe("bold")
+		expect(document.querySelector(".cm-table-wrapper .cm-italic")?.textContent).toBe("italic")
+		expect(document.querySelector(".cm-table-wrapper .cm-link")?.textContent).toBe("link")
 		expect(document.querySelectorAll(".cm-bold").length).toBeGreaterThanOrEqual(1)
 		expect(document.querySelectorAll(".cm-italic").length).toBeGreaterThanOrEqual(1)
 		expect(document.querySelectorAll(".cm-strikethrough").length).toBeGreaterThanOrEqual(1)
@@ -50,14 +50,30 @@ describe("GFM inline rendering", () => {
 		const content = "| A | B |\n| --- | --- |\n| **bold** | value |\n\ntail"
 		const view = createEditor(content)
 		expect(document.querySelector(".cm-table-wrapper")).not.toBeNull()
-		expect(document.querySelector(".cm-table-row-widget")).not.toBeNull()
+		expect(document.querySelector(".cm-table-rendered-line")).not.toBeNull()
+		expect(document.querySelector(".cm-table-cell")).not.toBeNull()
 
 		view.dispatch({ selection: { anchor: 0, head: content.indexOf("tail") } })
 
 		expect(document.querySelector(".cm-table-wrapper")).not.toBeNull()
+		expect(document.querySelector(".cm-table-rendered-line")).toBeNull()
+		expect(document.querySelector(".cm-table-cell")).toBeNull()
+		expect(document.querySelectorAll(".cm-table-source-line")).toHaveLength(3)
+		expect(document.querySelector(".cm-table-wrapper")?.textContent).toContain("| **bold** | value |")
+	})
+
+	it("maps table cell DOM positions to their exact source offsets", () => {
+		const content = "| Alpha | Beta |\n| --- | --- |\n| Gamma | Delta |\n\ntail"
+		const view = createEditor(content)
+		const gammaCell = Array.from(document.querySelectorAll<HTMLElement>(".cm-table-cell")).find(
+			(cell) => cell.textContent === "Gamma",
+		)
+		const gammaText = gammaCell?.firstChild
+
+		expect(gammaText).not.toBeNull()
+		expect(view.posAtDOM(gammaText as Node, 3)).toBe(content.indexOf("Gamma") + 3)
 		expect(document.querySelector(".cm-table-row-widget")).toBeNull()
-		expect(document.querySelector(".cm-table-line")).not.toBeNull()
-		expect(document.querySelector(".cm-bold")?.textContent).toBe("bold")
+		expect(document.querySelector(".cm-table-delimiter-widget")).toBeNull()
 	})
 
 	it("reveals blockquote markers from any cursor position in the block", () => {

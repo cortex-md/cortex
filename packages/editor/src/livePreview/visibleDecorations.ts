@@ -309,8 +309,18 @@ function buildVisibleDecorations(
 			visibleRange.to,
 		)
 		const codeBlocks = findBlocksInRange(blockState.index.code, visibleRange.from, visibleRange.to)
+		const tableBlocks = findBlocksInRange(blockState.index.tables, visibleRange.from, visibleRange.to)
+		const sourceTables = tableBlocks.filter((block) =>
+			selectionOverlapsBlock(view.state.selection, block),
+		)
+		const projectionBlockedBlocks = [...hiddenBlocks, ...sourceTables].sort(
+			(left, right) => left.from - right.from,
+		)
 		recordCandidateBlocks(
-			hiddenBlocks.length + calloutBlocks.length + blockquoteBlocks.length + codeBlocks.length,
+			projectionBlockedBlocks.length +
+				calloutBlocks.length +
+				blockquoteBlocks.length +
+				codeBlocks.length,
 		)
 		for (const block of calloutBlocks) visibleCallouts.set(block.id, block)
 		for (const block of codeBlocks) visibleCodeBlocks.set(block.id, block)
@@ -321,7 +331,7 @@ function buildVisibleDecorations(
 			enter(nodeRef) {
 				recordSyntaxNodeVisit()
 				const node = nodeRef.node as SyntaxNodeLike
-				if (hiddenBlockContaining(hiddenBlocks, node.from, node.to)) return false
+				if (hiddenBlockContaining(projectionBlockedBlocks, node.from, node.to)) return false
 				const callout = calloutContaining(calloutBlocks, node.from, node.to)
 				const blockquote = blockquoteContaining(blockquoteBlocks, node.from, node.to)
 
@@ -353,7 +363,7 @@ function buildVisibleDecorations(
 				}
 			},
 		})
-		addSemanticTransforms(view, ranges, hiddenBlocks, visibleRange)
+		addSemanticTransforms(view, ranges, projectionBlockedBlocks, visibleRange)
 	}
 
 	for (const block of visibleCallouts.values()) {

@@ -6,7 +6,6 @@ import {
 	parseCalloutMarker,
 	parseFrontmatter,
 } from "@cortex/renderer"
-import { createInlineSnapshot, type InlineSnapshot } from "./inlineTree"
 
 interface SyntaxNodeLike {
 	name: string
@@ -24,10 +23,24 @@ interface BaseBlock {
 	lastLine: number
 }
 
+interface SourceRange {
+	from: number
+	to: number
+}
+
+export interface TableCellModel extends SourceRange {
+	alignment: "left" | "center" | "right"
+}
+
+export interface TableRowModel extends SourceRange {
+	cells: TableCellModel[]
+}
+
 export interface TableModel {
-	headers: InlineSnapshot[]
-	rows: InlineSnapshot[][]
-	alignments: Array<"left" | "center" | "right">
+	header: TableRowModel
+	delimiter: SourceRange
+	rows: TableRowModel[]
+	columnCount: number
 }
 
 export interface TableBlock extends BaseBlock {
@@ -89,6 +102,7 @@ export interface MarkdownBlockIndex {
 	callouts: CalloutBlock[]
 	blockquotes: BlockquoteBlock[]
 	code: CodeBlock[]
+	tables: TableBlock[]
 }
 
 const headingLevels: Record<string, number> = {
@@ -133,24 +147,80 @@ function parseAlignment(value: string): "left" | "center" | "right" {
 	return "left"
 }
 
+function trimCellRange(state: EditorState, from: number, to: number): SourceRange {
+	const source = state.sliceDoc(from, to)
+	const leadingWhitespace = source.length - source.trimStart().length
+	const trailingWhitespace = source.length - source.trimEnd().length
+	const contentFrom = from + leadingWhitespace
+	return {
+		from: contentFrom,
+		to: Math.max(contentFrom, to - trailingWhitespace),
+	}
+}
+
+function createTableRowModel(
+	state: EditorState,
+	node: SyntaxNodeLike,
+	alignments: TableCellModel["alignment"][],
+): TableRowModel {
+	const delimiters = childNodes(node, "TableDelimiter")
+	const leadingDelimiter = delimiters[0]?.from === node.from
+	const trailingDelimiter = delimiters.at(-1)?.to === node.to
+	const segmentRanges: SourceRange[] = []
+	let segmentFrom = leadingDelimiter ? delimiters[0].to : node.from
+	const lastDelimiterIndex = trailingDelimiter ? delimiters.length - 1 : delimiters.length
+
+	for (
+		let delimiterIndex = leadingDelimiter ? 1 : 0;
+		delimiterIndex < lastDelimiterIndex;
+		delimiterIndex++
+	) {
+		const delimiter = delimiters[delimiterIndex]
+		segmentRanges.push(trimCellRange(state, segmentFrom, delimiter.from))
+		segmentFrom = delimiter.to
+	}
+
+	const segmentTo = trailingDelimiter ? delimiters.at(-1)?.from : node.to
+	if (segmentTo !== undefined) {
+		segmentRanges.push(trimCellRange(state, segmentFrom, segmentTo))
+	}
+
+	const columnCount = Math.max(alignments.length, segmentRanges.length)
+	const cells = Array.from({ length: columnCount }, (_, index) => {
+		const range = segmentRanges[index] ?? { from: node.to, to: node.to }
+		return {
+			...range,
+			alignment: alignments[index] ?? "left",
+		}
+	})
+
+	return { from: node.from, to: node.to, cells }
+}
+
 function createTableModel(state: EditorState, node: SyntaxNodeLike): TableModel {
 	const header = childNodes(node, "TableHeader")[0]
 	const rows = childNodes(node, "TableRow")
 	const delimiter = childNodes(node, "TableDelimiter")[0]
-	const delimiterSource = delimiter ? state.doc.sliceString(delimiter.from, delimiter.to) : ""
+	if (!header || !delimiter) {
+		const emptyRow = { from: node.from, to: node.from, cells: [] }
+		return {
+			header: emptyRow,
+			delimiter: { from: node.from, to: node.from },
+			rows: [],
+			columnCount: 0,
+		}
+	}
+	const delimiterSource = state.doc.sliceString(delimiter.from, delimiter.to)
 	const alignments = delimiterSource
 		.replace(/^\s*\|?|\|?\s*$/g, "")
 		.split("|")
 		.map(parseAlignment)
 
 	return {
-		headers: header
-			? childNodes(header, "TableCell").map((cell) => createInlineSnapshot(state, cell))
-			: [],
-		rows: rows.map((row) =>
-			childNodes(row, "TableCell").map((cell) => createInlineSnapshot(state, cell)),
-		),
-		alignments,
+		header: createTableRowModel(state, header, alignments),
+		delimiter: { from: delimiter.from, to: delimiter.to },
+		rows: rows.map((row) => createTableRowModel(state, row, alignments)),
+		columnCount: alignments.length,
 	}
 }
 
@@ -276,6 +346,7 @@ export function createMarkdownBlockIndex(blocks: MarkdownBlock[]): MarkdownBlock
 		callouts: blocks.filter((block): block is CalloutBlock => block.kind === "callout"),
 		blockquotes: blocks.filter((block): block is BlockquoteBlock => block.kind === "blockquote"),
 		code: blocks.filter((block): block is CodeBlock => block.kind === "code"),
+		tables: blocks.filter((block): block is TableBlock => block.kind === "table"),
 	}
 }
 
@@ -334,5 +405,5 @@ export function blockUsesReplacement(
 	selection: EditorSelection,
 ): boolean {
 	if (selectionOverlapsBlock(selection, block)) return false
-	return block.kind === "table" || block.kind === "image" || block.kind === "horizontalRule"
+	return block.kind === "image" || block.kind === "horizontalRule"
 }
