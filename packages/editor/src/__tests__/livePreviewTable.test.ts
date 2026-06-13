@@ -73,13 +73,15 @@ describe("GFM inline rendering", () => {
 		const content = "---\n\ntail"
 		const view = createEditor(content)
 
-		expect(document.querySelector(".cm-hr-widget")).not.toBeNull()
+		expect(document.querySelector(".cm-horizontal-rule-line")).not.toBeNull()
+		expect(document.querySelector(".cm-hr-widget")).toBeNull()
 		expect(document.querySelector(".cm-content")?.textContent).not.toContain("---")
 		view.dispatch({ selection: { anchor: 1 } })
-		expect(document.querySelector(".cm-hr-widget")).toBeNull()
+		expect(document.querySelector(".cm-horizontal-rule-line")).toBeNull()
 		expect(document.querySelector(".cm-content")?.textContent).toContain("---")
 		view.dispatch({ selection: { anchor: content.length } })
-		expect(document.querySelector(".cm-hr-widget")).not.toBeNull()
+		expect(document.querySelector(".cm-horizontal-rule-line")).not.toBeNull()
+		expect(document.querySelectorAll(".cm-line")).toHaveLength(view.state.doc.lines)
 	})
 
 	it("reveals fenced code markers only while the cursor is inside the block", () => {

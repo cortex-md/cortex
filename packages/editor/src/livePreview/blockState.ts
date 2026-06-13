@@ -19,7 +19,7 @@ import {
 	type MarkdownBlockIndex,
 	selectionOverlapsBlock,
 } from "./model"
-import { HorizontalRuleWidget, ImageWidget, TableDelimiterWidget, TableRowWidget } from "./widgets"
+import { ImageWidget, TableDelimiterWidget, TableRowWidget } from "./widgets"
 
 export interface LivePreviewBlockState {
 	blocks: MarkdownBlock[]
@@ -146,11 +146,8 @@ function buildDecorations(
 		}
 		if (block.kind === "horizontalRule") {
 			if (replaced) {
-				ranges.push(
-					Decoration.replace({
-						widget: new HorizontalRuleWidget(),
-					}).range(block.from, block.to),
-				)
+				ranges.push(Decoration.line({ class: "cm-horizontal-rule-line" }).range(block.from))
+				ranges.push(Decoration.replace({}).range(block.from, block.to))
 			}
 			continue
 		}

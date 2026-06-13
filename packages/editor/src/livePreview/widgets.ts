@@ -83,15 +83,6 @@ export class PortableNodeWidget extends WidgetType {
 	}
 }
 
-export class HorizontalRuleWidget extends WidgetType {
-	toDOM() {
-		const separator = document.createElement("div")
-		separator.className = "cm-hr-widget"
-		separator.setAttribute("role", "separator")
-		return separator
-	}
-}
-
 export class CheckboxWidget extends WidgetType {
 	constructor(
 		readonly checked: boolean,

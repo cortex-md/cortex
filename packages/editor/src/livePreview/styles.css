@@ -40,11 +40,18 @@
 	overflow: hidden;
 }
 
-.cm-hr-widget {
-	display: block;
+.cm-line.cm-horizontal-rule-line {
+	position: relative;
+}
+
+.cm-line.cm-horizontal-rule-line::before {
+	content: "";
+	position: absolute;
+	inset-inline: 0;
+	top: 50%;
 	height: 1px;
 	background: var(--border);
-	margin-block: calc(var(--editor-line-height, 27px) / 2);
+	pointer-events: none;
 }
 
 .cm-checkbox {
