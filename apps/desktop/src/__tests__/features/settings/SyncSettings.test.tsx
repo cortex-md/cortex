@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 vi.mock("@cortex/core", () => ({
 	DEFAULT_SYNC_SERVER_URL: "http://localhost:8080",
 	useAuthStore: vi.fn(),
+	useDevicesStore: vi.fn(),
 	useRemoteVaultStore: vi.fn(),
 	useSyncStore: vi.fn(),
 	useUIStore: vi.fn(),
@@ -36,6 +37,7 @@ vi.mock("../../../features/settings/ExcludedPathsSettings", () => ({
 
 import {
 	useAuthStore,
+	useDevicesStore,
 	useRemoteVaultStore,
 	useSyncStore,
 	useUIStore,
@@ -54,6 +56,7 @@ const updateSelfHostedEnvironment = vi.fn().mockResolvedValue(undefined)
 const unlinkVault = vi.fn().mockResolvedValue(undefined)
 const loadLink = vi.fn().mockResolvedValue(undefined)
 const fetchRemoteVaults = vi.fn().mockResolvedValue(undefined)
+const fetchDevices = vi.fn().mockResolvedValue(undefined)
 const updateSyncPreference = vi.fn().mockResolvedValue(undefined)
 
 function setupMocks(
@@ -63,7 +66,17 @@ function setupMocks(
 		syncEnabled?: boolean
 		selfHosted?: boolean
 		linkedVaultId?: string | null
-		remoteVaults?: Array<{ id: string; role: string }>
+		remoteVaults?: Array<{
+			id: string
+			name: string
+			role: string
+			memberCount?: number
+		}>
+		engineState?: string
+		lastSyncedAt?: number | null
+		deviceEntries?: Array<{ id: string; revoked: boolean }>
+		devicesLoading?: boolean
+		files?: Array<{ name: string; path: string; isDir: boolean }>
 	} = {},
 ) {
 	vi.mocked(useUIStore).mockImplementation(((selector?: (state: unknown) => unknown) => {
@@ -84,7 +97,13 @@ function setupMocks(
 	}) as never)
 
 	vi.mocked(useVaultStore).mockImplementation(((selector?: (state: unknown) => unknown) => {
-		const state = { vault: mockVault }
+		const state = {
+			vault: mockVault,
+			files: overrides.files ?? [
+				{ name: "One.md", path: "/vault/One.md", isDir: false },
+				{ name: "image.png", path: "/vault/image.png", isDir: false },
+			],
+		}
 		return selector ? selector(state) : state
 	}) as never)
 
@@ -112,8 +131,19 @@ function setupMocks(
 		return selector ? selector(state) : state
 	}) as never)
 
+	vi.mocked(useDevicesStore).mockImplementation(((selector?: (state: unknown) => unknown) => {
+		const state = {
+			deviceEntries: overrides.deviceEntries ?? [],
+			loading: overrides.devicesLoading ?? false,
+			error: null,
+			fetchDevices,
+		}
+		return selector ? selector(state) : state
+	}) as never)
+
 	vi.mocked(useSyncStore).mockReturnValue({
-		engineState: "idle",
+		engineState: overrides.engineState ?? "idle",
+		lastSyncedAt: overrides.lastSyncedAt ?? null,
 		syncPreferences: {
 			syncSettings: false,
 			syncHotkeys: false,
@@ -184,12 +214,62 @@ describe("SyncSection", () => {
 			authenticated: true,
 			syncEnabled: true,
 			linkedVaultId: "remote-vault-id",
-			remoteVaults: [{ id: "remote-vault-id", role: "owner" }],
+			remoteVaults: [{ id: "remote-vault-id", name: "Team Notes", role: "owner" }],
 		})
 		render(<SyncSection view="members" />)
 
 		expect(screen.getByText("Members")).toBeInTheDocument()
 		expect(screen.getByText("Members panel")).toBeInTheDocument()
+	})
+
+	it("shows useful linked vault metadata without exposing the remote id", () => {
+		setupMocks({
+			authenticated: true,
+			syncEnabled: true,
+			linkedVaultId: "remote-vault-id",
+			remoteVaults: [{ id: "remote-vault-id", name: "Team Notes", role: "owner" }],
+			engineState: "live",
+			lastSyncedAt: Date.now(),
+			deviceEntries: [
+				{ id: "one", revoked: false },
+				{ id: "two", revoked: false },
+				{ id: "old", revoked: true },
+			],
+			files: [
+				{ name: "One.md", path: "/vault/One.md", isDir: false },
+				{ name: "Two.MD", path: "/vault/Two.MD", isDir: false },
+				{ name: "Assets", path: "/vault/Assets", isDir: true },
+			],
+		})
+
+		render(<SyncSection />)
+
+		expect(screen.getByText("Team Notes")).toBeInTheDocument()
+		expect(screen.queryByText("remote-vault-id")).not.toBeInTheDocument()
+		expect(screen.getByText("Synced")).toBeInTheDocument()
+		expect(screen.getByText("Just now")).toBeInTheDocument()
+		expect(screen.getByText("2 devices")).toBeInTheDocument()
+		expect(screen.getByText("2 notes")).toBeInTheDocument()
+		expect(screen.getByText("owner")).toBeInTheDocument()
+	})
+
+	it("fetches devices only for an enabled linked overview with an empty device store", async () => {
+		setupMocks({
+			authenticated: true,
+			syncEnabled: true,
+			linkedVaultId: "remote-vault-id",
+			remoteVaults: [{ id: "remote-vault-id", name: "Team Notes", role: "owner" }],
+		})
+
+		const { rerender } = render(<SyncSection />)
+
+		await waitFor(() => {
+			expect(fetchDevices).toHaveBeenCalledTimes(1)
+		})
+
+		rerender(<SyncSection />)
+
+		expect(fetchDevices).toHaveBeenCalledTimes(1)
 	})
 
 	it("shows self-host settings with closed environment groups", () => {

@@ -1,6 +1,7 @@
 import {
 	DEFAULT_SYNC_SERVER_URL,
 	useAuthStore,
+	useDevicesStore,
 	useRemoteVaultStore,
 	useSyncStore,
 	useUIStore,
@@ -24,7 +25,18 @@ import {
 	Input,
 	Switch,
 } from "@cortex/ui"
-import { ClipboardCopy, Cloud, CloudOff, Download, Link, Loader2, LogIn } from "lucide-react"
+import {
+	ClipboardCopy,
+	Clock3,
+	Cloud,
+	CloudOff,
+	Download,
+	FileText,
+	Link,
+	Loader2,
+	LogIn,
+	MonitorSmartphone,
+} from "lucide-react"
 import {
 	type ChangeEvent,
 	type KeyboardEvent,
@@ -376,15 +388,87 @@ function SyncPreferencesSection() {
 	)
 }
 
+const SYNC_STATUS_LABELS: Record<string, string> = {
+	idle: "Idle",
+	authenticating: "Authenticating",
+	connecting: "Connecting",
+	syncing: "Syncing",
+	live: "Synced",
+	offline: "Offline",
+	recovering: "Recovering",
+	denied: "Access denied",
+}
+
+function formatLastSyncedAt(lastSyncedAt: number | null): string {
+	if (!lastSyncedAt) return "Not synced yet"
+	const elapsedMinutes = Math.floor((Date.now() - lastSyncedAt) / 60000)
+	if (elapsedMinutes <= 0) return "Just now"
+	if (elapsedMinutes < 60) {
+		return `${elapsedMinutes} ${elapsedMinutes === 1 ? "minute" : "minutes"} ago`
+	}
+	const elapsedHours = Math.floor(elapsedMinutes / 60)
+	if (elapsedHours < 24) {
+		return `${elapsedHours} ${elapsedHours === 1 ? "hour" : "hours"} ago`
+	}
+	return new Date(lastSyncedAt).toLocaleDateString(undefined, {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+	})
+}
+
+function syncStatusClassName(engineState: string): string {
+	if (engineState === "live") {
+		return "border-status-success-border bg-status-success-background text-status-success-foreground"
+	}
+	if (engineState === "offline") {
+		return "border-status-warning-border bg-status-warning-background text-status-warning-foreground"
+	}
+	if (engineState === "denied") {
+		return "border-status-error-border bg-status-error-background text-status-error-foreground"
+	}
+	return "border-border bg-muted text-muted-foreground"
+}
+
+interface SyncOverviewMetricProps {
+	icon: typeof Clock3
+	label: string
+	value: string
+}
+
+function SyncOverviewMetric({ icon: Icon, label, value }: SyncOverviewMetricProps) {
+	return (
+		<div className="flex min-w-0 items-center gap-3 px-4 py-3">
+			<div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+				<Icon className="size-3.5" />
+			</div>
+			<div className="min-w-0">
+				<p className="m-0 text-[11px] leading-4 text-muted-foreground">{label}</p>
+				<p className="m-0 truncate text-[13px] font-medium leading-5 text-foreground">{value}</p>
+			</div>
+		</div>
+	)
+}
+
 function VaultLinkSection({
 	linkedVaultId,
+	vaultName,
 	remoteVaultRole,
 	engineState,
+	lastSyncedAt,
+	connectedDeviceCount,
+	devicesLoading,
+	noteCount,
 	onOpenLink,
 }: {
 	linkedVaultId: string | null
+	vaultName: string
 	remoteVaultRole?: string
 	engineState: string
+	lastSyncedAt: number | null
+	connectedDeviceCount: number
+	devicesLoading: boolean
+	noteCount: number
 	onOpenLink: () => void
 }) {
 	return (
@@ -393,43 +477,75 @@ function VaultLinkSection({
 			description="The remote vault linked to this local vault."
 		>
 			<SettingsGroup>
-				<SettingsGroupContent className="flex items-center gap-3">
+				<SettingsGroupContent className="p-0">
 					{linkedVaultId ? (
-						<>
-							<Cloud size={16} className="text-accent" />
-							<div className="flex flex-col min-w-0 flex-1">
-								<span className="font-medium">Linked to remote vault</span>
-								<span className="text-text-muted truncate">{linkedVaultId}</span>
+						<div>
+							<div className="flex items-center gap-3 px-4 py-4">
+								<div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-subtle text-brand-text">
+									<Cloud className="size-4" />
+								</div>
+								<div className="min-w-0 flex-1">
+									<p className="m-0 truncate text-sm font-semibold text-foreground">{vaultName}</p>
+									<p className="m-0 mt-0.5 text-xs text-muted-foreground">Linked remote vault</p>
+								</div>
+								{remoteVaultRole && (
+									<Badge variant="outline" className="capitalize">
+										{remoteVaultRole}
+									</Badge>
+								)}
+								<Badge
+									variant="outline"
+									className={`capitalize ${syncStatusClassName(engineState)}`}
+								>
+									{(engineState === "connecting" ||
+										engineState === "authenticating" ||
+										engineState === "syncing" ||
+										engineState === "recovering") && <Loader2 className="animate-spin" />}
+									{SYNC_STATUS_LABELS[engineState] ?? engineState}
+								</Badge>
+								<Button variant="ghost" size="sm" onClick={onOpenLink}>
+									<Link />
+									Change
+								</Button>
 							</div>
-							{remoteVaultRole && (
-								<Badge variant="outline" className="py-1 capitalize">
-									{remoteVaultRole}
-								</Badge>
-							)}
-							{engineState === "live" && (
-								<Badge variant="outline" className="py-1">
-									Synced
-								</Badge>
-							)}
-							{(engineState === "connecting" ||
-								engineState === "authenticating" ||
-								engineState === "syncing" ||
-								engineState === "recovering") && (
-								<Loader2 size={14} className="animate-spin text-text-muted" />
-							)}
-						</>
+							<div className="grid border-t border-settings-group-divider sm:grid-cols-3 sm:divide-x sm:divide-settings-group-divider">
+								<SyncOverviewMetric
+									icon={Clock3}
+									label="Last synced"
+									value={formatLastSyncedAt(lastSyncedAt)}
+								/>
+								<SyncOverviewMetric
+									icon={MonitorSmartphone}
+									label="Connected devices"
+									value={
+										devicesLoading
+											? "Loading"
+											: `${connectedDeviceCount} ${
+													connectedDeviceCount === 1 ? "device" : "devices"
+												}`
+									}
+								/>
+								<SyncOverviewMetric
+									icon={FileText}
+									label="Synced notes"
+									value={`${noteCount} ${noteCount === 1 ? "note" : "notes"}`}
+								/>
+							</div>
+						</div>
 					) : (
-						<>
-							<CloudOff size={16} className="text-text-muted" />
-							<span className="text-text-muted flex-1">
+						<div className="flex items-center gap-3 px-4 py-4">
+							<div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+								<CloudOff className="size-4" />
+							</div>
+							<span className="flex-1 text-muted-foreground">
 								Link or create a remote vault to start syncing.
 							</span>
-						</>
+							<Button variant="default" size="sm" onClick={onOpenLink}>
+								<Link />
+								Link vault
+							</Button>
+						</div>
 					)}
-					<Button variant="ghost" size="sm" onClick={onOpenLink} className="h-7 px-2">
-						<Link size={12} />
-						{linkedVaultId ? "Change" : "Link"}
-					</Button>
 				</SettingsGroupContent>
 			</SettingsGroup>
 		</SettingsSection>
@@ -460,8 +576,13 @@ function MembersSection({
 			<SettingsPage>
 				<VaultLinkSection
 					linkedVaultId={linkedVaultId}
+					vaultName="Remote vault"
 					remoteVaultRole={linkedVaultRole}
 					engineState="idle"
+					lastSyncedAt={null}
+					connectedDeviceCount={0}
+					devicesLoading={false}
+					noteCount={0}
 					onOpenLink={onOpenLink}
 				/>
 			</SettingsPage>
@@ -621,10 +742,14 @@ function SelfHostedEnvironmentSection() {
 
 export function SyncSection({ view = "overview" }: { view?: SyncSettingsView }) {
 	const authenticated = useAuthStore((s) => s.authenticated)
-	const { vault } = useVaultStore()
+	const { vault, files } = useVaultStore()
 	const { linkedVaultId, remoteVaults, loadLink, fetchRemoteVaults, syncConfig } =
 		useRemoteVaultStore()
-	const { engineState } = useSyncStore()
+	const { engineState, lastSyncedAt } = useSyncStore()
+	const deviceEntries = useDevicesStore((state) => state.deviceEntries)
+	const devicesLoading = useDevicesStore((state) => state.loading)
+	const devicesError = useDevicesStore((state) => state.error)
+	const fetchDevices = useDevicesStore((state) => state.fetchDevices)
 	const [linkModalOpen, setLinkModalOpen] = useState(false)
 
 	useEffect(() => {
@@ -640,6 +765,37 @@ export function SyncSection({ view = "overview" }: { view?: SyncSettingsView }) 
 	}, [authenticated, syncConfig.enabled, fetchRemoteVaults])
 
 	const linkedVault = remoteVaults.find((remoteVault) => remoteVault.id === linkedVaultId)
+	const noteCount = useMemo(
+		() => files.filter((file) => !file.isDir && file.name.toLowerCase().endsWith(".md")).length,
+		[files],
+	)
+	const connectedDeviceCount = useMemo(
+		() => deviceEntries.filter((device) => !device.revoked).length,
+		[deviceEntries],
+	)
+
+	useEffect(() => {
+		if (
+			view === "overview" &&
+			authenticated &&
+			syncConfig.enabled &&
+			linkedVaultId &&
+			deviceEntries.length === 0 &&
+			!devicesLoading &&
+			!devicesError
+		) {
+			fetchDevices()
+		}
+	}, [
+		view,
+		authenticated,
+		syncConfig.enabled,
+		linkedVaultId,
+		deviceEntries.length,
+		devicesLoading,
+		devicesError,
+		fetchDevices,
+	])
 
 	let content: ReactNode = null
 
@@ -651,8 +807,13 @@ export function SyncSection({ view = "overview" }: { view?: SyncSettingsView }) 
 				{syncConfig.enabled && authenticated && (
 					<VaultLinkSection
 						linkedVaultId={linkedVaultId}
+						vaultName={linkedVault?.name ?? vault?.name ?? "Remote vault"}
 						remoteVaultRole={linkedVault?.role}
 						engineState={engineState}
+						lastSyncedAt={lastSyncedAt}
+						connectedDeviceCount={connectedDeviceCount}
+						devicesLoading={devicesLoading}
+						noteCount={noteCount}
 						onOpenLink={() => setLinkModalOpen(true)}
 					/>
 				)}
