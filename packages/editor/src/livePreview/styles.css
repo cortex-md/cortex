@@ -2,9 +2,7 @@
 	position: relative;
 	box-sizing: border-box;
 	margin-inline: var(--markdown-content-gutter, 40px);
-	margin-block-end: var(--markdown-block-spacing, 1em);
 	border-radius: var(--markdown-block-radius, 6px);
-	overflow: hidden;
 }
 
 .cm-markdown-block > .cm-line {
@@ -27,7 +25,6 @@
 }
 
 .cm-callout-wrapper {
-	padding-block: var(--markdown-callout-padding-block, 12px);
 	background: var(--callout-bg, var(--accent-subtle));
 	box-shadow: inset 3px 0 0 var(--callout-color, var(--accent));
 	color: var(--text-secondary);
@@ -39,11 +36,8 @@
 }
 
 .cm-callout-wrapper.is-collapsed {
-	max-height: calc(
-		var(--editor-line-height, 27px) +
-		2 *
-		var(--markdown-callout-padding-block, 12px)
-	);
+	max-height: var(--editor-line-height, 27px);
+	overflow: hidden;
 }
 
 .cm-hr-widget {
@@ -60,7 +54,6 @@
 }
 
 .cm-codeblock-wrapper {
-	padding-block: var(--markdown-code-padding-block, 8px);
 	background: var(--bg-code);
 }
 

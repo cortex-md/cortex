@@ -2,6 +2,8 @@ import { markdown } from "@codemirror/lang-markdown"
 import { EditorState } from "@codemirror/state"
 import { EditorView } from "@codemirror/view"
 import { GFM } from "@lezer/markdown"
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { livePreviewExtension } from "../livePreview"
 
@@ -115,5 +117,16 @@ title: Navigation
 		expect(document.querySelectorAll(".cm-table-row-widget")).toHaveLength(2)
 		expect(document.querySelectorAll(".cm-frontmatter-line")).toHaveLength(3)
 		expect(document.querySelectorAll(".cm-callout-line")).toHaveLength(2)
+	})
+
+	it("keeps block wrapper chrome out of vertical line geometry", () => {
+		const styles = readFileSync(resolve(process.cwd(), "src/livePreview/styles.css"), "utf8")
+
+		expect(styles).not.toContain("margin-block-end:")
+		expect(styles).not.toMatch(/\.cm-callout-wrapper\s*\{[^}]*padding-block:/s)
+		expect(styles).not.toMatch(/\.cm-codeblock-wrapper\s*\{[^}]*padding-block:/s)
+		expect(styles).toMatch(
+			/\.cm-callout-wrapper\.is-collapsed\s*\{[^}]*max-height:\s*var\(--editor-line-height/s,
+		)
 	})
 })
