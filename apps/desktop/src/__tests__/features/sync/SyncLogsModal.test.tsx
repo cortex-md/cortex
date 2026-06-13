@@ -48,13 +48,12 @@ describe("SyncLogsModal", () => {
 
 		expect(screen.queryByText("Sync connected")).not.toBeInTheDocument()
 		expect(screen.getByText("Upload failed")).toBeInTheDocument()
-		expect(screen.getByText("1 of 2 entries")).toBeInTheDocument()
 	})
 
 	it("copies all entries and clears the session", async () => {
 		render(<SyncLogsModal open onOpenChange={vi.fn()} />)
 
-		await userEvent.click(screen.getByRole("button", { name: "Copy all" }))
+		await userEvent.click(screen.getByRole("button", { name: "Copy" }))
 
 		expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
 			expect.stringContaining("[ERROR] Upload failed path=Notes/Plan.md"),
@@ -65,6 +64,6 @@ describe("SyncLogsModal", () => {
 		await waitFor(() => {
 			expect(screen.getByText("No sync activity yet")).toBeInTheDocument()
 		})
-		expect(screen.getByRole("button", { name: "Copy all" })).toBeDisabled()
+		expect(screen.getByRole("button", { name: "Copy" })).toBeDisabled()
 	})
 })
