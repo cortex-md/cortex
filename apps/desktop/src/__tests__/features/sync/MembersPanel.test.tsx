@@ -60,21 +60,17 @@ afterEach(() => {
 })
 
 describe("MembersPanel", () => {
-	it("shows member hierarchy and updates roles through a portaled select", async () => {
-		const { container } = render(<MembersPanel vaultId="vault-id" currentUserRole="owner" />)
+	it("shows member hierarchy and updates roles through a native select", async () => {
+		render(<MembersPanel vaultId="vault-id" currentUserRole="owner" />)
 
 		expect(screen.getByText("Ada Lovelace")).toBeInTheDocument()
 		expect(screen.getByText("ada@example.com")).toBeInTheDocument()
 		expect(screen.getByText("AL")).toBeInTheDocument()
 		expect(screen.getByRole("columnheader", { name: "Joined" })).toBeInTheDocument()
 
-		fireEvent.keyDown(screen.getByRole("combobox", { name: "Role for Ada Lovelace" }), {
-			key: "ArrowDown",
+		fireEvent.change(screen.getByRole("combobox", { name: "Role for Ada Lovelace" }), {
+			target: { value: "editor" },
 		})
-		await screen.findByRole("option", { name: "Editor" })
-		expect(document.querySelector('[data-slot="select-content"]')).not.toBeNull()
-		expect(container.querySelector('[data-slot="select-content"]')).toBeNull()
-		await userEvent.click(await screen.findByRole("option", { name: "Editor" }))
 
 		expect(updateMemberRole).toHaveBeenCalledWith("vault-id", "user-1", "editor")
 
@@ -87,10 +83,9 @@ describe("MembersPanel", () => {
 		render(<MembersPanel vaultId="vault-id" currentUserRole="owner" />)
 
 		await userEvent.type(screen.getByRole("textbox", { name: "Invite email" }), "new@example.com")
-		fireEvent.keyDown(screen.getByRole("combobox", { name: "Invite role" }), {
-			key: "ArrowDown",
+		fireEvent.change(screen.getByRole("combobox", { name: "Invite role" }), {
+			target: { value: "viewer" },
 		})
-		await userEvent.click(await screen.findByRole("option", { name: "Viewer" }))
 		await userEvent.click(screen.getByRole("button", { name: "Send invite" }))
 
 		await waitFor(() => {

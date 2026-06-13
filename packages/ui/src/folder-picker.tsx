@@ -20,6 +20,7 @@ interface FolderPickerProps {
 	className?: string
 	allowCustomValue?: boolean
 	getCustomValueLabel?: (value: string) => string
+	reserveDropdownSpace?: boolean
 }
 
 export function FolderPicker({
@@ -30,6 +31,7 @@ export function FolderPicker({
 	className,
 	allowCustomValue = false,
 	getCustomValueLabel = (customValue) => `Add "${customValue}"`,
+	reserveDropdownSpace = false,
 }: FolderPickerProps) {
 	const [search, setSearch] = useState("")
 	const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -65,11 +67,22 @@ export function FolderPicker({
 	}, [handleSelect, trimmedSearch])
 
 	const selectedLabel = options.find((o) => o.value === value)?.label
+	const dropdownVisible =
+		dropdownOpen && (filteredOptions.length > 0 || customValueAvailable || Boolean(trimmedSearch))
 
 	return (
-		<div className={cn("relative", className)}>
+		<div
+			className={cn(
+				"relative transition-[padding] duration-150",
+				dropdownVisible && reserveDropdownSpace && "pb-64",
+				className,
+			)}
+		>
 			<Input
 				ref={inputRef}
+				role="combobox"
+				aria-expanded={dropdownOpen}
+				aria-label={placeholder}
 				value={dropdownOpen ? search : (selectedLabel ?? "")}
 				onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
 					setSearch(e.target.value)
@@ -92,6 +105,7 @@ export function FolderPicker({
 			/>
 			{dropdownOpen && (filteredOptions.length > 0 || customValueAvailable) && (
 				<div
+					role="listbox"
 					className={cn(
 						"absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-[10px] p-1",
 						nativeGlassSurface,
@@ -101,6 +115,8 @@ export function FolderPicker({
 						<button
 							key={option.value}
 							type="button"
+							role="option"
+							aria-selected={option.value === value}
 							onMouseDown={(e) => e.preventDefault()}
 							onClick={() => handleSelect(option.value)}
 							className="flex items-center gap-2 w-full rounded-[6px] px-2 py-1.5 text-[13px] text-left hover:bg-accent/70"
@@ -116,6 +132,8 @@ export function FolderPicker({
 					{customValueAvailable && (
 						<button
 							type="button"
+							role="option"
+							aria-selected={false}
 							onMouseDown={(e) => e.preventDefault()}
 							onClick={handleCustomSelect}
 							className="flex items-center gap-2 w-full rounded-[6px] px-2 py-1.5 text-[13px] text-left hover:bg-accent/70"

@@ -23,15 +23,12 @@ import {
 import {
 	ChevronRight,
 	ClipboardCopy,
-	Clock3,
 	Cloud,
 	CloudOff,
 	Download,
-	FileText,
 	Link,
 	Loader2,
 	LogIn,
-	MonitorSmartphone,
 } from "lucide-react"
 import {
 	type ChangeEvent,
@@ -495,37 +492,17 @@ function formatLastSyncedAt(lastSyncedAt: number | null): string {
 	})
 }
 
-function syncStatusClassName(engineState: string): string {
+function syncStatusDotClassName(engineState: string): string {
 	if (engineState === "live") {
-		return "border-status-success-border bg-status-success-background text-status-success-foreground"
+		return "bg-status-success-foreground"
 	}
 	if (engineState === "offline") {
-		return "border-status-warning-border bg-status-warning-background text-status-warning-foreground"
+		return "bg-status-warning-foreground"
 	}
 	if (engineState === "denied") {
-		return "border-status-error-border bg-status-error-background text-status-error-foreground"
+		return "bg-status-error-foreground"
 	}
-	return "border-border bg-muted text-muted-foreground"
-}
-
-interface SyncOverviewMetricProps {
-	icon: typeof Clock3
-	label: string
-	value: string
-}
-
-function SyncOverviewMetric({ icon: Icon, label, value }: SyncOverviewMetricProps) {
-	return (
-		<div className="flex min-w-0 items-center gap-3 px-4 py-3">
-			<div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-				<Icon className="size-3.5" />
-			</div>
-			<div className="min-w-0">
-				<p className="m-0 text-[11px] leading-4 text-muted-foreground">{label}</p>
-				<p className="m-0 truncate text-[13px] font-medium leading-5 text-foreground">{value}</p>
-			</div>
-		</div>
-	)
+	return "bg-muted-foreground"
 }
 
 function VaultLinkSection({
@@ -555,64 +532,55 @@ function VaultLinkSection({
 			description="The remote vault linked to this local vault."
 		>
 			<SettingsGroup>
-				<SettingsGroupContent className="p-0">
-					{linkedVaultId ? (
-						<div>
-							<div className="flex items-center gap-3 px-4 py-4">
-								<div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-subtle text-brand-text">
-									<Cloud className="size-4" />
-								</div>
-								<div className="min-w-0 flex-1">
-									<p className="m-0 truncate text-sm font-semibold text-foreground">{vaultName}</p>
-									<p className="m-0 mt-0.5 text-xs text-muted-foreground">Linked remote vault</p>
-								</div>
-								{remoteVaultRole && (
-									<Badge variant="outline" className="capitalize">
-										{remoteVaultRole}
-									</Badge>
-								)}
-								<Badge
-									variant="outline"
-									className={`capitalize ${syncStatusClassName(engineState)}`}
-								>
-									{(engineState === "connecting" ||
-										engineState === "authenticating" ||
-										engineState === "syncing" ||
-										engineState === "recovering") && <Loader2 className="animate-spin" />}
-									{SYNC_STATUS_LABELS[engineState] ?? engineState}
-								</Badge>
-								<Button variant="ghost" size="sm" onClick={onOpenLink}>
-									<Link />
-									Change
-								</Button>
-							</div>
-							<div className="grid border-t border-settings-group-divider sm:grid-cols-3 sm:divide-x sm:divide-settings-group-divider">
-								<SyncOverviewMetric
-									icon={Clock3}
-									label="Last synced"
-									value={formatLastSyncedAt(lastSyncedAt)}
-								/>
-								<SyncOverviewMetric
-									icon={MonitorSmartphone}
-									label="Connected devices"
-									value={
-										devicesLoading
-											? "Loading"
-											: `${connectedDeviceCount} ${
-													connectedDeviceCount === 1 ? "device" : "devices"
-												}`
-									}
-								/>
-								<SyncOverviewMetric
-									icon={FileText}
-									label="Synced notes"
-									value={`${noteCount} ${noteCount === 1 ? "note" : "notes"}`}
-								/>
-							</div>
-						</div>
-					) : (
+				{linkedVaultId ? (
+					<>
 						<div className="flex items-center gap-3 px-4 py-4">
-							<div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+							<div className="flex size-9 shrink-0 items-center justify-center rounded-[8px] bg-muted text-muted-foreground">
+								<Cloud className="size-4" />
+							</div>
+							<div className="min-w-0 flex-1">
+								<p className="m-0 truncate text-[13px] font-semibold text-foreground">
+									{vaultName}
+								</p>
+								<div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+									<span
+										className={`size-1.5 rounded-full ${syncStatusDotClassName(engineState)}`}
+									/>
+									<span>{SYNC_STATUS_LABELS[engineState] ?? engineState}</span>
+									{remoteVaultRole && (
+										<>
+											<span aria-hidden="true">·</span>
+											<span className="capitalize">{remoteVaultRole} access</span>
+										</>
+									)}
+								</div>
+							</div>
+							<Button variant="ghost" size="xs" onClick={onOpenLink}>
+								Change
+							</Button>
+						</div>
+						<SettingsField label="Last synced">
+							<span className="text-[13px] text-muted-foreground">
+								{formatLastSyncedAt(lastSyncedAt)}
+							</span>
+						</SettingsField>
+						<SettingsField label="Connected devices">
+							<span className="text-[13px] text-muted-foreground">
+								{devicesLoading
+									? "Loading"
+									: `${connectedDeviceCount} ${connectedDeviceCount === 1 ? "device" : "devices"}`}
+							</span>
+						</SettingsField>
+						<SettingsField label="Synced notes">
+							<span className="text-[13px] text-muted-foreground">
+								{noteCount} {noteCount === 1 ? "note" : "notes"}
+							</span>
+						</SettingsField>
+					</>
+				) : (
+					<SettingsGroupContent className="p-0">
+						<div className="flex items-center gap-3 px-4 py-4">
+							<div className="flex size-9 shrink-0 items-center justify-center rounded-[8px] bg-muted text-muted-foreground">
 								<CloudOff className="size-4" />
 							</div>
 							<span className="flex-1 text-muted-foreground">
@@ -623,8 +591,8 @@ function VaultLinkSection({
 								Link vault
 							</Button>
 						</div>
-					)}
-				</SettingsGroupContent>
+					</SettingsGroupContent>
+				)}
 			</SettingsGroup>
 		</SettingsSection>
 	)
@@ -841,14 +809,15 @@ function SelfHostedEnvironmentSection() {
 		window.setTimeout(() => setCopied(false), 1200)
 	}
 
-	const handleExport = () => {
-		const blob = new Blob([environmentFile], { type: "text/plain;charset=utf-8" })
-		const url = URL.createObjectURL(blob)
-		const link = document.createElement("a")
-		link.href = url
-		link.download = ".env"
-		link.click()
-		URL.revokeObjectURL(url)
+	const handleExport = async () => {
+		const platform = getPlatform()
+		const path = await platform.dialog.saveFile({
+			title: "Export sync environment",
+			defaultPath: ".env",
+			filters: [{ name: "Environment file", extensions: ["env"] }],
+		})
+		if (!path) return
+		await platform.fs.writeFile(path, environmentFile)
 	}
 
 	return (
@@ -861,7 +830,7 @@ function SelfHostedEnvironmentSection() {
 						<ClipboardCopy size={14} />
 						{copied ? "Copied" : "Copy .env"}
 					</Button>
-					<Button variant="secondary" size="sm" onClick={handleExport}>
+					<Button variant="secondary" size="sm" onClick={() => void handleExport()}>
 						<Download size={14} />
 						Export
 					</Button>

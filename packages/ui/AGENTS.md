@@ -14,5 +14,7 @@
 - Components remain pure primitives with class names and forwarded native props.
 - Buttons use the accent with `primary-foreground`; custom accents update that foreground at
   runtime.
+- `FolderPicker` uses `reserveDropdownSpace` when it is rendered inside an overflow-clipped
+  Settings group so its inline option list remains visible.
 - Settings composition remains desktop-owned. `@cortex/ui` provides `Field`, `Item`, `Separator`,
   and `NativeSelect` rather than a Settings-specific primitive.

@@ -53,7 +53,7 @@ describe("CreateVaultModal", () => {
 			screen.getByPlaceholderText("Search files, folders, or add a pattern..."),
 			"node_modules/",
 		)
-		await userEvent.click(screen.getByRole("button", { name: 'Add pattern "node_modules/"' }))
+		await userEvent.click(screen.getByRole("option", { name: 'Add pattern "node_modules/"' }))
 		await userEvent.click(screen.getByRole("button", { name: "Create vault" }))
 
 		await waitFor(() => {

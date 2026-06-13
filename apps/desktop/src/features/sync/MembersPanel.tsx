@@ -5,11 +5,8 @@ import {
 	Badge,
 	Button,
 	Input,
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
+	NativeSelect,
+	NativeSelectOption,
 	Spinner,
 	Table,
 	TableBody,
@@ -138,16 +135,16 @@ export function MembersPanel({ vaultId, currentUserRole }: MembersPanelProps) {
 								if (event.key === "Enter") void handleInvite()
 							}}
 						/>
-						<Select value={inviteRole} onValueChange={setInviteRole}>
-							<SelectTrigger aria-label="Invite role" className="w-32">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent position="popper" align="end">
-								<SelectItem value="admin">Admin</SelectItem>
-								<SelectItem value="editor">Editor</SelectItem>
-								<SelectItem value="viewer">Viewer</SelectItem>
-							</SelectContent>
-						</Select>
+						<NativeSelect
+							aria-label="Invite role"
+							value={inviteRole}
+							onChange={(event) => setInviteRole(event.target.value)}
+							className="w-32"
+						>
+							<NativeSelectOption value="admin">Admin</NativeSelectOption>
+							<NativeSelectOption value="editor">Editor</NativeSelectOption>
+							<NativeSelectOption value="viewer">Viewer</NativeSelectOption>
+						</NativeSelect>
 						<Button
 							size="sm"
 							onClick={handleInvite}
@@ -220,26 +217,20 @@ export function MembersPanel({ vaultId, currentUserRole }: MembersPanelProps) {
 										</TableCell>
 										<TableCell>
 											{canManage ? (
-												<Select
+												<NativeSelect
+													size="sm"
+													aria-label={`Role for ${member.displayName}`}
 													value={member.role}
-													onValueChange={(role) => handleChangeRole(member.userId, role)}
+													onChange={(event) => handleChangeRole(member.userId, event.target.value)}
+													className="w-28 capitalize"
 												>
-													<SelectTrigger
-														size="sm"
-														aria-label={`Role for ${member.displayName}`}
-														className="w-28 capitalize"
-													>
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent position="popper">
-														{currentUserRole === "owner" && (
-															<SelectItem value="owner">Owner</SelectItem>
-														)}
-														<SelectItem value="admin">Admin</SelectItem>
-														<SelectItem value="editor">Editor</SelectItem>
-														<SelectItem value="viewer">Viewer</SelectItem>
-													</SelectContent>
-												</Select>
+													{currentUserRole === "owner" && (
+														<NativeSelectOption value="owner">Owner</NativeSelectOption>
+													)}
+													<NativeSelectOption value="admin">Admin</NativeSelectOption>
+													<NativeSelectOption value="editor">Editor</NativeSelectOption>
+													<NativeSelectOption value="viewer">Viewer</NativeSelectOption>
+												</NativeSelect>
 											) : (
 												<Badge variant="outline" className="capitalize">
 													{member.role}

@@ -5,7 +5,7 @@ import type {
 	FolderDialogOptions,
 	Dialog as IDialog,
 } from "@cortex/platform"
-import { confirm, message, open } from "@tauri-apps/plugin-dialog"
+import { confirm, message, open, save } from "@tauri-apps/plugin-dialog"
 import { revealItemInDir } from "@tauri-apps/plugin-opener"
 
 function resolveFolderOptions(options?: string | FolderDialogOptions) {
@@ -44,6 +44,10 @@ export class Dialog implements IDialog {
 		const selected = await open({ ...options, multiple: false })
 		if (Array.isArray(selected)) return selected[0] ?? null
 		return selected
+	}
+
+	async saveFile(options: FileDialogOptions = {}): Promise<string | null> {
+		return await save(options)
 	}
 
 	async showConfirm(title: string, message: string): Promise<boolean>

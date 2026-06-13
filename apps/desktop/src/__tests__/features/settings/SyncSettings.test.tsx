@@ -7,6 +7,8 @@ const platformMocks = vi.hoisted(() => ({
 	keychainGet: vi.fn().mockResolvedValue(null),
 	keychainSet: vi.fn().mockResolvedValue(undefined),
 	keychainDelete: vi.fn().mockResolvedValue(undefined),
+	saveFile: vi.fn().mockResolvedValue("/exports/.env"),
+	writeFile: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock("@cortex/core", () => ({
@@ -23,6 +25,10 @@ vi.mock("@cortex/platform", () => ({
 	getPlatform: vi.fn(() => ({
 		dialog: {
 			showConfirm: platformMocks.showConfirm,
+			saveFile: platformMocks.saveFile,
+		},
+		fs: {
+			writeFile: platformMocks.writeFile,
 		},
 		keychain: {
 			get: platformMocks.keychainGet,
@@ -258,7 +264,7 @@ describe("SyncSection", () => {
 		expect(screen.getByText("Just now")).toBeInTheDocument()
 		expect(screen.getByText("2 devices")).toBeInTheDocument()
 		expect(screen.getByText("2 notes")).toBeInTheDocument()
-		expect(screen.getByText("owner")).toBeInTheDocument()
+		expect(screen.getByText("owner access")).toBeInTheDocument()
 	})
 
 	it("fetches devices only for an enabled linked overview with an empty device store", async () => {
@@ -354,20 +360,9 @@ describe("SyncSection", () => {
 
 	it("copies and exports the self-host environment file", async () => {
 		const writeText = vi.fn().mockResolvedValue(undefined)
-		const createObjectURL = vi.fn(() => "blob:environment")
-		const revokeObjectURL = vi.fn()
-		const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {})
 		Object.defineProperty(navigator, "clipboard", {
 			configurable: true,
 			value: { writeText },
-		})
-		Object.defineProperty(URL, "createObjectURL", {
-			configurable: true,
-			value: createObjectURL,
-		})
-		Object.defineProperty(URL, "revokeObjectURL", {
-			configurable: true,
-			value: revokeObjectURL,
 		})
 		setupMocks({ authenticated: false, syncEnabled: true, selfHosted: true })
 		render(<SyncSection view="self-host" />)
@@ -378,8 +373,24 @@ describe("SyncSection", () => {
 
 		await userEvent.click(screen.getByRole("button", { name: "Export" }))
 
-		expect(createObjectURL).toHaveBeenCalled()
-		expect(click).toHaveBeenCalled()
-		expect(revokeObjectURL).toHaveBeenCalledWith("blob:environment")
+		expect(platformMocks.saveFile).toHaveBeenCalledWith({
+			title: "Export sync environment",
+			defaultPath: ".env",
+			filters: [{ name: "Environment file", extensions: ["env"] }],
+		})
+		expect(platformMocks.writeFile).toHaveBeenCalledWith(
+			"/exports/.env",
+			expect.stringContaining("CORTEX_SERVER_HOST=0.0.0.0"),
+		)
+	})
+
+	it("does not write an environment file when native export is cancelled", async () => {
+		platformMocks.saveFile.mockResolvedValueOnce(null)
+		setupMocks({ authenticated: false, syncEnabled: true, selfHosted: true })
+		render(<SyncSection view="self-host" />)
+
+		await userEvent.click(screen.getByRole("button", { name: "Export" }))
+
+		expect(platformMocks.writeFile).not.toHaveBeenCalled()
 	})
 })

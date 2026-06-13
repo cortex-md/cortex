@@ -352,8 +352,8 @@ UI doesn't directly access files; it reads/writes through noteCache.
 - Sync dialogs and recovery panels use bounded flex or grid layouts. Every nested scroll viewport
   needs `min-h-0` through its parent chain so logs, versions, diffs, and deleted notes scroll
   independently.
-- Settings controls inside clipped groups use the portaled `Select` and `Combobox` primitives.
-  Reusable settings-specific compositions belong in `apps/desktop/src/components/shared`.
+- Settings uses `NativeSelect` for compact option menus. Searchable file and folder controls reuse
+  `FolderPicker`; inside clipped Settings groups, enable its reserved dropdown space.
 - The sync overview never exposes remote vault IDs. Prefer already-loaded vault metadata, sync
   state, device state, and file lists; fetch devices only for a visible, authenticated linked
   overview when the store is empty.

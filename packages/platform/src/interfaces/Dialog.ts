@@ -37,6 +37,7 @@ export interface AlertDialogOptions {
 export interface Dialog {
 	pickFolder(options?: string | FolderDialogOptions): Promise<string | null>
 	pickFile(options?: FileDialogOptions): Promise<string | null>
+	saveFile(options?: FileDialogOptions): Promise<string | null>
 	showConfirm(title: string, message: string): Promise<boolean>
 	showConfirm(options: ConfirmDialogOptions): Promise<boolean>
 	showAlert(title: string, message: string): Promise<void>

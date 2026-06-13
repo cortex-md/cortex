@@ -58,8 +58,20 @@ describe("ExcludedPathsSettings", () => {
 		})
 
 		await userEvent.type(input, "*.log")
-		await userEvent.keyboard("{ArrowDown}{Enter}")
+		await userEvent.keyboard("{Enter}")
 
 		expect(toggleExcludedPath).toHaveBeenCalledWith("*.log", true)
+	})
+
+	it("reserves space for options inside the clipped settings group", async () => {
+		render(<ExcludedPathsSettings />)
+		const input = screen.getByRole("combobox", {
+			name: "Search files, folders, or add a pattern...",
+		})
+
+		await userEvent.click(input)
+
+		expect(input.parentElement).toHaveClass("pb-64")
+		expect(screen.getByRole("option", { name: "Notes/" })).toBeInTheDocument()
 	})
 })
