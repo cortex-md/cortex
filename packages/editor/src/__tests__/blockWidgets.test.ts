@@ -42,8 +42,11 @@ tail`
 		expect(() => createBlockWidgetEditor(content)).not.toThrow()
 		expect(document.querySelector(".cm-table-wrapper .cm-bold")?.textContent).toBe("Bold")
 		expect(document.querySelector(".cm-table-wrapper .cm-italic")?.textContent).toBe("Italic")
-		expect(document.querySelectorAll(".cm-table-rendered-line")).toHaveLength(2)
-		expect(document.querySelectorAll(".cm-table-cell")).toHaveLength(4)
+		expect(document.querySelectorAll(".cm-table-rendered-line")).toHaveLength(3)
+		expect(document.querySelectorAll(".cm-table-cell:not(.cm-table-delimiter-cell)")).toHaveLength(
+			4,
+		)
+		expect(document.querySelectorAll(".cm-table-delimiter-cell")).toHaveLength(2)
 		expect(document.querySelector(".cm-table-row-widget")).toBeNull()
 		expect(document.querySelectorAll(".cm-callout-line").length).toBeGreaterThan(1)
 		expect(
@@ -113,8 +116,11 @@ title: Navigation
 
 		expect(document.querySelectorAll(".cm-line")).toHaveLength(view.state.doc.lines)
 		expect(document.querySelectorAll(".cm-table-line")).toHaveLength(3)
-		expect(document.querySelectorAll(".cm-table-rendered-line")).toHaveLength(2)
-		expect(document.querySelectorAll(".cm-table-cell")).toHaveLength(4)
+		expect(document.querySelectorAll(".cm-table-rendered-line")).toHaveLength(3)
+		expect(document.querySelectorAll(".cm-table-cell:not(.cm-table-delimiter-cell)")).toHaveLength(
+			4,
+		)
+		expect(document.querySelectorAll(".cm-table-delimiter-cell")).toHaveLength(2)
 		expect(document.querySelector(".cm-table-row-widget")).toBeNull()
 		expect(document.querySelectorAll(".cm-frontmatter-line")).toHaveLength(3)
 		expect(document.querySelectorAll(".cm-callout-line")).toHaveLength(2)

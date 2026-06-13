@@ -309,8 +309,8 @@ UI doesn't directly access files; it reads/writes through noteCache.
   replacement decorations only within one source line. Do not replace ranges containing line
   breaks.
 - Live Preview tables keep cell text mapped to CodeMirror positions and hide only Markdown pipe and
-  spacing ranges. Never replace a full table row. Any selection entering a table restores source
-  mode for the whole table.
+  spacing ranges. Delimiter rows project their hyphens and alignment colons as mapped cells. Never
+  replace a full table row. Any selection entering a table restores source mode for the whole table.
 - Live Preview list markers are viewport-scoped inline projections from Lezer `ListMark` nodes.
   Entering a list item line restores its raw marker while task checkbox projection remains
   independent.

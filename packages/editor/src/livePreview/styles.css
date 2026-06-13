@@ -154,20 +154,6 @@
 	color: var(--text-muted);
 }
 
-.cm-line.cm-table-delimiter-line {
-	position: relative;
-}
-
-.cm-line.cm-table-delimiter-line::before {
-	content: "";
-	position: absolute;
-	inset-inline: 0;
-	top: 50%;
-	height: 1px;
-	background: var(--border);
-	pointer-events: none;
-}
-
 .cm-line.cm-table-rendered-line {
 	display: grid;
 	grid-template-columns: repeat(var(--table-column-count), minmax(0, 1fr));
@@ -192,8 +178,19 @@
 	user-select: none;
 }
 
-.cm-table-delimiter-source {
+.cm-table-delimiter-cell {
+	position: relative;
 	color: transparent;
+}
+
+.cm-table-delimiter-cell::before {
+	content: "";
+	position: absolute;
+	inset-inline: 0.75em;
+	top: 50%;
+	height: 1px;
+	background: var(--border);
+	pointer-events: none;
 }
 
 .cm-image-container {

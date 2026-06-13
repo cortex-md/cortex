@@ -78,9 +78,27 @@ describe("GFM inline rendering", () => {
 		expect(document.querySelector(".cm-table-delimiter-widget")).toBeNull()
 	})
 
+	it("keeps delimiter cells mapped while hiding only table syntax gaps", () => {
+		const content = "| Left | Right |\n| :--- | ---: |\n| one | two |\n\ntail"
+		const view = createEditor(content)
+		const delimiterCells = Array.from(
+			document.querySelectorAll<HTMLElement>(".cm-table-delimiter-cell"),
+		)
+		const firstDelimiterText = delimiterCells[0]?.firstChild
+
+		expect(delimiterCells.map((cell) => cell.textContent)).toEqual([":---", "---:"])
+		expect(delimiterCells.map((cell) => cell.dataset.align)).toEqual(["left", "right"])
+		expect(firstDelimiterText).not.toBeNull()
+		expect(view.posAtDOM(firstDelimiterText as Node, 2)).toBe(content.indexOf(":---") + 2)
+		expect(document.querySelectorAll(".cm-table-rendered-line")).toHaveLength(3)
+		expect(document.querySelectorAll(".cm-line")).toHaveLength(view.state.doc.lines)
+	})
+
 	it("projects GFM table alignment onto mapped cells", () => {
 		createEditor("| Left | Center | Right |\n| :--- | :---: | ---: |\n| a | b | c |\n\ntail")
-		const cells = Array.from(document.querySelectorAll<HTMLElement>(".cm-table-cell"))
+		const cells = Array.from(
+			document.querySelectorAll<HTMLElement>(".cm-table-cell:not(.cm-table-delimiter-cell)"),
+		)
 
 		expect(cells.slice(0, 3).map((cell) => cell.dataset.align)).toEqual(["left", "center", "right"])
 		expect(cells.slice(3).map((cell) => cell.dataset.align)).toEqual(["left", "center", "right"])

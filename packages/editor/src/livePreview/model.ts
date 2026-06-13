@@ -38,7 +38,7 @@ export interface TableRowModel extends SourceRange {
 
 export interface TableModel {
 	header: TableRowModel
-	delimiter: SourceRange
+	delimiter: TableRowModel
 	rows: TableRowModel[]
 	columnCount: number
 }
@@ -197,6 +197,35 @@ function createTableRowModel(
 	return { from: node.from, to: node.to, cells }
 }
 
+function createTableDelimiterModel(state: EditorState, node: SyntaxNodeLike): TableRowModel {
+	const source = state.doc.sliceString(node.from, node.to)
+	const contentStart = source.search(/\S/)
+	const contentEndMatch = source.match(/\S(?=\s*$)/)
+	const contentEnd =
+		contentEndMatch?.index === undefined ? source.length : contentEndMatch.index + 1
+	const leadingDelimiter = source[contentStart] === "|"
+	const trailingDelimiter = source[contentEnd - 1] === "|"
+	const segmentRanges: SourceRange[] = []
+	let segmentFrom = leadingDelimiter ? contentStart + 1 : Math.max(contentStart, 0)
+	const segmentTo = trailingDelimiter ? contentEnd - 1 : contentEnd
+
+	for (let index = segmentFrom; index < segmentTo; index++) {
+		if (source[index] !== "|") continue
+		segmentRanges.push(trimCellRange(state, node.from + segmentFrom, node.from + index))
+		segmentFrom = index + 1
+	}
+	segmentRanges.push(trimCellRange(state, node.from + segmentFrom, node.from + segmentTo))
+
+	return {
+		from: node.from,
+		to: node.to,
+		cells: segmentRanges.map((range) => ({
+			...range,
+			alignment: parseAlignment(state.doc.sliceString(range.from, range.to)),
+		})),
+	}
+}
+
 function createTableModel(state: EditorState, node: SyntaxNodeLike): TableModel {
 	const header = childNodes(node, "TableHeader")[0]
 	const rows = childNodes(node, "TableRow")
@@ -205,20 +234,17 @@ function createTableModel(state: EditorState, node: SyntaxNodeLike): TableModel 
 		const emptyRow = { from: node.from, to: node.from, cells: [] }
 		return {
 			header: emptyRow,
-			delimiter: { from: node.from, to: node.from },
+			delimiter: emptyRow,
 			rows: [],
 			columnCount: 0,
 		}
 	}
-	const delimiterSource = state.doc.sliceString(delimiter.from, delimiter.to)
-	const alignments = delimiterSource
-		.replace(/^\s*\|?|\|?\s*$/g, "")
-		.split("|")
-		.map(parseAlignment)
+	const delimiterRow = createTableDelimiterModel(state, delimiter)
+	const alignments = delimiterRow.cells.map((cell) => cell.alignment)
 
 	return {
 		header: createTableRowModel(state, header, alignments),
-		delimiter: { from: delimiter.from, to: delimiter.to },
+		delimiter: delimiterRow,
 		rows: rows.map((row) => createTableRowModel(state, row, alignments)),
 		columnCount: alignments.length,
 	}

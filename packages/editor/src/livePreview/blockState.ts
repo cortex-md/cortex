@@ -59,12 +59,19 @@ function calloutLineDecoration(block: CalloutBlock): Decoration {
 function addTableRowDecorations(
 	ranges: Range<Decoration>[],
 	row: TableRowModel,
-	header: boolean,
+	kind: "header" | "delimiter" | "body",
 	columnCount: number,
 ): void {
+	const lineClass =
+		kind === "header"
+			? " cm-table-header-line"
+			: kind === "delimiter"
+				? " cm-table-delimiter-line"
+				: ""
+	const cellClass = kind === "delimiter" ? " cm-table-delimiter-cell" : ""
 	ranges.push(
 		Decoration.line({
-			class: `cm-table-line cm-table-rendered-line${header ? " cm-table-header-line" : ""}`,
+			class: `cm-table-line cm-table-rendered-line${lineClass}`,
 			attributes: { style: `--table-column-count: ${Math.max(columnCount, 1)}` },
 		}).range(row.from),
 	)
@@ -77,7 +84,7 @@ function addTableRowDecorations(
 		if (cell.from < cell.to) {
 			ranges.push(
 				Decoration.mark({
-					class: "cm-table-cell",
+					class: `cm-table-cell${cellClass}`,
 					attributes: { "data-align": cell.alignment },
 				}).range(cell.from, cell.to),
 			)
@@ -221,20 +228,10 @@ function buildDecorations(
 					Decoration.line({ class: "cm-table-line cm-table-source-line" }),
 				)
 			} else {
-				addTableRowDecorations(ranges, block.table.header, true, block.table.columnCount)
-				ranges.push(
-					Decoration.line({
-						class: "cm-table-line cm-table-delimiter-line",
-					}).range(block.table.delimiter.from),
-				)
-				ranges.push(
-					Decoration.mark({ class: "cm-table-delimiter-source" }).range(
-						block.table.delimiter.from,
-						block.table.delimiter.to,
-					),
-				)
+				addTableRowDecorations(ranges, block.table.header, "header", block.table.columnCount)
+				addTableRowDecorations(ranges, block.table.delimiter, "delimiter", block.table.columnCount)
 				for (const row of block.table.rows) {
-					addTableRowDecorations(ranges, row, false, block.table.columnCount)
+					addTableRowDecorations(ranges, row, "body", block.table.columnCount)
 				}
 			}
 			continue
