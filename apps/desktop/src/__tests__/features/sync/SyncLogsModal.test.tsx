@@ -1,21 +1,21 @@
-import { useSyncLogStore } from "@cortex/core"
+import { type SyncLogEntry, useSyncLogStore } from "@cortex/core"
 import { cleanup, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SyncLogsModal } from "../../../features/sync/SyncLogsModal"
 
-const entries = [
+const entries: SyncLogEntry[] = [
 	{
 		id: 0,
 		timestamp: new Date("2026-06-13T12:00:00Z").getTime(),
-		level: "info" as const,
+		level: "info",
 		message: "Sync connected",
 		metadata: { vault: "Writing" },
 	},
 	{
 		id: 1,
 		timestamp: new Date("2026-06-13T12:01:00Z").getTime(),
-		level: "error" as const,
+		level: "error",
 		message: "Upload failed",
 		metadata: { path: "Notes/Plan.md" },
 	},
