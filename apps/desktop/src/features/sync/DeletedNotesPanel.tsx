@@ -6,6 +6,7 @@ import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
+	DialogHeader,
 	DialogTitle,
 	InputGroup,
 	InputGroupAddon,
@@ -71,48 +72,48 @@ function DeletedFileRow({ file, isSelected, onSelect, onRestore, restoring }: De
 	const directory = extractDirectory(file.filePath)
 
 	return (
-		<button
-			type="button"
-			onClick={onSelect}
-			className={`w-full text-left px-3 py-2.5 rounded-md transition-colors flex flex-col gap-1 ${
-				isSelected ? "bg-accent/10 border border-accent/30" : "hover:bg-bg-secondary"
+		<div
+			data-selected={isSelected}
+			className={`group flex items-start gap-1 rounded-[6px] p-1 transition-colors ${
+				isSelected ? "bg-accent text-accent-foreground" : "hover:bg-muted/50"
 			}`}
 		>
-			<div className="flex items-center gap-2">
-				<FileText size={14} className="text-text-muted shrink-0" />
-				<span className="text-sm font-medium text-text-primary flex-1 truncate">{fileName}</span>
-				<Button
-					variant="ghost"
-					size="icon-xs"
-					onClick={(e) => {
-						e.stopPropagation()
-						onRestore()
-					}}
-					disabled={restoring}
-					title="Restore file"
-				>
-					{restoring ? <Spinner className="size-3" /> : <RotateCcw size={12} />}
-				</Button>
-			</div>
-			{directory && (
-				<div className="flex items-center gap-1 pl-6">
-					<FolderOpen size={10} className="text-text-muted shrink-0" />
-					<span className="text-[11px] text-text-muted truncate">{directory}</span>
+			<Button
+				variant="ghost"
+				size="sm"
+				onClick={onSelect}
+				className="h-auto min-w-0 flex-1 items-start justify-start gap-2 rounded-[6px] px-2 py-2 text-left hover:bg-transparent"
+			>
+				<FileText className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+				<div className="min-w-0 flex-1">
+					<p className="m-0 truncate text-xs font-medium text-foreground">{fileName}</p>
+					{directory && (
+						<p className="m-0 mt-0.5 flex items-center gap-1 truncate text-[11px] text-muted-foreground">
+							<FolderOpen className="size-2.5 shrink-0" />
+							{directory}
+						</p>
+					)}
+					<div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
+						<span className="flex items-center gap-1">
+							<Clock className="size-2.5" />
+							{formatDeletedDate(file.deletedAt)}
+						</span>
+						{file.sizeBytes !== null && <span>{formatFileSize(file.sizeBytes)}</span>}
+						<span>v{file.version}</span>
+					</div>
 				</div>
-			)}
-			<div className="flex items-center gap-3 pl-6">
-				<span className="flex items-center gap-1 text-[11px] text-text-muted">
-					<Clock size={10} />
-					{formatDeletedDate(file.deletedAt)}
-				</span>
-				{file.sizeBytes !== null && (
-					<span className="text-[11px] text-text-muted">{formatFileSize(file.sizeBytes)}</span>
-				)}
-				<Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4">
-					v{file.version}
-				</Badge>
-			</div>
-		</button>
+			</Button>
+			<Button
+				variant="ghost"
+				size="icon-xs"
+				onClick={onRestore}
+				disabled={restoring}
+				aria-label={`Restore ${fileName}`}
+				className="mt-1 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-data-[selected=true]:opacity-100"
+			>
+				{restoring ? <Spinner className="size-3" /> : <RotateCcw />}
+			</Button>
+		</div>
 	)
 }
 
@@ -218,22 +219,24 @@ export function DeletedNotesPanel({ open, onOpenChange }: DeletedNotesPanelProps
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="overflow-hidden p-0 md:max-h-[640px] md:max-w-[900px] lg:max-w-[1100px]">
-				<DialogTitle className="sr-only">Deleted Notes</DialogTitle>
-				<DialogDescription className="sr-only">
-					View and restore deleted notes from your vault
-				</DialogDescription>
+			<DialogContent className="flex h-[min(680px,calc(100vh-2rem))] flex-col gap-0 overflow-hidden p-0 md:max-w-[960px] lg:max-w-[1100px]">
+				<DialogHeader className="shrink-0 gap-1 border-b border-border px-5 py-4 pr-12">
+					<DialogTitle className="flex items-center gap-2 text-base leading-5">
+						<Trash2 className="size-4 text-muted-foreground" />
+						Deleted notes
+					</DialogTitle>
+					<DialogDescription className="text-xs leading-[18px]">
+						Preview and restore notes retained by the linked remote vault.
+					</DialogDescription>
+				</DialogHeader>
 
-				<div className="flex h-[600px] overflow-hidden">
-					<div className="w-72 shrink-0 border-r border-border flex flex-col">
-						<div className="px-4 py-3 space-y-2">
-							<div className="flex items-center gap-2">
-								<Trash2 size={14} className="text-text-muted" />
-								<p className="text-xs font-semibold text-text-muted uppercase tracking-wide">
-									Deleted Notes
-								</p>
+				<div className="grid min-h-0 flex-1 grid-cols-[280px_minmax(0,1fr)] overflow-hidden">
+					<aside className="flex min-h-0 flex-col overflow-hidden border-r border-border bg-muted/30">
+						<div className="shrink-0 space-y-3 border-b border-border px-4 py-3">
+							<div className="flex items-center justify-between">
+								<p className="m-0 text-xs font-medium text-foreground">Recoverable notes</p>
 								{!loading && deletedFiles.length > 0 && (
-									<Badge variant="secondary" className="text-[10px] py-0 px-1.5 h-4 ml-auto">
+									<Badge variant="secondary" className="h-5 px-1.5 py-0 text-[10px]">
 										{deletedFiles.length}
 									</Badge>
 								)}
@@ -243,24 +246,32 @@ export function DeletedNotesPanel({ open, onOpenChange }: DeletedNotesPanelProps
 									<Search />
 								</InputGroupAddon>
 								<InputGroupInput
-									placeholder="Search deleted files..."
+									aria-label="Search deleted notes"
+									placeholder="Search deleted notes"
 									value={searchQuery}
-									onChange={(e) => setSearchQuery(e.target.value)}
+									onChange={(event) => setSearchQuery(event.target.value)}
 								/>
 							</InputGroup>
 						</div>
 
-						<ScrollArea className="flex-1">
-							<div className="p-2 flex flex-col gap-1">
+						<ScrollArea className="min-h-0 flex-1">
+							<div className="flex flex-col gap-1 p-2">
 								{loading && (
-									<div className="flex items-center justify-center py-8">
-										<Spinner className="size-4 text-text-muted" />
+									<div className="flex items-center justify-center py-10">
+										<Spinner className="size-4 text-muted-foreground" />
 									</div>
 								)}
 								{!loading && filteredFiles.length === 0 && !error && (
-									<p className="text-xs text-text-muted text-center py-8">
-										{searchQuery ? "No matching files" : "No deleted notes"}
-									</p>
+									<div className="px-4 py-10 text-center">
+										<p className="m-0 text-sm font-medium text-foreground">
+											{searchQuery ? "No matching notes" : "Nothing to recover"}
+										</p>
+										<p className="m-0 mt-1 text-xs leading-[18px] text-muted-foreground">
+											{searchQuery
+												? "Try a different file or folder name."
+												: "Deleted synced notes will appear here while retained."}
+										</p>
+									</div>
 								)}
 								{filteredFiles.map((file) => (
 									<DeletedFileRow
@@ -274,63 +285,76 @@ export function DeletedNotesPanel({ open, onOpenChange }: DeletedNotesPanelProps
 								))}
 							</div>
 						</ScrollArea>
-					</div>
+					</aside>
 
-					<div className="flex-1 flex flex-col overflow-hidden">
-						{selectedFile ? (
-							<>
-								<div className="px-4 py-3 flex items-center justify-between border-b border-border">
-									<div className="flex flex-col min-w-0 flex-1">
-										<p className="text-sm font-medium text-text-primary truncate">
+					<section className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+						<div className="flex min-h-16 shrink-0 items-center gap-4 border-b border-border px-5 py-3">
+							{selectedFile ? (
+								<>
+									<div className="min-w-0 flex-1">
+										<p className="m-0 truncate text-sm font-medium text-foreground">
 											{extractFileName(selectedFile.filePath)}
 										</p>
-										<p className="text-xs text-text-muted truncate">
+										<p className="m-0 mt-0.5 truncate text-xs text-muted-foreground">
 											{selectedFile.filePath} · Deleted {formatDeletedDate(selectedFile.deletedAt)}
 										</p>
 									</div>
+									<Badge variant="outline" className="shrink-0">
+										Version {selectedFile.version}
+									</Badge>
 									<Button
-										variant="secondary"
 										size="sm"
 										onClick={() => handleRestore(selectedFile)}
 										disabled={restoringPath === selectedFile.filePath}
-										className="gap-1.5 ml-4 shrink-0"
+										className="shrink-0"
 									>
 										{restoringPath === selectedFile.filePath ? (
 											<Spinner className="size-3" />
 										) : (
-											<RotateCcw size={12} />
+											<RotateCcw />
 										)}
-										Restore
+										Restore note
 									</Button>
+								</>
+							) : (
+								<div>
+									<p className="m-0 text-sm font-medium text-foreground">Select a note</p>
+									<p className="m-0 mt-0.5 text-xs text-muted-foreground">
+										Choose a deleted note to inspect it before restoring.
+									</p>
 								</div>
+							)}
+						</div>
 
-								<ScrollArea className="flex-1">
-									{loadingPreview && (
-										<div className="flex items-center justify-center py-12">
-											<Spinner className="size-5 text-text-muted" />
-										</div>
-									)}
-									{!loadingPreview && previewContent !== null && (
-										<div className="p-4">
-											<pre className="text-xs leading-5 text-text-secondary whitespace-pre-wrap font-mono break-all">
-												{previewContent}
-											</pre>
-										</div>
-									)}
-								</ScrollArea>
-							</>
-						) : (
-							<div className="flex-1 flex items-center justify-center text-text-muted text-sm">
-								Select a deleted note to preview its content
-							</div>
-						)}
-
-						{error && (
-							<div className="mx-4 mb-4 rounded-md border border-status-error-border bg-status-error-background p-3 text-sm text-status-error-foreground">
-								{error}
-							</div>
-						)}
-					</div>
+						<div
+							data-slot="deleted-note-preview"
+							className="min-h-0 min-w-0 flex-1 overflow-auto bg-background"
+						>
+							{error && (
+								<div className="m-5 rounded-[6px] border border-status-error-border bg-status-error-background p-3 text-sm text-status-error-foreground">
+									{error}
+								</div>
+							)}
+							{loadingPreview && (
+								<div className="flex min-h-full items-center justify-center">
+									<Spinner className="size-5 text-muted-foreground" />
+								</div>
+							)}
+							{!loadingPreview && previewContent !== null && (
+								<pre className="m-0 min-w-full whitespace-pre-wrap break-words p-5 font-mono text-xs leading-5 text-foreground">
+									{previewContent}
+								</pre>
+							)}
+							{!loadingPreview && previewContent === null && !error && (
+								<div className="flex min-h-full flex-col items-center justify-center gap-1 px-8 text-center">
+									<p className="m-0 text-sm font-medium text-foreground">No preview selected</p>
+									<p className="m-0 max-w-sm text-xs leading-[18px] text-muted-foreground">
+										Restoring creates the note again at its original vault path.
+									</p>
+								</div>
+							)}
+						</div>
+					</section>
 				</div>
 			</DialogContent>
 		</Dialog>
