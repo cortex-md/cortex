@@ -7,15 +7,15 @@ import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
+	DialogHeader,
 	DialogTitle,
 	ScrollArea,
-	Separator,
 	Spinner,
 } from "@cortex/ui"
 import type { FileDiffMetadata } from "@pierre/diffs"
 import { parseDiffFromFile } from "@pierre/diffs"
 import { FileDiff } from "@pierre/diffs/react"
-import { Clock, RotateCcw, User } from "lucide-react"
+import { Clock3, FileClock, RotateCcw, UserRound } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 function useIsDarkTheme(): boolean {
@@ -48,24 +48,26 @@ interface VersionRowProps {
 function VersionRow({ version, isSelected, isLatest, onSelect }: VersionRowProps) {
 	return (
 		<Button
-			variant={"ghost"}
+			variant="ghost"
+			size="sm"
 			onClick={onSelect}
-			className={`flex flex-col items-start w-full h-16 ${isSelected ? "bg-accent! border-none" : ""}`}
+			className={`h-auto min-h-16 w-full flex-col items-stretch justify-center gap-1 rounded-[6px] px-3 py-2 text-left ${
+				isSelected ? "bg-accent text-accent-foreground" : ""
+			}`}
 		>
-			<div className="flex items-center gap-2">
-				<User size={12} className="text-text-muted shrink-0" />
-				<span className="text-xs font-medium text-text-primary flex-1 truncate">
+			<div className="flex min-w-0 items-center gap-2">
+				<UserRound className="size-3 shrink-0 text-muted-foreground" />
+				<span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
 					{version.authorName ?? "Unknown"}
 				</span>
 				{isLatest && (
-					<Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4">
-						latest
+					<Badge variant="secondary" className="h-4 px-1.5 py-0 text-[10px]">
+						Latest
 					</Badge>
 				)}
 			</div>
-			<div className="flex items-center gap-2 pl-5"></div>
-			<span className="flex items-center gap-1 text-[11px] text-text-muted">
-				<Clock size={10} />
+			<span className="flex items-center gap-1 pl-5 text-[11px] text-muted-foreground">
+				<Clock3 className="size-2.5" />
 				{formatVersionDate(version.createdAt)}
 			</span>
 		</Button>
@@ -205,30 +207,42 @@ export function NoteHistoryPanel({ filePath, open, onOpenChange }: NoteHistoryPa
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="overflow-hidden p-0 md:max-h-[640px] md:max-w-[900px] lg:max-w-[1100px]">
-				<DialogTitle className="sr-only">Note History — {fileName}</DialogTitle>
-				<DialogDescription className="sr-only">
-					View and restore previous versions of {fileName}
-				</DialogDescription>
+			<DialogContent className="flex h-[min(680px,calc(100vh-2rem))] flex-col gap-0 overflow-hidden p-0 md:max-w-[960px] lg:max-w-[1100px]">
+				<DialogHeader className="shrink-0 gap-1 border-b border-border px-5 py-4 pr-12">
+					<DialogTitle className="flex items-center gap-2 text-base leading-5">
+						<FileClock className="size-4 text-muted-foreground" />
+						Note history
+					</DialogTitle>
+					<DialogDescription className="truncate text-xs leading-[18px]">
+						{relativeFilePath}
+					</DialogDescription>
+				</DialogHeader>
 
-				<div className="flex h-[600px] overflow-hidden">
-					<div className="w-64 shrink-0 border-r border-border flex flex-col">
-						<div className="px-4 py-3">
-							<p className="text-xs font-semibold text-text-muted uppercase tracking-wide">
-								History
-							</p>
-							<p className="text-sm font-medium text-text-primary mt-0.5 truncate">{fileName}</p>
+				<div className="grid min-h-0 flex-1 grid-cols-[240px_minmax(0,1fr)] overflow-hidden">
+					<aside className="flex min-h-0 flex-col overflow-hidden border-r border-border bg-muted/30">
+						<div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
+							<p className="m-0 text-xs font-medium text-foreground">Versions</p>
+							{!loadingVersions && versions.length > 0 && (
+								<span className="text-xs tabular-nums text-muted-foreground">
+									{versions.length}
+								</span>
+							)}
 						</div>
 
-						<ScrollArea className="flex-1">
-							<div className="p-2 flex flex-col gap-1">
+						<ScrollArea className="min-h-0 flex-1">
+							<div className="flex flex-col gap-1 p-2">
 								{loadingVersions && (
-									<div className="flex items-center justify-center py-8">
-										<Spinner className="size-4 text-text-muted" />
+									<div className="flex items-center justify-center py-10">
+										<Spinner className="size-4 text-muted-foreground" />
 									</div>
 								)}
 								{!loadingVersions && versions.length === 0 && !error && (
-									<p className="text-xs text-text-muted text-center py-8">No history found</p>
+									<div className="px-4 py-10 text-center">
+										<p className="m-0 text-sm font-medium text-foreground">No history yet</p>
+										<p className="m-0 mt-1 text-xs leading-[18px] text-muted-foreground">
+											Synced versions of this note will appear here.
+										</p>
+									</div>
 								)}
 								{versions.map((version, index) => (
 									<VersionRow
@@ -241,74 +255,96 @@ export function NoteHistoryPanel({ filePath, open, onOpenChange }: NoteHistoryPa
 								))}
 							</div>
 						</ScrollArea>
-					</div>
+					</aside>
 
-					<div className="flex-1 flex flex-col overflow-hidden">
-						<div className="px-4 py-3 flex flex-col items-center justify-between">
+					<section className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+						<div className="flex min-h-16 shrink-0 items-center gap-4 border-b border-border px-5 py-3">
 							{selectedVersion ? (
-								<div className="flex items-center w-full justify-start gap-2">
-									<div className="flex flex-col">
-										<p className="text-sm font-medium text-text-primary">
-											{selectedVersion.authorName ?? "Unknown"} · v{selectedVersion.version}
+								<>
+									<div className="min-w-0 flex-1">
+										<p className="m-0 truncate text-sm font-medium text-foreground">
+											Version {selectedVersion.version} by {selectedVersion.authorName ?? "Unknown"}
 										</p>
-										<p className="text-xs text-text-muted">
+										<p className="m-0 mt-0.5 truncate text-xs text-muted-foreground">
 											{formatVersionDate(selectedVersion.createdAt)}
+											{selectedVersion.deviceName ? ` · ${selectedVersion.deviceName}` : ""}
 										</p>
 									</div>
 									{!loadingDiff && fileDiff && (
-										<div className="px-4 py-2 flex gap-4 text-xs text-text-muted">
-											<span className="text-status-success-foreground">+{addedLines} added</span>
-											<Separator orientation="vertical" className="h-4" />
-											<span className="text-status-error-foreground">-{removedLines} removed</span>
+										<div className="flex shrink-0 items-center gap-2">
+											<Badge
+												variant="outline"
+												className="border-status-success-border bg-status-success-background text-status-success-foreground"
+											>
+												+{addedLines}
+											</Badge>
+											<Badge
+												variant="outline"
+												className="border-status-error-border bg-status-error-background text-status-error-foreground"
+											>
+												-{removedLines}
+											</Badge>
 										</div>
 									)}
 									<Button
-										variant="secondary"
 										size="sm"
 										onClick={handleRestore}
 										disabled={restoring}
-										className="gap-1.5 ml-auto mr-10"
+										className="shrink-0"
 									>
-										{restoring ? <Spinner className="size-3" /> : <RotateCcw size={12} />}
-										Restore
+										{restoring ? <Spinner className="size-3" /> : <RotateCcw />}
+										Restore version
 									</Button>
-								</div>
+								</>
 							) : (
-								<p className="text-sm text-text-muted">Select a version to view changes</p>
+								<div>
+									<p className="m-0 text-sm font-medium text-foreground">Select a version</p>
+									<p className="m-0 mt-0.5 text-xs text-muted-foreground">
+										Choose a snapshot to compare it with the previous version.
+									</p>
+								</div>
 							)}
 						</div>
 
-						<ScrollArea className="flex-1">
+						<div
+							data-slot="note-history-diff"
+							className="min-h-0 min-w-0 flex-1 overflow-auto bg-background"
+						>
 							{error && (
-								<div className="m-4 rounded-md border border-status-error-border bg-status-error-background p-3 text-sm text-status-error-foreground">
+								<div className="m-5 rounded-[6px] border border-status-error-border bg-status-error-background p-3 text-sm text-status-error-foreground">
 									{error}
 								</div>
 							)}
 							{loadingDiff && (
-								<div className="flex items-center justify-center py-12">
-									<Spinner className="size-5 text-text-muted" />
+								<div className="flex min-h-full items-center justify-center">
+									<Spinner className="size-5 text-muted-foreground" />
 								</div>
 							)}
 							{!loadingDiff && !fileDiff && !error && (
-								<div className="flex items-center justify-center py-12 text-text-muted text-sm">
-									Select a version from the left to view changes
+								<div className="flex min-h-full flex-col items-center justify-center gap-1 px-8 text-center">
+									<p className="m-0 text-sm font-medium text-foreground">No version selected</p>
+									<p className="m-0 max-w-sm text-xs leading-[18px] text-muted-foreground">
+										The comparison will appear here without replacing your current note.
+									</p>
 								</div>
 							)}
 							{!loadingDiff && fileDiff && (
-								<FileDiff
-									fileDiff={fileDiff}
-									options={{
-										theme: { dark: "pierre-dark", light: "pierre-light" },
-										themeType: isDark ? "dark" : "light",
-										diffStyle: "unified",
-										lineDiffType: "word",
-										disableFileHeader: true,
-										overflow: "wrap",
-									}}
-								/>
+								<div className="min-w-full">
+									<FileDiff
+										fileDiff={fileDiff}
+										options={{
+											theme: { dark: "pierre-dark", light: "pierre-light" },
+											themeType: isDark ? "dark" : "light",
+											diffStyle: "unified",
+											lineDiffType: "word",
+											disableFileHeader: true,
+											overflow: "scroll",
+										}}
+									/>
+								</div>
 							)}
-						</ScrollArea>
-					</div>
+						</div>
+					</section>
 				</div>
 			</DialogContent>
 		</Dialog>
