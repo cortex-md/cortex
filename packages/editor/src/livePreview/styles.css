@@ -124,7 +124,7 @@
 
 .cm-table-wrapper {
 	overflow-x: auto;
-	border: 1px solid var(--border);
+	box-shadow: inset 0 0 0 1px var(--border);
 	background: transparent;
 }
 
@@ -141,11 +141,26 @@
 
 .cm-line.cm-table-header-line {
 	font-weight: 600;
+	background: var(--bg-secondary);
 }
 
 .cm-line.cm-table-delimiter-line,
 .cm-frontmatter-line {
 	color: var(--text-muted);
+}
+
+.cm-line.cm-table-delimiter-line {
+	position: relative;
+}
+
+.cm-line.cm-table-delimiter-line::before {
+	content: "";
+	position: absolute;
+	inset-inline: 0;
+	top: 50%;
+	height: 1px;
+	background: var(--border);
+	pointer-events: none;
 }
 
 .cm-line.cm-table-rendered-line {
@@ -161,6 +176,10 @@
 .cm-table-cell {
 	display: block;
 	min-width: 0;
+	padding-inline: 0.75em;
+	box-shadow:
+		inset -1px 0 0 var(--border),
+		inset 0 -1px 0 var(--border);
 	overflow-wrap: anywhere;
 }
 

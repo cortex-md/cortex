@@ -76,6 +76,22 @@ describe("GFM inline rendering", () => {
 		expect(document.querySelector(".cm-table-delimiter-widget")).toBeNull()
 	})
 
+	it("projects GFM table alignment onto mapped cells", () => {
+		createEditor("| Left | Center | Right |\n| :--- | :---: | ---: |\n| a | b | c |\n\ntail")
+		const cells = Array.from(document.querySelectorAll<HTMLElement>(".cm-table-cell"))
+
+		expect(cells.slice(0, 3).map((cell) => cell.dataset.align)).toEqual([
+			"left",
+			"center",
+			"right",
+		])
+		expect(cells.slice(3).map((cell) => cell.dataset.align)).toEqual([
+			"left",
+			"center",
+			"right",
+		])
+	})
+
 	it("reveals blockquote markers from any cursor position in the block", () => {
 		const content = "> quoted\n\ntail"
 		const view = createEditor(content)

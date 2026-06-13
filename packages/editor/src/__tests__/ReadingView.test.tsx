@@ -26,4 +26,21 @@ describe("ReadingView links", () => {
 
 		expect(container.innerHTML).not.toContain("javascript:")
 	})
+
+	it("renders GFM table headers, cells, and alignment metadata", async () => {
+		const { container } = render(
+			<ReadingView
+				content={"| Left | Center | Right |\n| :--- | :---: | ---: |\n| a | b | c |"}
+			/>,
+		)
+		await waitFor(() => expect(container.querySelector("table")).not.toBeNull())
+
+		expect(container.querySelectorAll("th")).toHaveLength(3)
+		expect(container.querySelectorAll("td")).toHaveLength(3)
+		expect(
+			Array.from(container.querySelectorAll<HTMLElement>("th")).map(
+				(cell) => cell.getAttribute("align"),
+			),
+		).toEqual(["left", "center", "right"])
+	})
 })

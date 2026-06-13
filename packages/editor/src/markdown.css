@@ -282,16 +282,22 @@
 }
 
 .markdown-surface table {
-	border-collapse: collapse;
+	border-collapse: separate;
+	border-spacing: 0;
 	width: 100%;
 	margin-bottom: 1em;
+	border-radius: var(--markdown-block-radius, 6px);
+	box-shadow: inset 0 0 0 1px var(--border);
+	overflow: hidden;
 }
 
 .markdown-surface th,
 .markdown-surface td {
-	border: 1px solid var(--border);
-	padding: 0.4em 0.75em;
+	padding: 0 0.75em;
 	text-align: left;
+	box-shadow:
+		inset -1px 0 0 var(--border),
+		inset 0 -1px 0 var(--border);
 }
 
 .markdown-surface th {
@@ -299,11 +305,13 @@
 	font-weight: 600;
 }
 
-.markdown-surface [data-align="center"] {
+.markdown-surface [data-align="center"],
+.markdown-surface [align="center"] {
 	text-align: center;
 }
 
-.markdown-surface [data-align="right"] {
+.markdown-surface [data-align="right"],
+.markdown-surface [align="right"] {
 	text-align: right;
 }
 
