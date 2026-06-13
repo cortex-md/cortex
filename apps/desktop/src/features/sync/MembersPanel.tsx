@@ -1,10 +1,16 @@
 import { useMembersStore } from "@cortex/core"
 import {
+	Avatar,
+	AvatarFallback,
 	Badge,
 	Button,
 	Input,
-	NativeSelect,
-	NativeSelectOption,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Spinner,
 	Table,
 	TableBody,
 	TableCell,
@@ -12,7 +18,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@cortex/ui"
-import { Plus, Trash2, UserMinus } from "lucide-react"
+import { MailPlus, Trash2, UserMinus } from "lucide-react"
 import { type ChangeEvent, type KeyboardEvent, useEffect, useState } from "react"
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -23,6 +29,16 @@ function formatInviteDate(value: string): string {
 		day: "numeric",
 		year: "numeric",
 	}).format(new Date(value))
+}
+
+function getMemberInitials(displayName: string): string {
+	const names = displayName.trim().split(/\s+/).filter(Boolean)
+	if (names.length === 0) return "?"
+	return names
+		.slice(0, 2)
+		.map((name) => name.charAt(0))
+		.join("")
+		.toUpperCase()
 }
 
 interface MembersPanelProps {
@@ -72,8 +88,8 @@ export function MembersPanel({ vaultId, currentUserRole }: MembersPanelProps) {
 		try {
 			await createInvite(vaultId, inviteEmail.trim(), inviteRole, "")
 			setInviteEmail("")
-			setInviting(false)
 		} catch {
+		} finally {
 			setInviting(false)
 		}
 	}
@@ -94,164 +110,237 @@ export function MembersPanel({ vaultId, currentUserRole }: MembersPanelProps) {
 	}
 
 	return (
-		<div className="flex flex-col gap-4">
-			<div className="overflow-hidden rounded-lg border border-border bg-background">
-				{loading && members.length === 0 ? (
-					<p className="p-4 text-sm text-muted-foreground">Loading members...</p>
-				) : members.length === 0 ? (
-					<p className="p-4 text-sm text-muted-foreground">No members</p>
-				) : (
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>Member</TableHead>
-								<TableHead>Role</TableHead>
-								<TableHead>Joined</TableHead>
-								<TableHead className="w-12 text-right">Actions</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{members.map((member) => (
-								<TableRow key={member.userId}>
-									<TableCell>
-										<div className="flex min-w-0 items-center gap-3">
-											<div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent/20 text-xs font-medium uppercase text-accent">
-												{member.displayName?.charAt(0) || "?"}
-											</div>
-											<div className="min-w-0">
-												<div className="truncate font-medium">{member.displayName}</div>
-												<div className="truncate text-xs text-muted-foreground">{member.email}</div>
-											</div>
-										</div>
-									</TableCell>
-									<TableCell>
-										{canManage ? (
-											<NativeSelect
-												className="h-7 w-[132px]"
-												value={member.role}
-												onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-													handleChangeRole(member.userId, event.target.value)
-												}
-											>
-												{currentUserRole === "owner" && (
-													<NativeSelectOption value="owner">Owner</NativeSelectOption>
-												)}
-												<NativeSelectOption value="admin">Admin</NativeSelectOption>
-												<NativeSelectOption value="editor">Editor</NativeSelectOption>
-												<NativeSelectOption value="viewer">Viewer</NativeSelectOption>
-											</NativeSelect>
-										) : (
-											<Badge variant="outline" className="capitalize">
-												{member.role}
-											</Badge>
-										)}
-									</TableCell>
-									<TableCell className="text-muted-foreground">
-										{formatInviteDate(member.joinedAt)}
-									</TableCell>
-									<TableCell className="text-right">
-										{canManage && member.role !== "owner" && (
-											<Button
-												variant="ghost"
-												size="icon"
-												onClick={() => handleRemoveMember(member.userId)}
-												className="h-7 w-7 text-muted-foreground hover:text-status-error-foreground"
-											>
-												<UserMinus size={13} />
-											</Button>
-										)}
-									</TableCell>
-								</TableRow>
-							))}
-						</TableBody>
-					</Table>
-				)}
-			</div>
-
+		<div className="flex flex-col gap-5">
 			{canManage && (
-				<div className="rounded-lg border border-border bg-background p-3">
+				<section className="rounded-[8px] border border-border bg-muted/30 p-4">
+					<div className="mb-3 flex items-start gap-3">
+						<div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-subtle text-brand-text">
+							<MailPlus className="size-4" />
+						</div>
+						<div>
+							<h3 className="m-0 text-sm font-semibold text-foreground">Invite a member</h3>
+							<p className="m-0 mt-0.5 text-xs leading-[18px] text-muted-foreground">
+								Send access to this vault with an initial role.
+							</p>
+						</div>
+					</div>
 					<div className="flex items-center gap-2">
 						<Input
-							className="h-7 flex-1"
-							placeholder="email@example.com"
+							className="min-w-0 flex-1"
+							type="email"
+							aria-label="Invite email"
+							placeholder="name@example.com"
 							value={inviteEmail}
 							onChange={(event: ChangeEvent<HTMLInputElement>) =>
 								setInviteEmail(event.target.value)
 							}
 							onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
-								if (event.key === "Enter") handleInvite()
+								if (event.key === "Enter") void handleInvite()
 							}}
 						/>
-						<NativeSelect
-							className="h-7 w-[128px]"
-							value={inviteRole}
-							onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-								setInviteRole(event.target.value)
-							}
-						>
-							<NativeSelectOption value="admin">Admin</NativeSelectOption>
-							<NativeSelectOption value="editor">Editor</NativeSelectOption>
-							<NativeSelectOption value="viewer">Viewer</NativeSelectOption>
-						</NativeSelect>
+						<Select value={inviteRole} onValueChange={setInviteRole}>
+							<SelectTrigger aria-label="Invite role" className="w-32">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent position="popper" align="end">
+								<SelectItem value="admin">Admin</SelectItem>
+								<SelectItem value="editor">Editor</SelectItem>
+								<SelectItem value="viewer">Viewer</SelectItem>
+							</SelectContent>
+						</Select>
 						<Button
-							variant="secondary"
 							size="sm"
 							onClick={handleInvite}
 							disabled={inviting || !isValidEmail}
-							className="h-7"
+							className="shrink-0"
 						>
-							<Plus size={12} />
-							Invite
+							{inviting ? <Spinner className="size-3" /> : <MailPlus />}
+							Send invite
 						</Button>
 					</div>
-				</div>
+				</section>
 			)}
+
+			<section>
+				<div className="mb-2 flex items-end justify-between px-0.5">
+					<div>
+						<h3 className="m-0 text-sm font-semibold text-foreground">Vault members</h3>
+						<p className="m-0 mt-0.5 text-xs text-muted-foreground">
+							People with current access to this vault.
+						</p>
+					</div>
+					{members.length > 0 && (
+						<Badge variant="secondary">
+							{members.length} {members.length === 1 ? "member" : "members"}
+						</Badge>
+					)}
+				</div>
+				<div className="overflow-hidden rounded-[8px] border border-border bg-background">
+					{loading && members.length === 0 ? (
+						<div className="flex items-center justify-center gap-2 p-8 text-sm text-muted-foreground">
+							<Spinner className="size-4" />
+							Loading members
+						</div>
+					) : members.length === 0 ? (
+						<div className="p-8 text-center">
+							<p className="m-0 text-sm font-medium text-foreground">No members found</p>
+							<p className="m-0 mt-1 text-xs text-muted-foreground">
+								Invite someone to begin collaborating.
+							</p>
+						</div>
+					) : (
+						<Table>
+							<TableHeader>
+								<TableRow className="hover:bg-transparent">
+									<TableHead>Member</TableHead>
+									<TableHead>Role</TableHead>
+									<TableHead>Joined</TableHead>
+									<TableHead className="w-12 text-right">Actions</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{members.map((member) => (
+									<TableRow key={member.userId}>
+										<TableCell>
+											<div className="flex min-w-0 items-center gap-3">
+												<Avatar>
+													<AvatarFallback className="bg-brand-subtle font-medium text-brand-text">
+														{getMemberInitials(member.displayName)}
+													</AvatarFallback>
+												</Avatar>
+												<div className="min-w-0">
+													<div className="truncate text-[13px] font-medium text-foreground">
+														{member.displayName}
+													</div>
+													<div className="truncate text-xs text-muted-foreground">
+														{member.email}
+													</div>
+												</div>
+											</div>
+										</TableCell>
+										<TableCell>
+											{canManage ? (
+												<Select
+													value={member.role}
+													onValueChange={(role) => handleChangeRole(member.userId, role)}
+												>
+													<SelectTrigger
+														size="sm"
+														aria-label={`Role for ${member.displayName}`}
+														className="w-28 capitalize"
+													>
+														<SelectValue />
+													</SelectTrigger>
+													<SelectContent position="popper">
+														{currentUserRole === "owner" && (
+															<SelectItem value="owner">Owner</SelectItem>
+														)}
+														<SelectItem value="admin">Admin</SelectItem>
+														<SelectItem value="editor">Editor</SelectItem>
+														<SelectItem value="viewer">Viewer</SelectItem>
+													</SelectContent>
+												</Select>
+											) : (
+												<Badge variant="outline" className="capitalize">
+													{member.role}
+												</Badge>
+											)}
+										</TableCell>
+										<TableCell className="text-muted-foreground">
+											{formatInviteDate(member.joinedAt)}
+										</TableCell>
+										<TableCell className="text-right">
+											{canManage && member.role !== "owner" && (
+												<Button
+													variant="ghost"
+													size="icon-xs"
+													onClick={() => handleRemoveMember(member.userId)}
+													aria-label={`Remove ${member.displayName}`}
+													className="h-7 w-7 text-muted-foreground hover:text-status-error-foreground"
+												>
+													<UserMinus />
+												</Button>
+											)}
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					)}
+				</div>
+			</section>
 
 			{canManage && pendingInvites.length > 0 && (
-				<div className="overflow-hidden rounded-lg border border-border bg-background">
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>Invite</TableHead>
-								<TableHead>Role</TableHead>
-								<TableHead>Expires</TableHead>
-								<TableHead>Status</TableHead>
-								<TableHead className="w-12 text-right">Actions</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{pendingInvites.map((invite) => (
-								<TableRow key={invite.id}>
-									<TableCell className="font-medium">{invite.inviteeEmail}</TableCell>
-									<TableCell>
-										<Badge variant="outline" className="capitalize">
-											{invite.role}
-										</Badge>
-									</TableCell>
-									<TableCell className="text-muted-foreground">
-										{formatInviteDate(invite.expiresAt)}
-									</TableCell>
-									<TableCell>
-										<Badge variant="outline">Pending</Badge>
-									</TableCell>
-									<TableCell className="text-right">
-										<Button
-											variant="ghost"
-											size="icon"
-											onClick={() => handleDeleteInvite(invite.id)}
-											className="h-7 w-7 text-muted-foreground hover:text-status-error-foreground"
-										>
-											<Trash2 size={13} />
-										</Button>
-									</TableCell>
+				<section>
+					<div className="mb-2 flex items-end justify-between px-0.5">
+						<div>
+							<h3 className="m-0 text-sm font-semibold text-foreground">Pending invitations</h3>
+							<p className="m-0 mt-0.5 text-xs text-muted-foreground">
+								Invitations that have not been accepted yet.
+							</p>
+						</div>
+						<Badge variant="secondary">{pendingInvites.length}</Badge>
+					</div>
+					<div className="overflow-hidden rounded-[8px] border border-border bg-background">
+						<Table>
+							<TableHeader>
+								<TableRow className="hover:bg-transparent">
+									<TableHead>Invitee</TableHead>
+									<TableHead>Role</TableHead>
+									<TableHead>Expires</TableHead>
+									<TableHead className="w-12 text-right">Actions</TableHead>
 								</TableRow>
-							))}
-						</TableBody>
-					</Table>
-				</div>
+							</TableHeader>
+							<TableBody>
+								{pendingInvites.map((invite) => (
+									<TableRow key={invite.id}>
+										<TableCell>
+											<div className="flex items-center gap-3">
+												<Avatar>
+													<AvatarFallback>
+														{invite.inviteeEmail.charAt(0).toUpperCase()}
+													</AvatarFallback>
+												</Avatar>
+												<div>
+													<p className="m-0 text-[13px] font-medium text-foreground">
+														{invite.inviteeEmail}
+													</p>
+													<p className="m-0 text-xs text-muted-foreground">Awaiting response</p>
+												</div>
+											</div>
+										</TableCell>
+										<TableCell>
+											<Badge variant="outline" className="capitalize">
+												{invite.role}
+											</Badge>
+										</TableCell>
+										<TableCell className="text-muted-foreground">
+											{formatInviteDate(invite.expiresAt)}
+										</TableCell>
+										<TableCell className="text-right">
+											<Button
+												variant="ghost"
+												size="icon-xs"
+												onClick={() => handleDeleteInvite(invite.id)}
+												aria-label={`Cancel invite for ${invite.inviteeEmail}`}
+												className="text-muted-foreground hover:text-status-error-foreground"
+											>
+												<Trash2 />
+											</Button>
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</div>
+				</section>
 			)}
 
-			{error && <p className="text-xs text-status-error-foreground">{error}</p>}
+			{error && (
+				<p className="m-0 rounded-[6px] border border-status-error-border bg-status-error-background p-3 text-xs text-status-error-foreground">
+					{error}
+				</p>
+			)}
 		</div>
 	)
 }
