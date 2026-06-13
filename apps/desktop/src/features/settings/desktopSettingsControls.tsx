@@ -10,7 +10,7 @@ import {
 } from "@cortex/ui"
 import type { ReactNode } from "react"
 import { useEffect, useState } from "react"
-import { SettingsField } from "./SettingsPrimitives"
+import { SettingsField, SettingsGroup } from "./SettingsPrimitives"
 
 function DesktopSwitch({
 	checked,
@@ -140,7 +140,7 @@ function DesktopDescription({ children }: { children: ReactNode }) {
 }
 
 function DesktopGroup({ children }: { children: ReactNode }) {
-	return <div className="flex flex-col gap-3">{children}</div>
+	return <SettingsGroup>{children}</SettingsGroup>
 }
 
 function DesktopField({

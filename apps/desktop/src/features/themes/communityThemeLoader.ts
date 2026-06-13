@@ -1,6 +1,11 @@
 import type { FileEntry } from "@cortex/platform"
 import { getPlatform } from "@cortex/platform"
-import { type CommunityThemeManifest, getThemeManager, type ThemeFamily } from "@cortex/theme"
+import {
+	type CommunityThemeManifest,
+	getThemeManager,
+	parseCommunityThemeManifest,
+	type ThemeFamily,
+} from "@cortex/theme"
 
 export async function loadCommunityThemes(themesDir: string): Promise<void> {
 	const platform = getPlatform()
@@ -25,13 +30,10 @@ export async function loadCommunityThemes(themesDir: string): Promise<void> {
 
 		let manifest: CommunityThemeManifest
 		try {
-			manifest = JSON.parse(raw)
+			manifest = parseCommunityThemeManifest(raw)
 		} catch {
 			continue
 		}
-
-		if (!manifest.id || !manifest.name || !manifest.displayName || !manifest.colorschemes) continue
-		if (!manifest.colorschemes.dark || !manifest.colorschemes.light) continue
 
 		let darkCss: string
 		let lightCss: string

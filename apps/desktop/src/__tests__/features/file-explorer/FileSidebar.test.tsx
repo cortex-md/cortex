@@ -6,7 +6,12 @@ vi.mock("../../../features/sync/NoteHistoryPanel", () => ({
 }))
 
 import { useDragStore, useVaultStore, useWorkspaceStore } from "@cortex/core"
-import { FileSidebar } from "../../../features/file-explorer/FileSidebar"
+import {
+	FILE_TREE_ROW_HEIGHT,
+	FILE_TREE_ROW_STEP,
+	FileSidebar,
+	getFileTreeDepthStyle,
+} from "../../../features/file-explorer/FileSidebar"
 
 const ROOT_PANE_ID = "root"
 
@@ -28,10 +33,11 @@ function renderFileSidebar() {
 			uuid: "vault",
 			path: "/vault",
 			name: "Vault",
-			fileCount: 2,
+			fileCount: 3,
 		},
 		files: [
 			{ path: "/vault/Folder", name: "Folder", isDir: true },
+			{ path: "/vault/Folder/Nested.md", name: "Nested.md", isDir: false },
 			{ path: "/vault/Note.md", name: "Note.md", isDir: false },
 		],
 	})
@@ -81,5 +87,44 @@ describe("FileSidebar drag behavior", () => {
 
 		expect(screen.getByDisplayValue("Note.md")).toBeInTheDocument()
 		expect(note).toHaveAttribute("draggable", "false")
+	})
+})
+
+describe("FileSidebar layout", () => {
+	it("uses a thirty-six pixel virtual step around thirty-two pixel rows", () => {
+		expect(FILE_TREE_ROW_HEIGHT).toBe(32)
+		expect(FILE_TREE_ROW_STEP).toBe(36)
+		expect(getFileTreeDepthStyle(2)).toEqual({
+			"--file-tree-depth": 2,
+			"--file-tree-guide-width": "36px",
+			"--file-tree-indent": "46px",
+			"--file-tree-row-height": "32px",
+		})
+	})
+
+	it("passes nested depth through typed CSS properties", () => {
+		renderFileSidebar()
+		fireEvent.click(screen.getByRole("treeitem", { name: "Folder" }))
+
+		const nestedRow = screen.getByRole("treeitem", { name: "Nested" }).closest(".file-tree-row")
+
+		expect(nestedRow).not.toBeNull()
+		expect((nestedRow as HTMLElement).style.getPropertyValue("--file-tree-depth")).toBe("1")
+		expect((nestedRow as HTMLElement).style.getPropertyValue("--file-tree-guide-width")).toBe(
+			"18px",
+		)
+		expect((nestedRow as HTMLElement).style.height).toBe("36px")
+	})
+
+	it("uses the same depth contract for inline creation rows", () => {
+		renderFileSidebar()
+		fireEvent.click(screen.getByRole("button", { name: "New Folder" }))
+
+		const createInput = screen.getByDisplayValue("New Folder")
+		const createRow = createInput.closest(".file-tree-row")
+
+		expect(createRow).not.toBeNull()
+		expect((createRow as HTMLElement).style.getPropertyValue("--file-tree-depth")).toBe("0")
+		expect(createInput.closest(".file-tree-create-row")).not.toBeNull()
 	})
 })

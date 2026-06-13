@@ -1,4 +1,4 @@
-import { generateCSSVariables, paperTheme, type Theme } from "@cortex/theme"
+import { generateCSSVariables, inkTheme, paperTheme, type Theme } from "@cortex/theme"
 import { describe, expect, it } from "vitest"
 
 describe("generateCSSVariables", () => {
@@ -60,6 +60,15 @@ describe("generateCSSVariables", () => {
 		expect(vars["--callout-warning-bg"]).toBe(paperTheme.tokens.status.warningBg)
 		expect(vars["--markdown-content-width"]).toBe("720px")
 		expect(vars["--markdown-content-gutter"]).toBe("40px")
+		expect(vars["--status-error-foreground"]).toBe(paperTheme.tokens.status.errorForeground)
+		expect(vars["--status-error-on-solid"]).toBe(paperTheme.tokens.status.errorOnSolid)
+		expect(vars["--settings-group-bg"]).toBe(paperTheme.tokens.component.settingsGroupBg)
+		expect(vars["--settings-group-divider"]).toBe(paperTheme.tokens.component.settingsGroupDivider)
+	})
+
+	it("emits theme-specific sidebar tree guides", () => {
+		expect(generateCSSVariables(paperTheme)["--sidebar-tree-guide"]).toBe("#deddd6")
+		expect(generateCSSVariables(inkTheme)["--sidebar-tree-guide"]).toBe("#353432")
 	})
 
 	it("falls back to existing semantic colors when selection tokens are absent", () => {

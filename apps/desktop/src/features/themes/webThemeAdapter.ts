@@ -4,9 +4,10 @@ const THEME_CLASS_REGEX = /(?:^|\s)theme-[\w-]+(?=\s|$)/g
 const OVERRIDE_STYLE_ID = "cortex-theme-overrides"
 
 export class WebThemeAdapter implements ThemeAdapter {
-	applyTheme(themeName: string): void {
+	applyTheme(themeName: string, colorScheme: "light" | "dark"): void {
 		document.body.className = document.body.className.replace(THEME_CLASS_REGEX, "").trim()
 		document.body.classList.add(`theme-${themeName}`)
+		document.body.dataset.themeScheme = colorScheme
 	}
 
 	injectCSS(cssString: string, themeName: string): void {

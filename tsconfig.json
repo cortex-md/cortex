@@ -19,6 +19,7 @@
 		{ "path": "packages/editor" },
 		{ "path": "packages/ui" },
 		{ "path": "packages/theme" },
+		{ "path": "packages/theme-mobile" },
 		{ "path": "packages/settings" },
 		{ "path": "packages/hotkeys" },
 		{ "path": "packages/search" },

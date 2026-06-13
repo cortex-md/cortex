@@ -37,14 +37,14 @@ export function InvitesPanel() {
 							variant="ghost"
 							size="sm"
 							onClick={() => handleAccept(invite.id)}
-							className="h-6 px-2 text-xs text-green-600 hover:text-green-700"
+							className="h-6 px-2 text-xs text-status-success-foreground hover:text-status-success"
 						>
 							<Check size={12} />
 							Accept
 						</Button>
 					</div>
 				))}
-			{error && <p className="text-xs text-red-500 mt-2">{error}</p>}
+			{error && <p className="mt-2 text-xs text-status-error-foreground">{error}</p>}
 		</div>
 	)
 }

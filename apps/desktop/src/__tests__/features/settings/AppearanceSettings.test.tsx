@@ -9,7 +9,7 @@ vi.mock("@cortex/core", () => ({
 import { useUIStore } from "@cortex/core"
 import { getPlatform } from "@cortex/platform"
 import type { AppearanceSettings } from "@cortex/settings"
-import { getThemeManager } from "@cortex/theme"
+import { getContrastRatio, getThemeManager } from "@cortex/theme"
 import { AppearanceSection } from "../../../features/settings/AppearanceSettings"
 import { buildAppearanceOverrides } from "../../../features/settings/applyAppearance"
 
@@ -87,5 +87,19 @@ describe("AppearanceSection", () => {
 		expect(overrides).not.toHaveProperty("--editor-line-height")
 		expect(overrides).not.toHaveProperty("--ui-font-weight")
 		expect(overrides).not.toHaveProperty("--editor-font-weight")
+	})
+
+	it("updates every accent foreground used by primary controls", () => {
+		getThemeManager().setActiveTheme("paper")
+		const overrides = buildAppearanceOverrides({
+			...appearanceSettings,
+			accentColor: "#ffd400",
+		})
+
+		expect(overrides["--text-on-accent"]).toBe("#0a0a09")
+		expect(overrides["--primary-foreground"]).toBe("#0a0a09")
+		expect(overrides["--btn-primary-text"]).toBe("#0a0a09")
+		expect(overrides["--sidebar-primary-foreground"]).toBe("#0a0a09")
+		expect(getContrastRatio(overrides["--border-focus"], "#fafaf8")).toBeGreaterThanOrEqual(3)
 	})
 })

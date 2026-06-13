@@ -7,7 +7,9 @@ import {
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuTrigger,
-	Input,
+	InputGroup,
+	InputGroupAddon,
+	InputGroupInput,
 } from "@cortex/ui"
 import { FileIcon, FilterIcon, FolderIcon, SearchIcon } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -145,23 +147,24 @@ export function SearchSidebar() {
 		<div className="flex flex-col h-full">
 			<div className="px-3 py-2 border-b border-border">
 				<div className="flex items-center gap-1">
-					<div className="relative flex-1">
-						<SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-						<Input
+					<InputGroup variant="search" className="flex-1">
+						<InputGroupAddon>
+							<SearchIcon />
+						</InputGroupAddon>
+						<InputGroupInput
 							ref={inputRef}
 							type="text"
 							value={localQuery}
 							onChange={(e) => handleQueryChange(e.target.value)}
 							placeholder="Search in vault..."
-							className="w-full h-8 pl-8 pr-3 text-sm rounded-md border border-border focus:border-ring focus:outline-none placeholder:text-muted-foreground"
 						/>
-					</div>
+					</InputGroup>
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
 							<Button
 								variant="ghost"
-								size="sm"
-								className="h-8 w-8 p-0 flex-shrink-0"
+								size="icon-sm"
+								className="size-9 flex-shrink-0"
 								title="Add filter"
 							>
 								<FilterIcon className="size-3.5" />

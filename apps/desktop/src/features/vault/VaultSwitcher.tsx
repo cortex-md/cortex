@@ -56,7 +56,7 @@ export function VaultSwitcher() {
 					<DropdownMenuTrigger asChild>
 						<Button
 							variant="ghost"
-							className="vault-switcher-button w-full justify-between gap-2 px-2 py-1.5 h-auto"
+							className="vault-switcher-button w-full justify-between gap-2 px-2.5"
 						>
 							<span className="flex items-center gap-2 min-w-0">
 								{currentEntry?.color && (
@@ -66,15 +66,15 @@ export function VaultSwitcher() {
 									/>
 								)}
 								{currentEntry?.icon && isValidLucideIconName(currentEntry.icon) ? (
-									<LucideIcon name={currentEntry.icon} size={14} />
+									<LucideIcon name={currentEntry.icon} size={16} />
 								) : (
-									<Vault size={14} className="shrink-0" />
+									<Vault size={16} className="shrink-0" />
 								)}
-								<span className="truncate text-xs font-medium">
+								<span className="truncate text-sm font-medium">
 									{currentEntry?.name ?? vault.name}
 								</span>
 							</span>
-							<ChevronsUpDown size={12} className="shrink-0 text-text-muted" />
+							<ChevronsUpDown size={14} className="shrink-0 text-text-muted" />
 						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="start" className="w-64">

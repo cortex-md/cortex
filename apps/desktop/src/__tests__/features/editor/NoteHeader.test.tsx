@@ -53,4 +53,14 @@ describe("NoteHeader", () => {
 		expect(title).toHaveValue("Current")
 		expect(renameFile).not.toHaveBeenCalled()
 	})
+
+	it("marks invalid titles using the input invalid state", () => {
+		render(<NoteHeader filePath="/vault/folder/Current.md" />)
+		const title = screen.getByRole("textbox", { name: "Note title" })
+
+		fireEvent.change(title, { target: { value: "invalid/name" } })
+
+		expect(title).toHaveAttribute("aria-invalid", "true")
+		expect(screen.getByText(/not supported/i)).toBeInTheDocument()
+	})
 })

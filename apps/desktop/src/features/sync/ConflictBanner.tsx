@@ -36,9 +36,11 @@ export function ConflictBanner({ filePath }: Props) {
 
 	return (
 		<>
-			<div className="flex items-center gap-2 px-3 py-1.5 border-b border-yellow-500/30 bg-yellow-500/10 text-xs">
-				<AlertTriangleIcon className="size-3.5 text-yellow-500 flex-shrink-0" />
-				<span className="text-yellow-200 font-medium">Conflicting changes detected</span>
+			<div className="flex items-center gap-2 border-b border-status-warning-border bg-status-warning-background px-3 py-1.5 text-xs">
+				<AlertTriangleIcon className="size-3.5 flex-shrink-0 text-status-warning-foreground" />
+				<span className="font-medium text-status-warning-foreground">
+					Conflicting changes detected
+				</span>
 				<div className="flex items-center gap-1.5 ml-auto">
 					<Button variant="ghost" size="xs" onClick={() => handleResolve({ type: "keep_local" })}>
 						Keep Local

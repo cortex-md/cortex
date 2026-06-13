@@ -162,7 +162,7 @@ describe("SyncSection", () => {
 		setupMocks({ authenticated: true, syncEnabled: true, linkedVaultId: null })
 		render(<SyncSection />)
 
-		expect(screen.getByText("Remote Vault")).toBeInTheDocument()
+		expect(screen.getByText("Remote vault")).toBeInTheDocument()
 		expect(screen.getByText("Link or create a remote vault to start syncing.")).toBeInTheDocument()
 
 		await waitFor(() => {
@@ -174,7 +174,7 @@ describe("SyncSection", () => {
 		setupMocks({ authenticated: false, syncEnabled: true })
 		render(<SyncSection view="preferences" />)
 
-		expect(screen.getByText("Preferences")).toBeInTheDocument()
+		expect(screen.getByText("Content")).toBeInTheDocument()
 		expect(screen.getByRole("switch", { name: "Ignore images" })).toBeInTheDocument()
 		expect(screen.getByText("Excluded paths panel")).toBeInTheDocument()
 	})

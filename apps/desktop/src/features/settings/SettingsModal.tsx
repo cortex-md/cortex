@@ -3,16 +3,14 @@ import { getPluginInstance, PluginSettingsRenderer, usePluginStore } from "@cort
 import { useSettingsStore } from "@cortex/settings"
 import type { FolderPickerOption } from "@cortex/ui"
 import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogTitle,
 	LucideIcon,
+	NativeSelect,
+	NativeSelectOptGroup,
+	NativeSelectOption,
 	Sidebar,
 	SidebarContent,
 	SidebarGroup,
@@ -42,12 +40,14 @@ import { EditorSection } from "./EditorSettings"
 import { GeneralSection } from "./GeneralSettings"
 import { HotkeysSection } from "./HotkeysSettings"
 import { PluginsSection } from "./PluginsSettings"
-import { SettingsBlock, SettingsPage } from "./SettingsPrimitives"
+import { SettingsPage, SettingsPageHeader, SettingsSection } from "./SettingsPrimitives"
 import { SyncSection } from "./SyncSettings"
 
 interface SettingsSectionItem {
-	name: string
 	id: string
+	navigationLabel: string
+	title: string
+	description: string
 	icon: typeof Settings
 }
 
@@ -57,26 +57,86 @@ interface SettingsSectionGroup {
 }
 
 const appSections: SettingsSectionItem[] = [
-	{ name: "General", id: "general", icon: Settings },
-	{ name: "Appearance", id: "appearance", icon: Palette },
-	{ name: "Editor", id: "editor", icon: Type },
-	{ name: "Hotkeys", id: "hotkeys", icon: Keyboard },
+	{
+		id: "general",
+		navigationLabel: "General",
+		title: "General",
+		description: "Startup behavior and recently opened vaults.",
+		icon: Settings,
+	},
+	{
+		id: "appearance",
+		navigationLabel: "Appearance",
+		title: "Appearance",
+		description: "Theme, accent color, and interface typography.",
+		icon: Palette,
+	},
+	{
+		id: "editor",
+		navigationLabel: "Editor",
+		title: "Editor",
+		description: "Editing behavior, indentation, and attachment storage.",
+		icon: Type,
+	},
+	{
+		id: "hotkeys",
+		navigationLabel: "Hotkeys",
+		title: "Keyboard shortcuts",
+		description: "Search, record, and reset command bindings for this vault.",
+		icon: Keyboard,
+	},
 ]
 
 const syncSections: SettingsSectionItem[] = [
-	{ name: "Sync", id: "sync", icon: RefreshCw },
-	{ name: "Preferences", id: "sync-preferences", icon: SlidersHorizontal },
-	{ name: "Members", id: "sync-members", icon: Users },
-	{ name: "Self-host", id: "sync-self-host", icon: Server },
+	{
+		id: "sync",
+		navigationLabel: "Overview",
+		title: "Sync",
+		description: "Connection status and the remote vault linked to this workspace.",
+		icon: RefreshCw,
+	},
+	{
+		id: "sync-preferences",
+		navigationLabel: "Preferences",
+		title: "Sync preferences",
+		description: "Choose which content and app state are synchronized.",
+		icon: SlidersHorizontal,
+	},
+	{
+		id: "sync-members",
+		navigationLabel: "Members",
+		title: "Sync members",
+		description: "Manage access to the linked remote vault.",
+		icon: Users,
+	},
+	{
+		id: "sync-self-host",
+		navigationLabel: "Self-hosted",
+		title: "Self-hosted sync",
+		description: "Configure the server and environment used by this vault.",
+		icon: Server,
+	},
 ]
 
 const extensionSections: SettingsSectionItem[] = [
-	{ name: "Plugins", id: "plugins", icon: Blocks },
-	{ name: "Marketplace", id: "marketplace", icon: Store },
+	{
+		id: "plugins",
+		navigationLabel: "Plugins",
+		title: "Plugins",
+		description: "Manage built-in and community extensions for this vault.",
+		icon: Blocks,
+	},
+	{
+		id: "marketplace",
+		navigationLabel: "Marketplace",
+		title: "Marketplace",
+		description: "Discover community plugins and themes.",
+		icon: Store,
+	},
 ]
 
 const settingsSectionGroups: SettingsSectionGroup[] = [
-	{ label: "App", sections: appSections },
+	{ label: "Cortex", sections: appSections },
 	{ label: "Sync", sections: syncSections },
 	{ label: "Extensions", sections: extensionSections },
 ]
@@ -132,7 +192,9 @@ export function SettingsContent({
 
 	const coreSection = settingsSections.find((s) => s.id === activeSectionId)
 	const pluginTab = pluginSettingsTabs.find((t) => t.id === activeSectionId)
-	const activeName = coreSection?.name ?? pluginTab?.label ?? "Settings"
+	const activeTitle = coreSection?.title ?? pluginTab?.label ?? "Settings"
+	const activeDescription =
+		coreSection?.description ?? "Configure this plugin for the current vault."
 
 	useEffect(() => {
 		if (!pluginTab) return
@@ -164,7 +226,7 @@ export function SettingsContent({
 												isActive={activeSectionId === item.id}
 											>
 												<item.icon />
-												<span>{item.name}</span>
+												<span>{item.navigationLabel}</span>
 											</SidebarMenuButton>
 										</SidebarMenuItem>
 									))}
@@ -174,7 +236,7 @@ export function SettingsContent({
 					))}
 					{pluginSettingsTabs.length > 0 && (
 						<SidebarGroup>
-							<SidebarGroupLabel>Plugin Settings</SidebarGroupLabel>
+							<SidebarGroupLabel>Plugin settings</SidebarGroupLabel>
 							<SidebarGroupContent>
 								<SidebarMenu>
 									{pluginSettingsTabs.map((tab) => (
@@ -199,57 +261,79 @@ export function SettingsContent({
 					fullHeight ? "h-full" : "h-full max-h-full"
 				}`}
 			>
-				<header className="flex h-12 shrink-0 items-center gap-2 border-b border-border">
-					<div className="flex items-center gap-2 px-4">
-						<Breadcrumb>
-							<BreadcrumbList>
-								<BreadcrumbItem className="hidden md:block">Settings</BreadcrumbItem>
-								<BreadcrumbSeparator className="hidden md:block" />
-								<BreadcrumbItem>
-									<BreadcrumbPage>{activeName}</BreadcrumbPage>
-								</BreadcrumbItem>
-							</BreadcrumbList>
-						</Breadcrumb>
-					</div>
-				</header>
+				<div className="shrink-0 border-b border-border p-4 md:hidden [&>[data-slot=native-select-wrapper]]:w-full">
+					<NativeSelect
+						aria-label="Settings section"
+						value={activeSectionId}
+						onChange={(event) => setActiveSectionId(event.target.value)}
+						className="w-full"
+					>
+						{settingsSectionGroups.map((group) => (
+							<NativeSelectOptGroup key={group.label} label={group.label}>
+								{group.sections.map((item) => (
+									<NativeSelectOption key={item.id} value={item.id}>
+										{item.navigationLabel}
+									</NativeSelectOption>
+								))}
+							</NativeSelectOptGroup>
+						))}
+						{pluginSettingsTabs.length > 0 && (
+							<NativeSelectOptGroup label="Plugin settings">
+								{pluginSettingsTabs.map((tab) => (
+									<NativeSelectOption key={tab.id} value={tab.id}>
+										{tab.label}
+									</NativeSelectOption>
+								))}
+							</NativeSelectOptGroup>
+						)}
+					</NativeSelect>
+				</div>
 				<div
 					className={
 						activeSectionId === "marketplace"
 							? "flex min-h-0 flex-1 flex-col overflow-hidden"
-							: "flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4"
+							: "min-h-0 flex-1 overflow-y-auto"
 					}
 				>
-					{activeSectionId === "general" && (
-						<GeneralSection settings={settings.general} onUpdate={updateSetting} />
-					)}
-					{activeSectionId === "appearance" && (
-						<AppearanceSection settings={settings.appearance} onUpdate={updateSetting} />
-					)}
-					{activeSectionId === "editor" && (
-						<EditorSection
-							settings={settings.editor}
-							onUpdate={updateSetting}
-							vaultFolders={vaultFolders}
-						/>
-					)}
-					{activeSectionId === "hotkeys" && <HotkeysSection />}
-					{activeSectionId === "sync" && <SyncSection view="overview" />}
-					{activeSectionId === "sync-preferences" && <SyncSection view="preferences" />}
-					{activeSectionId === "sync-members" && <SyncSection view="members" />}
-					{activeSectionId === "sync-self-host" && <SyncSection view="self-host" />}
-					{activeSectionId === "plugins" && <PluginsSection />}
 					{activeSectionId === "marketplace" && <MarketplaceSection initialTab={marketplaceTab} />}
-					{pluginTab && (
-						<SettingsPage>
-							<SettingsBlock title={pluginTab.label} description="Plugin settings for this vault.">
-								<PluginSettingsRenderer
-									pluginId={pluginTab.id}
-									settings={pluginSettingsSchemas[pluginTab.id] ?? pluginTab.settings}
-									values={pluginSettingsValues}
-									onUpdate={(key, value) => handlePluginSettingUpdate(pluginTab.id, key, value)}
+					{activeSectionId !== "marketplace" && (
+						<div className="mx-auto flex w-full max-w-[860px] flex-col gap-7 px-5 py-7 md:px-8 md:py-8">
+							<SettingsPageHeader title={activeTitle} description={activeDescription} />
+							{activeSectionId === "general" && (
+								<GeneralSection settings={settings.general} onUpdate={updateSetting} />
+							)}
+							{activeSectionId === "appearance" && (
+								<AppearanceSection settings={settings.appearance} onUpdate={updateSetting} />
+							)}
+							{activeSectionId === "editor" && (
+								<EditorSection
+									settings={settings.editor}
+									onUpdate={updateSetting}
+									vaultFolders={vaultFolders}
 								/>
-							</SettingsBlock>
-						</SettingsPage>
+							)}
+							{activeSectionId === "hotkeys" && <HotkeysSection />}
+							{activeSectionId === "sync" && <SyncSection view="overview" />}
+							{activeSectionId === "sync-preferences" && <SyncSection view="preferences" />}
+							{activeSectionId === "sync-members" && <SyncSection view="members" />}
+							{activeSectionId === "sync-self-host" && <SyncSection view="self-host" />}
+							{activeSectionId === "plugins" && <PluginsSection />}
+							{pluginTab && (
+								<SettingsPage>
+									<SettingsSection
+										title={pluginTab.label}
+										description="Settings declared by this plugin for the current vault."
+									>
+										<PluginSettingsRenderer
+											pluginId={pluginTab.id}
+											settings={pluginSettingsSchemas[pluginTab.id] ?? pluginTab.settings}
+											values={pluginSettingsValues}
+											onUpdate={(key, value) => handlePluginSettingUpdate(pluginTab.id, key, value)}
+										/>
+									</SettingsSection>
+								</SettingsPage>
+							)}
+						</div>
 					)}
 				</div>
 			</main>

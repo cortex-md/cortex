@@ -404,7 +404,12 @@ const IconPicker = React.forwardRef<React.ComponentRef<typeof PopoverTrigger>, I
 				</PopoverTrigger>
 				<PopoverContent className="w-64 p-2">
 					{searchable && (
-						<Input placeholder={searchPlaceholder} onChange={handleSearchChange} className="mb-2" />
+						<Input
+							size="sm"
+							placeholder={searchPlaceholder}
+							onChange={handleSearchChange}
+							className="mb-2"
+						/>
 					)}
 					{categorized && search.trim() === "" && (
 						<div className="flex flex-row gap-1 mt-2 overflow-x-auto pb-2">{categoryButtons}</div>

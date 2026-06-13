@@ -33,7 +33,12 @@ import { AuthModal } from "./features/auth/AuthModal"
 import { BookmarksSidebar } from "./features/bookmarks/BookmarksSidebar"
 import { CommandPalette } from "./features/command-palette/CommandPalette"
 import { FileSidebar } from "./features/file-explorer/FileSidebar"
-import { type NavItem, SidebarNav } from "./features/file-explorer/SidebarNav"
+import {
+	getAvailableSidebarViewId,
+	SidebarViewCarousel,
+	type SidebarViewItem,
+} from "./features/file-explorer/SidebarViewCarousel"
+import { SidebarViewStage } from "./features/file-explorer/SidebarViewStage"
 import { EmptyVaultLayout } from "./features/layout/empty-vault-layout"
 import { SplitPaneView } from "./features/layout/SplitPane"
 import { QuickFinder } from "./features/quick-finder/QuickFinder"
@@ -56,15 +61,11 @@ import { useWorkspacePersistence } from "./hooks/useWorkspacePersistence"
 
 initializePluginBridges()
 
-const CORE_NAV_ITEMS: NavItem[] = [
-	{ id: "files", icon: FolderClosed, label: "Files" },
-	{ id: "search", icon: SearchIcon, label: "Search" },
-	{ id: "bookmarks", icon: BookmarkIcon, label: "Bookmarks" },
-	{ id: "tags", icon: TagIcon, label: "Tags" },
-]
-
-const NAV_BOTTOM_ITEMS: NavItem[] = [
-	{ id: "settings", icon: SettingsIcon, label: "Settings", draggable: false },
+const CORE_SIDEBAR_VIEWS: SidebarViewItem[] = [
+	{ id: "files", icon: FolderClosed, label: "Files", source: "core" },
+	{ id: "search", icon: SearchIcon, label: "Search", source: "core" },
+	{ id: "bookmarks", icon: BookmarkIcon, label: "Bookmarks", source: "core" },
+	{ id: "tags", icon: TagIcon, label: "Tags", source: "core" },
 ]
 
 export default function App() {
@@ -99,15 +100,21 @@ export default function App() {
 		null,
 	)
 
-	const navItems = useMemo<NavItem[]>(() => {
-		const pluginNavItems: NavItem[] = pluginSidebarItems.map((item) => ({
-			id: item.id,
-			viewId: item.viewId,
-			icon: item.icon,
-			label: item.label,
-		}))
-		return [...CORE_NAV_ITEMS, ...pluginNavItems]
-	}, [pluginSidebarItems])
+	const sidebarViews = useMemo<SidebarViewItem[]>(() => {
+		const pluginNavItems = pluginSidebarItems
+			.filter((item) =>
+				pluginViews.some((view) => view.id === item.viewId && view.location === "sidebar-left"),
+			)
+			.map((item) => ({
+				id: item.id,
+				viewId: item.viewId,
+				icon: item.icon,
+				label: item.label,
+				source: "extension" as const,
+			}))
+		return [...CORE_SIDEBAR_VIEWS, ...pluginNavItems]
+	}, [pluginSidebarItems, pluginViews])
+	const activeSidebarView = getAvailableSidebarViewId(sidebarViews, leftSidebarView)
 
 	const autoOpenAttempted = useRef(false)
 	const { sidebarElementRef, handleSidebarResizeStart } = useSidebarResize(
@@ -271,17 +278,28 @@ export default function App() {
 		}
 	}, [])
 
-	const handleSidebarNavSelect = (id: string) => {
-		if (id === "settings") {
-			openSettings("general")
-			return
-		}
-		if (id === leftSidebarView && !leftSidebarCollapsed) {
-			toggleLeftSidebar()
-			return
-		}
+	useEffect(() => {
+		if (activeSidebarView !== leftSidebarView) setLeftSidebarView(activeSidebarView)
+	}, [activeSidebarView, leftSidebarView, setLeftSidebarView])
+
+	const handleSidebarViewSelect = (id: string) => {
+		if (id === leftSidebarView) return
 		if (leftSidebarCollapsed) toggleLeftSidebar()
-		setLeftSidebarView(id as Parameters<typeof setLeftSidebarView>[0])
+		setLeftSidebarView(id)
+	}
+
+	const renderSidebarView = (id: string) => {
+		if (id === "files") return <FileSidebar />
+		if (id === "search") return <SearchSidebar />
+		if (id === "bookmarks") return <BookmarksSidebar />
+		if (id === "tags") return <TagsSidebar />
+		const sidebarItem = pluginSidebarItems.find((item) => item.id === id)
+		const pluginView = pluginViews.find((view) => view.id === sidebarItem?.viewId)
+		return pluginView ? (
+			<div className="h-full min-h-0 overflow-hidden">
+				<PluginViewRenderer registration={pluginView} />
+			</div>
+		) : null
 	}
 
 	return (
@@ -307,7 +325,7 @@ export default function App() {
 						onMouseDown={(event) => event.stopPropagation()}
 						onClick={toggleLeftSidebar}
 					>
-						<PanelLeftIcon size={24} strokeWidth={2} />
+						<PanelLeftIcon size={16} strokeWidth={2} />
 					</Button>
 				)}
 			</div>
@@ -329,25 +347,28 @@ export default function App() {
 							aria-label="Sidebar panel"
 						>
 							<VaultSwitcher />
-							<SidebarNav
-								items={navItems}
-								bottomItems={NAV_BOTTOM_ITEMS}
-								activeId={leftSidebarView}
-								onSelect={handleSidebarNavSelect}
+							<SidebarViewCarousel
+								items={sidebarViews}
+								activeId={activeSidebarView}
+								onSelect={handleSidebarViewSelect}
 							/>
-							<div className="flex-1 overflow-hidden flex flex-col">
-								{leftSidebarView === "files" && <FileSidebar />}
-								{leftSidebarView === "search" && <SearchSidebar />}
-								{leftSidebarView === "bookmarks" && <BookmarksSidebar />}
-								{leftSidebarView === "tags" && <TagsSidebar />}
-								{pluginViews
-									.filter((v) => {
-										const sidebarItem = pluginSidebarItems.find((s) => s.viewId === v.id)
-										return sidebarItem && leftSidebarView === sidebarItem.id
-									})
-									.map((view) => (
-										<PluginViewRenderer key={view.id} registration={view} />
-									))}
+							<div className="min-h-0 flex-1 overflow-hidden">
+								<SidebarViewStage
+									activeId={activeSidebarView}
+									items={sidebarViews}
+									renderView={renderSidebarView}
+								/>
+							</div>
+							<div className="sidebar-footer">
+								<Button
+									type="button"
+									variant="ghost"
+									className="sidebar-settings-button"
+									onClick={() => openSettings("general")}
+								>
+									<SettingsIcon size={16} strokeWidth={2} />
+									<span>Settings</span>
+								</Button>
 							</div>
 						</aside>
 						<div

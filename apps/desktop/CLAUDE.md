@@ -26,9 +26,26 @@ The main app and Settings use separate Tauri webview windows. `main.tsx` renders
 
 `SettingsModal` remains as a fallback for cases where there is no active vault or native window creation fails. Shared settings layout belongs in `SettingsContent`, not in window-specific wrappers.
 
-Settings form sections should use `SettingsPage`, `SettingsBlock`, `SettingsField`, `SettingsList`, and `SettingsEmptyState` from `features/settings/SettingsPrimitives`. Keep Marketplace as its own browser-style settings view, but use the shared settings primitives for General, Appearance, Editor, Hotkeys, Sync, Plugins, and plugin-declared settings.
+Settings routes are defined centrally with navigation label, page title, description, icon, and
+group. Standard pages render `SettingsPageHeader` inside the scroll area, then compose
+`SettingsPage`, `SettingsSection`, `SettingsGroup`, `SettingsGroupContent`, `SettingsField`,
+`SettingsList`, and `SettingsEmptyState`. Section headings stay outside grouped row surfaces.
+Marketplace remains its own full-height browser-style view without the standard page header or
+groups. Below the desktop breakpoint, navigation uses grouped `NativeSelect` options.
+
+Settings and Sync feedback colors must use `status-error-*`, `status-success-*`, and
+`status-warning-*`. Group surfaces use `settings-group-*`; do not introduce direct Tailwind
+red/green/yellow colors or one-off card backgrounds.
 
 Appearance settings may override only font families and font sizes. UI/editor font weights and line heights are theme CSS tokens (`--ui-font-weight`, `--ui-line-height`, `--editor-font-weight`, `--editor-line-height`) and should not be written by runtime appearance overrides.
+
+Community theme CSS is loaded as opaque text and injected directly into the WebView. Desktop code
+must not import `@cortex/theme-mobile`, parse theme selectors, require token lists, or generate
+`.tokens.json`.
+
+Custom accents update `--text-on-accent`, primary/button/sidebar foregrounds, and a contrast-safe
+focus color. Runtime dark styling and charts use `body[data-theme-scheme]`, never a built-in theme
+class.
 
 `tauri.conf.json` should stay platform-neutral. macOS chrome belongs in `tauri.macos.conf.json`; Windows chrome belongs in `tauri.windows.conf.json`.
 
@@ -42,9 +59,25 @@ Workspace tabs keep a fixed width with truncated titles so tab order changes do 
 
 The left sidebar's persisted width lives in `uiStore`, but live resize feedback should stay local/imperative during the drag and commit the final clamped width only on mouseup.
 
+`SidebarViewCarousel` owns left-sidebar navigation. Core views stay ordered before extension views,
+the active item expands to show its label, and `All views` provides direct searchable access through
+the shared Command surface. Keep Settings outside the carousel in the fixed footer, keep each view's
+scroll inside the flexible viewport, and preserve `sidebar-view` drag sources for tabs and splits.
+View changes mount only the previous and current panels during the lateral transition. Plugin view
+IDs are dynamic; when the active registration disappears, the host falls back to Files. Carousel
+alignment must use measured viewport and button geometry and react to width changes while the active
+label animates; do not return to `scrollIntoView`.
+
 `FileSidebar` builds its hierarchy in O(n), flattens expanded rows, and virtualizes the result with
 `@tanstack/react-virtual`. Keep file tree construction pure in `fileTree.ts`; row components must
-subscribe only to visible row state.
+subscribe only to visible row state. Tree rows are 32px inside a 36px virtual step, use 18px
+indentation per level, and expose typed depth CSS properties so `--sidebar-tree-guide` can draw
+continuous hierarchy guides for built-in and community themes.
+
+The macOS shell uses a 40px overlay titlebar and an edge-to-edge native sidebar material. Traffic
+light placement is owned by the Rust setup path, not `trafficLightPosition` in Tauri JSON. Keep the
+sidebar flush with the window, separated only by `--sidebar-border`, and do not add CSS blur or an
+inset card treatment.
 
 App-level bridges belong in `bootstrap/pluginBridges.ts`. Lifecycle effects and command wiring belong
 in dedicated hooks; native menu listeners belong in `hooks/useNativeMenuEvents.ts`. `App.tsx` should

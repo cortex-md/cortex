@@ -185,6 +185,7 @@ their own caches.
 
 Use `getNotePathPresentation(filePath, vaultPath)` for note titles and breadcrumbs. It returns the
 vault-relative segments, omits the vault itself, and removes the Markdown extension from the note.
+Use `getNoteTitleError(title)` to validate editable note titles before appending `.md`.
 
 ## Existing Stores
 
@@ -271,7 +272,7 @@ Manages UI chrome, app-level overlays, and settings entry points:
 export interface UIState {
   leftSidebarCollapsed: boolean
   leftSidebarWidth: number
-  leftSidebarView: "files" | "search" | "bookmarks" | "tags"
+  leftSidebarView: string
   settingsOpen: boolean
   settingsInitialSection: string | null
   marketplaceInitialTab: "plugins" | "themes"
@@ -288,6 +289,9 @@ export interface UIState {
 ```
 
 `LEFT_SIDEBAR_WIDTH_BOUNDS` and `clampLeftSidebarWidth()` are exported with `uiStore`; use them anywhere sidebar width is read from pointer input or restored from persisted state.
+
+`leftSidebarView` accepts dynamic plugin view IDs. The desktop host owns registration lookup and
+falls back to `"files"` when the active plugin view disappears.
 
 **Usage**: Prefer selectors such as `useUIStore((s) => s.leftSidebarWidth)` in frequently re-rendered app chrome. Marketplace is a Settings tab; `openMarketplace(tab)` opens Settings with `settingsInitialSection` set to `"marketplace"`.
 

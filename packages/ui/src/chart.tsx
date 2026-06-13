@@ -5,10 +5,7 @@ import * as RechartsPrimitive from "recharts"
 
 import { cn } from "./lib/utils"
 
-// Format: { THEME_NAME: CSS_SELECTOR }
-// Use the app's runtime theme class so injected styles follow the same
-// theme toggles used elsewhere (.theme-ink / .theme-paper).
-const THEMES = { light: "", dark: ".theme-ink" } as const
+const THEMES = { light: "", dark: '[data-theme-scheme="dark"]' } as const
 
 export type ChartConfig = {
 	[k in string]: {

@@ -36,7 +36,13 @@ import {
 import { MembersPanel } from "../sync/MembersPanel"
 import { VaultLinkModal } from "../sync/VaultLinkModal"
 import { ExcludedPathsSettings } from "./ExcludedPathsSettings"
-import { SettingsBlock, SettingsField, SettingsPage } from "./SettingsPrimitives"
+import {
+	SettingsField,
+	SettingsGroup,
+	SettingsGroupContent,
+	SettingsPage,
+	SettingsSection,
+} from "./SettingsPrimitives"
 
 export type SyncSettingsView = "overview" | "preferences" | "members" | "self-host"
 
@@ -231,18 +237,20 @@ function SyncToggleSection() {
 	const setSyncEnabled = useRemoteVaultStore((s) => s.setSyncEnabled)
 
 	return (
-		<SettingsBlock
+		<SettingsSection
 			title="Sync"
 			description="Enable or disable sync for this vault without changing its remote link."
 		>
-			<SettingsField label="Enable sync for this vault" htmlFor="sync-enabled">
-				<Switch
-					id="sync-enabled"
-					checked={syncEnabled}
-					onCheckedChange={(checked) => vault?.path && setSyncEnabled(vault.path, checked)}
-				/>
-			</SettingsField>
-		</SettingsBlock>
+			<SettingsGroup>
+				<SettingsField label="Enable sync for this vault" htmlFor="sync-enabled">
+					<Switch
+						id="sync-enabled"
+						checked={syncEnabled}
+						onCheckedChange={(checked) => vault?.path && setSyncEnabled(vault.path, checked)}
+					/>
+				</SettingsField>
+			</SettingsGroup>
+		</SettingsSection>
 	)
 }
 
@@ -295,45 +303,47 @@ function ServerSection() {
 	}
 
 	return (
-		<SettingsBlock
+		<SettingsSection
 			title="Connection"
 			description="Choose Cortex Cloud or point this vault at a self-hosted sync server."
 		>
-			<SettingsField label="Self-hosted sync" htmlFor="self-hosted-sync">
-				<Switch
-					id="self-hosted-sync"
-					checked={syncConfig.selfHosted}
-					onCheckedChange={handleSelfHostToggle}
-				/>
-			</SettingsField>
-			<SettingsField
-				label="Sync URL"
-				description="Remote vaults and login use this URL for the active vault only."
-				htmlFor="server-url"
-				controlClassName="max-w-[440px]"
-			>
-				<div className="flex gap-2">
-					<Input
-						id="server-url"
-						type="url"
-						value={inputValue}
-						onChange={(event: ChangeEvent<HTMLInputElement>) => setInputValue(event.target.value)}
-						onKeyDown={handleKeyDown}
-						placeholder={DEFAULT_SYNC_SERVER_URL}
-						disabled={saving}
+			<SettingsGroup>
+				<SettingsField label="Self-hosted sync" htmlFor="self-hosted-sync">
+					<Switch
+						id="self-hosted-sync"
+						checked={syncConfig.selfHosted}
+						onCheckedChange={handleSelfHostToggle}
 					/>
-					<Button
-						variant="secondary"
-						size="sm"
-						onClick={handleSave}
-						disabled={saving || inputValue.trim() === syncConfig.serverUrl}
-						className="shrink-0"
-					>
-						{saving ? <Loader2 size={14} className="animate-spin" /> : "Save"}
-					</Button>
-				</div>
-			</SettingsField>
-		</SettingsBlock>
+				</SettingsField>
+				<SettingsField
+					label="Sync URL"
+					description="Remote vaults and login use this URL for the active vault only."
+					htmlFor="server-url"
+					controlClassName="max-w-[440px]"
+				>
+					<div className="flex gap-2">
+						<Input
+							id="server-url"
+							type="url"
+							value={inputValue}
+							onChange={(event: ChangeEvent<HTMLInputElement>) => setInputValue(event.target.value)}
+							onKeyDown={handleKeyDown}
+							placeholder={DEFAULT_SYNC_SERVER_URL}
+							disabled={saving}
+						/>
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={handleSave}
+							disabled={saving || inputValue.trim() === syncConfig.serverUrl}
+							className="shrink-0"
+						>
+							{saving ? <Loader2 size={14} className="animate-spin" /> : "Save"}
+						</Button>
+					</div>
+				</SettingsField>
+			</SettingsGroup>
+		</SettingsSection>
 	)
 }
 
@@ -350,20 +360,19 @@ function SyncPreferencesSection() {
 	]
 
 	return (
-		<SettingsBlock
-			title="Preferences"
-			description="Choose what sync should include for this vault."
-		>
-			{preferences.map(({ key, label }) => (
-				<SettingsField key={key} label={label} htmlFor={`sync-preference-${key}`}>
-					<Switch
-						id={`sync-preference-${key}`}
-						checked={syncPreferences[key]}
-						onCheckedChange={(checked) => updateSyncPreference(key, checked)}
-					/>
-				</SettingsField>
-			))}
-		</SettingsBlock>
+		<SettingsSection title="Content" description="Choose what sync should include for this vault.">
+			<SettingsGroup>
+				{preferences.map(({ key, label }) => (
+					<SettingsField key={key} label={label} htmlFor={`sync-preference-${key}`}>
+						<Switch
+							id={`sync-preference-${key}`}
+							checked={syncPreferences[key]}
+							onCheckedChange={(checked) => updateSyncPreference(key, checked)}
+						/>
+					</SettingsField>
+				))}
+			</SettingsGroup>
+		</SettingsSection>
 	)
 }
 
@@ -379,46 +388,51 @@ function VaultLinkSection({
 	onOpenLink: () => void
 }) {
 	return (
-		<SettingsBlock title="Remote Vault" description="The remote vault linked to this local vault.">
-			<div className="flex items-center gap-3 py-2">
-				{linkedVaultId ? (
-					<>
-						<Cloud size={16} className="text-accent" />
-						<div className="flex flex-col min-w-0 flex-1">
-							<span className="font-medium">Linked to remote vault</span>
-							<span className="text-text-muted truncate">{linkedVaultId}</span>
-						</div>
-						{remoteVaultRole && (
-							<Badge variant="outline" className="py-1 capitalize">
-								{remoteVaultRole}
-							</Badge>
-						)}
-						{engineState === "live" && (
-							<Badge variant="outline" className="py-1">
-								Synced
-							</Badge>
-						)}
-						{(engineState === "connecting" ||
-							engineState === "authenticating" ||
-							engineState === "syncing" ||
-							engineState === "recovering") && (
-							<Loader2 size={14} className="animate-spin text-text-muted" />
-						)}
-					</>
-				) : (
-					<>
-						<CloudOff size={16} className="text-text-muted" />
-						<span className="text-text-muted flex-1">
-							Link or create a remote vault to start syncing.
-						</span>
-					</>
-				)}
-				<Button variant="ghost" size="sm" onClick={onOpenLink} className="h-7 px-2">
-					<Link size={12} />
-					{linkedVaultId ? "Change" : "Link"}
-				</Button>
-			</div>
-		</SettingsBlock>
+		<SettingsSection
+			title="Remote vault"
+			description="The remote vault linked to this local vault."
+		>
+			<SettingsGroup>
+				<SettingsGroupContent className="flex items-center gap-3">
+					{linkedVaultId ? (
+						<>
+							<Cloud size={16} className="text-accent" />
+							<div className="flex flex-col min-w-0 flex-1">
+								<span className="font-medium">Linked to remote vault</span>
+								<span className="text-text-muted truncate">{linkedVaultId}</span>
+							</div>
+							{remoteVaultRole && (
+								<Badge variant="outline" className="py-1 capitalize">
+									{remoteVaultRole}
+								</Badge>
+							)}
+							{engineState === "live" && (
+								<Badge variant="outline" className="py-1">
+									Synced
+								</Badge>
+							)}
+							{(engineState === "connecting" ||
+								engineState === "authenticating" ||
+								engineState === "syncing" ||
+								engineState === "recovering") && (
+								<Loader2 size={14} className="animate-spin text-text-muted" />
+							)}
+						</>
+					) : (
+						<>
+							<CloudOff size={16} className="text-text-muted" />
+							<span className="text-text-muted flex-1">
+								Link or create a remote vault to start syncing.
+							</span>
+						</>
+					)}
+					<Button variant="ghost" size="sm" onClick={onOpenLink} className="h-7 px-2">
+						<Link size={12} />
+						{linkedVaultId ? "Change" : "Link"}
+					</Button>
+				</SettingsGroupContent>
+			</SettingsGroup>
+		</SettingsSection>
 	)
 }
 
@@ -456,12 +470,16 @@ function MembersSection({
 
 	return (
 		<SettingsPage>
-			<SettingsBlock
+			<SettingsSection
 				title="Members"
 				description="Manage access and invitations for the linked remote vault."
 			>
-				<MembersPanel vaultId={linkedVaultId} currentUserRole={linkedVaultRole} />
-			</SettingsBlock>
+				<SettingsGroup>
+					<SettingsGroupContent>
+						<MembersPanel vaultId={linkedVaultId} currentUserRole={linkedVaultRole} />
+					</SettingsGroupContent>
+				</SettingsGroup>
+			</SettingsSection>
 		</SettingsPage>
 	)
 }
@@ -546,7 +564,7 @@ function SelfHostedEnvironmentSection() {
 	}
 
 	return (
-		<SettingsBlock
+		<SettingsSection
 			title="Environment"
 			description="Values are saved for this vault. Secret values are stored in the OS keychain."
 			action={
@@ -562,38 +580,42 @@ function SelfHostedEnvironmentSection() {
 				</>
 			}
 		>
-			<Accordion type="multiple">
-				{selfHostedEnvironmentGroups.map((group) => (
-					<AccordionItem key={group.id} value={group.id}>
-						<AccordionTrigger>{group.label}</AccordionTrigger>
-						<AccordionContent>
-							<FieldGroup className="gap-3">
-								{group.fields.map((field) => {
-									const value = field.secret
-										? (secrets[field.key] ?? "")
-										: (syncConfig.selfHostedEnvironment[field.key] ?? "")
-									return (
-										<Field key={field.key}>
-											<FieldLabel htmlFor={field.key}>{field.label}</FieldLabel>
-											<Input
-												id={field.key}
-												type={field.secret ? "password" : "text"}
-												value={value}
-												onChange={(event: ChangeEvent<HTMLInputElement>) =>
-													handleFieldChange(field, event.target.value)
-												}
-												placeholder={field.defaultValue}
-											/>
-											<FieldDescription>{field.key}</FieldDescription>
-										</Field>
-									)
-								})}
-							</FieldGroup>
-						</AccordionContent>
-					</AccordionItem>
-				))}
-			</Accordion>
-		</SettingsBlock>
+			<SettingsGroup>
+				<SettingsGroupContent>
+					<Accordion type="multiple">
+						{selfHostedEnvironmentGroups.map((group) => (
+							<AccordionItem key={group.id} value={group.id}>
+								<AccordionTrigger>{group.label}</AccordionTrigger>
+								<AccordionContent>
+									<FieldGroup className="gap-3">
+										{group.fields.map((field) => {
+											const value = field.secret
+												? (secrets[field.key] ?? "")
+												: (syncConfig.selfHostedEnvironment[field.key] ?? "")
+											return (
+												<Field key={field.key}>
+													<FieldLabel htmlFor={field.key}>{field.label}</FieldLabel>
+													<Input
+														id={field.key}
+														type={field.secret ? "password" : "text"}
+														value={value}
+														onChange={(event: ChangeEvent<HTMLInputElement>) =>
+															handleFieldChange(field, event.target.value)
+														}
+														placeholder={field.defaultValue}
+													/>
+													<FieldDescription>{field.key}</FieldDescription>
+												</Field>
+											)
+										})}
+									</FieldGroup>
+								</AccordionContent>
+							</AccordionItem>
+						))}
+					</Accordion>
+				</SettingsGroupContent>
+			</SettingsGroup>
+		</SettingsSection>
 	)
 }
 

@@ -1,6 +1,6 @@
 import { type FileEntry, getPlatform } from "@cortex/platform"
 import { getCommunityPluginLoadError, usePluginStore } from "@cortex/plugin-runtime"
-import { getThemeManager } from "@cortex/theme"
+import { getThemeManager, parseCommunityThemeManifest } from "@cortex/theme"
 import { fetchLatestRelease } from "./registryService"
 import type { GitHubRelease, GitHubReleaseAsset, RegistryEntry } from "./types"
 
@@ -40,7 +40,7 @@ function getPathDirname(path: string): string {
 	return index === -1 ? "" : normalized.slice(0, index)
 }
 
-function normalizeRelativePath(path: string): string {
+function normalizeRelativePath(path: string, description = "plugin main"): string {
 	const normalized = path.replaceAll("\\", "/").trim()
 	const segments = normalized.split("/").filter((segment) => segment && segment !== ".")
 	if (
@@ -50,7 +50,7 @@ function normalizeRelativePath(path: string): string {
 		segments.length === 0 ||
 		segments.some((segment) => segment === "..")
 	) {
-		throw new Error(`Invalid plugin main path: ${path}`)
+		throw new Error(`Invalid ${description} path: ${path}`)
 	}
 	return segments.join("/")
 }
@@ -258,36 +258,72 @@ export async function installTheme(
 ): Promise<void> {
 	const release = await fetchLatestRelease(entry.repo)
 	const destDir = `${themesDir}/${entry.id}`
-	await getPlatform().fs.createDir(destDir)
+	const workspaceDir = `${themesDir}/.${entry.id}-install-${Date.now()}`
+	const stagingDir = `${workspaceDir}/theme`
+	const backupDir = `${workspaceDir}/previous`
+	let previousThemeMoved = false
+	let stagedThemePromoted = false
 
-	const manifestAsset = findAsset(release.assets, "manifest.json")
-	if (!manifestAsset) {
-		throw new Error(`Release for ${entry.id} is missing manifest.json`)
-	}
-	await downloadAsset(manifestAsset, `${destDir}/manifest.json`)
-
-	const manifestContent = await getPlatform().fs.readFile(`${destDir}/manifest.json`)
-	const parsedManifest = JSON.parse(manifestContent) as { colorschemes?: Record<string, string> }
-	const colorschemes = parsedManifest.colorschemes ?? {}
-
-	for (const [key, cssFile] of Object.entries(colorschemes)) {
-		const normalizedCssFile = normalizeRelativePath(cssFile)
-		const cssAsset =
-			findAsset(release.assets, normalizedCssFile) ??
-			findAsset(release.assets, getPathBasename(normalizedCssFile)) ??
-			findAsset(release.assets, `${key}.css`)
-		if (!cssAsset) {
-			throw new Error(`Release for ${entry.id} is missing colorscheme asset: ${key}.css`)
+	await safeDelete(workspaceDir)
+	await getPlatform().fs.createDir(stagingDir)
+	try {
+		const manifestAsset = findAsset(release.assets, "manifest.json")
+		if (!manifestAsset) {
+			throw new Error(`Release for ${entry.id} is missing manifest.json`)
 		}
-		await downloadAsset(cssAsset, joinPath(destDir, normalizedCssFile))
-	}
+		await downloadAsset(manifestAsset, `${stagingDir}/manifest.json`)
 
-	await reloadCommunityThemes(themesDir)
+		const manifestContent = await getPlatform().fs.readFile(`${stagingDir}/manifest.json`)
+		const manifest = parseCommunityThemeManifest(manifestContent)
+		if (manifest.id !== entry.id) {
+			throw new Error(`Release manifest id must be "${entry.id}"`)
+		}
+
+		for (const [colorScheme, cssFile] of Object.entries(manifest.colorschemes)) {
+			const normalizedCssFile = normalizeRelativePath(cssFile, "theme stylesheet")
+			const cssAsset =
+				findAsset(release.assets, normalizedCssFile) ??
+				findAsset(release.assets, getPathBasename(normalizedCssFile)) ??
+				findAsset(release.assets, `${colorScheme}.css`)
+			if (!cssAsset) {
+				throw new Error(`Release for ${entry.id} is missing colorscheme asset: ${colorScheme}.css`)
+			}
+			const destination = joinPath(stagingDir, normalizedCssFile)
+			await downloadAsset(cssAsset, destination)
+		}
+
+		const installedThemes = await getPlatform().fs.listDir(themesDir)
+		if (installedThemes.some((theme) => theme.name === entry.id)) {
+			await getPlatform().fs.renameFile(destDir, backupDir)
+			previousThemeMoved = true
+		}
+
+		await getPlatform().fs.renameFile(stagingDir, destDir)
+		stagedThemePromoted = true
+		await reloadCommunityThemes(themesDir)
+		await safeDelete(workspaceDir)
+	} catch (error) {
+		if (stagedThemePromoted) await safeDelete(destDir)
+		if (previousThemeMoved) {
+			await getPlatform().fs.renameFile(backupDir, destDir)
+			try {
+				await reloadCommunityThemes(themesDir)
+			} catch {}
+		}
+		await safeDelete(workspaceDir)
+		throw error
+	}
 }
 
 export async function uninstallTheme(id: string, themesDir: string): Promise<void> {
 	const destDir = `${themesDir}/${id}`
+	let familyName = id
+	try {
+		const manifest = parseCommunityThemeManifest(
+			await getPlatform().fs.readFile(`${destDir}/manifest.json`),
+		)
+		familyName = manifest.name
+	} catch {}
 	await getPlatform().fs.deleteFile(destDir)
-	getThemeManager().unregisterTheme(`${id}-dark`)
-	getThemeManager().unregisterTheme(`${id}-light`)
+	getThemeManager().unregisterTheme(familyName)
 }

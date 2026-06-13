@@ -11,7 +11,9 @@ import {
 	Empty,
 	EmptyDescription,
 	EmptyMedia,
-	Input,
+	InputGroup,
+	InputGroupAddon,
+	InputGroupInput,
 	NativeSelect,
 	NativeSelectOption,
 	ScrollArea,
@@ -91,18 +93,16 @@ export function MarketplaceBrowser({ tab }: MarketplaceBrowserProps) {
 		<div className="flex h-full min-h-0 flex-col overflow-hidden">
 			<div className="flex shrink-0 flex-col gap-3 border-b border-border p-4">
 				<div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-					<div className="relative min-w-0 flex-1">
-						<PackageSearch
-							size={14}
-							className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted"
-						/>
-						<Input
+					<InputGroup variant="search" className="min-w-0 flex-1">
+						<InputGroupAddon>
+							<PackageSearch />
+						</InputGroupAddon>
+						<InputGroupInput
 							placeholder={`Search ${tab}…`}
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
-							className="h-9 pl-8 text-sm"
 						/>
-					</div>
+					</InputGroup>
 					<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
 						<Button
 							variant={filterInstalled ? "secondary" : "ghost"}

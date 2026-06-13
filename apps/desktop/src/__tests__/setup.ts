@@ -9,6 +9,7 @@ class MockResizeObserver {
 
 vi.stubGlobal("ResizeObserver", MockResizeObserver)
 Element.prototype.scrollIntoView = vi.fn()
+Element.prototype.scrollTo = vi.fn()
 
 vi.mock("@cortex/platform", () => ({
 	getPlatform: vi.fn(() => ({

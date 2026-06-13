@@ -3,7 +3,12 @@ import type { FileEntry } from "@cortex/platform"
 import { Badge, FolderPicker } from "@cortex/ui"
 import { FileIcon, FolderIcon, XIcon } from "lucide-react"
 import { useMemo } from "react"
-import { SettingsBlock, SettingsEmptyState } from "./SettingsPrimitives"
+import {
+	SettingsEmptyState,
+	SettingsGroup,
+	SettingsGroupContent,
+	SettingsSection,
+} from "./SettingsPrimitives"
 
 function fileEntryToRelativePath(entry: FileEntry, vaultPath: string): string {
 	const relative = entry.path.replace(`${vaultPath}/`, "")
@@ -32,45 +37,51 @@ export function ExcludedPathsSettings() {
 	}, [files, vault?.path, syncPreferences])
 
 	return (
-		<SettingsBlock
+		<SettingsSection
 			title="Excluded from Sync"
 			description="Files, folders, and patterns excluded from sync will not be uploaded to the remote vault."
 		>
-			{excludedPaths.length > 0 && (
-				<div className="flex flex-wrap gap-1.5 mb-3">
-					{excludedPaths.map((path) => (
-						<Badge
-							key={path}
-							variant="secondary"
-							className="flex items-center gap-1.5 pl-2 pr-1 py-1"
-						>
-							{path.replace(/^!/, "").endsWith("/") ? (
-								<FolderIcon className="size-3 shrink-0 text-text-muted" />
-							) : (
-								<FileIcon className="size-3 shrink-0 text-text-muted" />
-							)}
-							<span className="text-xs">{path}</span>
-							<button
-								type="button"
-								onClick={() => toggleExcludedPath(path, false)}
-								className="ml-0.5 p-0.5 rounded-sm hover:bg-bg-hover"
-							>
-								<XIcon className="size-3" />
-							</button>
-						</Badge>
-					))}
-				</div>
-			)}
-			{excludedPaths.length === 0 && <SettingsEmptyState>No excluded paths</SettingsEmptyState>}
+			<SettingsGroup>
+				<SettingsGroupContent>
+					{excludedPaths.length > 0 && (
+						<div className="mb-3 flex flex-wrap gap-1.5">
+							{excludedPaths.map((path) => (
+								<Badge
+									key={path}
+									variant="secondary"
+									className="flex items-center gap-1.5 py-1 pr-1 pl-2"
+								>
+									{path.replace(/^!/, "").endsWith("/") ? (
+										<FolderIcon className="size-3 shrink-0 text-text-muted" />
+									) : (
+										<FileIcon className="size-3 shrink-0 text-text-muted" />
+									)}
+									<span className="text-xs">{path}</span>
+									<button
+										type="button"
+										onClick={() => toggleExcludedPath(path, false)}
+										className="ml-0.5 rounded-sm p-0.5 hover:bg-bg-hover"
+									>
+										<XIcon className="size-3" />
+									</button>
+								</Badge>
+							))}
+						</div>
+					)}
+					{excludedPaths.length === 0 && (
+						<SettingsEmptyState className="px-0 pt-0">No excluded paths</SettingsEmptyState>
+					)}
 
-			<FolderPicker
-				options={availableOptions}
-				value=""
-				onChange={(path) => toggleExcludedPath(path, true)}
-				placeholder="Search files, folders, or add a pattern..."
-				allowCustomValue
-				getCustomValueLabel={(value) => `Add pattern "${value}"`}
-			/>
-		</SettingsBlock>
+					<FolderPicker
+						options={availableOptions}
+						value=""
+						onChange={(path) => toggleExcludedPath(path, true)}
+						placeholder="Search files, folders, or add a pattern..."
+						allowCustomValue
+						getCustomValueLabel={(value) => `Add pattern "${value}"`}
+					/>
+				</SettingsGroupContent>
+			</SettingsGroup>
+		</SettingsSection>
 	)
 }

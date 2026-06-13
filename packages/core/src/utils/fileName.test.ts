@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { getNotePathPresentation, getPortableFileNameError } from "./fileName"
+import { getNotePathPresentation, getNoteTitleError, getPortableFileNameError } from "./fileName"
 
 describe("getNotePathPresentation", () => {
 	it("returns the path relative to the vault without the markdown extension", () => {
@@ -51,5 +51,16 @@ describe("getPortableFileNameError", () => {
 		"daily.2026-06-12.md",
 	])("accepts portable file name %j", (fileName) => {
 		expect(getPortableFileNameError(fileName)).toBeNull()
+	})
+})
+
+describe("getNoteTitleError", () => {
+	it("rejects empty and invalid note titles", () => {
+		expect(getNoteTitleError("  ")).toBe("File name cannot be empty")
+		expect(getNoteTitleError("invalid/name")).not.toBeNull()
+	})
+
+	it("accepts a portable title without an extension", () => {
+		expect(getNoteTitleError("Current note")).toBeNull()
 	})
 })

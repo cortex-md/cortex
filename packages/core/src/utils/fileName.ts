@@ -50,3 +50,9 @@ export function getPortableFileNameError(fileName: string): string | null {
 	if (windowsReservedName.test(fileName)) return "File name is reserved by the operating system"
 	return null
 }
+
+export function getNoteTitleError(title: string): string | null {
+	const normalizedTitle = title.trim()
+	if (!normalizedTitle) return "File name cannot be empty"
+	return getPortableFileNameError(`${normalizedTitle}.md`)
+}

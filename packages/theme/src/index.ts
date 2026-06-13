@@ -1,4 +1,10 @@
 export type { ThemeAdapter } from "./adapter"
+export {
+	getContrastRatio,
+	resolveAccessibleColor,
+	resolveAccessibleForeground,
+} from "./color"
+export { parseCommunityThemeManifest } from "./communityTheme"
 export { generateCSSString, generateCSSVariables } from "./cssGenerator"
 export { getThemeManager, initThemeManager, ThemeManager } from "./ThemeManager"
 export { inkTheme } from "./themes/ink"
@@ -11,6 +17,5 @@ export type {
 	Theme,
 	ThemeFamily,
 	ThemeName,
-	ThemeTokenMap,
 	ThemeTokens,
 } from "./types"

@@ -21,9 +21,10 @@ import { EditorSection } from "../../../features/settings/EditorSettings"
 import { GeneralSection } from "../../../features/settings/GeneralSettings"
 import { PluginsSection } from "../../../features/settings/PluginsSettings"
 import {
-	SettingsBlock,
 	SettingsField,
+	SettingsGroup,
 	SettingsPage,
+	SettingsSection,
 } from "../../../features/settings/SettingsPrimitives"
 
 const onUpdate = vi.fn()
@@ -84,7 +85,7 @@ describe("settings sections", () => {
 		expect(screen.getByText("Indentation")).toBeInTheDocument()
 		expect(screen.getByLabelText("Tab size")).toBeInTheDocument()
 		expect(screen.getByRole("switch", { name: "Use spaces instead of tabs" })).toBeInTheDocument()
-		expect(screen.getByText("Editor Behavior")).toBeInTheDocument()
+		expect(screen.getByText("Editor behavior")).toBeInTheDocument()
 		expect(screen.getByText("Images")).toBeInTheDocument()
 	})
 
@@ -122,28 +123,35 @@ describe("settings sections", () => {
 
 		render(<PluginsSection />)
 
-		expect(screen.getByText("Core Plugins")).toBeInTheDocument()
-		expect(screen.getByText("Community Plugins")).toBeInTheDocument()
+		expect(screen.getByText("Core plugins")).toBeInTheDocument()
+		expect(screen.getByText("Community plugins")).toBeInTheDocument()
 		expect(screen.getByText("Core plugin")).toBeInTheDocument()
 		expect(screen.getByText("Community plugin")).toBeInTheDocument()
 	})
 
 	it("keeps long field labels and descriptions inside the shared settings layout", () => {
-		render(
+		const { container } = render(
 			<SettingsPage>
-				<SettingsBlock title="Long Content">
-					<SettingsField
-						label="A very long setting label that should remain readable without changing component style"
-						description="A long description should stay in the field content column and avoid becoming a one-off text style."
-					>
-						<div>Control</div>
-					</SettingsField>
-				</SettingsBlock>
+				<SettingsSection title="Long Content">
+					<SettingsGroup>
+						<SettingsField
+							label="A very long setting label that should remain readable without changing component style"
+							description="A long description should stay in the field content column and avoid becoming a one-off text style."
+						>
+							<div>Control</div>
+						</SettingsField>
+					</SettingsGroup>
+				</SettingsSection>
 			</SettingsPage>,
 		)
 
 		expect(screen.getByText("Long Content")).toBeInTheDocument()
 		expect(screen.getByText(/A very long setting label/)).toBeInTheDocument()
 		expect(screen.getByText(/A long description/)).toBeInTheDocument()
+		const section = container.querySelector('[data-slot="settings-section"]')
+		const group = container.querySelector('[data-slot="settings-group"]')
+		const field = container.querySelector('[data-slot="field"]')
+		expect(group?.contains(section?.querySelector("h2") ?? null)).toBe(false)
+		expect(field).toHaveClass("min-h-14")
 	})
 })

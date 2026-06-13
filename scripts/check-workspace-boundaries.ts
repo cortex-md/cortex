@@ -17,6 +17,7 @@ const allowedDependencies: Record<string, readonly string[]> = {
 	"@cortex/platform": [],
 	"@cortex/renderer": [],
 	"@cortex/theme": [],
+	"@cortex/theme-mobile": [],
 	"@cortex/settings": ["@cortex/platform"],
 	"@cortex/core": ["@cortex/platform", "@cortex/settings"],
 	"@cortex/editor": ["@cortex/renderer"],
@@ -28,6 +29,12 @@ const allowedDependencies: Record<string, readonly string[]> = {
 	"@cortex/hotkeys": ["@cortex/platform"],
 	"@cortex/marketplace": ["@cortex/platform", "@cortex/plugin-runtime", "@cortex/theme"],
 	"@cortex/plugin-github-emoji": ["cortex-plugin-api"],
+}
+
+const forbiddenDependencies: Record<string, readonly string[]> = {
+	"@cortex/desktop": ["@cortex/theme-mobile"],
+	"@cortex/marketplace": ["@cortex/theme-mobile"],
+	"@cortex/theme": ["@cortex/theme-mobile"],
 }
 
 function readJson<T>(path: string): T {
@@ -159,6 +166,13 @@ for (const workspacePackage of workspacePackages) {
 	for (const dependency of declaredWorkspaceDependencies) {
 		if (!imports.has(dependency)) {
 			errors.push(`${workspacePackage.name} declares unused workspace ${dependency}`)
+		}
+	}
+	for (const forbiddenDependency of forbiddenDependencies[workspacePackage.name] ?? []) {
+		if (declared[forbiddenDependency] || imports.has(forbiddenDependency)) {
+			errors.push(
+				`${workspacePackage.name} must not depend on or import ${forbiddenDependency}`,
+			)
 		}
 	}
 

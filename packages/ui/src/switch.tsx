@@ -1,35 +1,61 @@
+import { cva, type VariantProps } from "class-variance-authority"
 import { Switch as SwitchPrimitive } from "radix-ui"
 import type * as React from "react"
 
 import { nativeFocusRing } from "./lib/native-styles"
 import { cn } from "./lib/utils"
 
+const switchVariants = cva(
+	"peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-black/5 shadow-[inset_0_1px_1px_rgba(0,0,0,0.08)] outline-none transition-[background-color,border-color,box-shadow,opacity,filter] duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-white/15 data-[state=checked]:bg-brand data-[state=checked]:shadow-[inset_0_1px_1px_rgba(0,0,0,0.12)] data-[state=unchecked]:bg-[#78788029] dark:border-white/10 dark:data-[state=unchecked]:bg-[#78788052]",
+	{
+		variants: {
+			size: {
+				sm: "h-[18px] w-8",
+				default: "h-6 w-[54px]",
+				lg: "h-7 w-16",
+			},
+		},
+		defaultVariants: {
+			size: "default",
+		},
+	},
+)
+
+const switchThumbVariants = cva(
+	"pointer-events-none absolute top-1/2 left-[2px] block -translate-y-1/2 rounded-full border border-white/80 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.9)] ring-0 transition-[width,transform,background-color,box-shadow,backdrop-filter] duration-150 ease-[cubic-bezier(0.2,0.8,0.2,1)] group-active/switch:bg-white/75 group-active/switch:backdrop-blur-xl group-active/switch:shadow-[0_2px_7px_rgba(0,0,0,0.24),inset_0_1px_1px_rgba(255,255,255,0.95)] data-[state=unchecked]:translate-x-0",
+	{
+		variants: {
+			size: {
+				sm: "h-3.5 w-[19px] group-active/switch:w-[22px] data-[state=checked]:translate-x-[9px] group-active/switch:data-[state=checked]:translate-x-1.5",
+				default:
+					"h-5 w-8 group-active/switch:w-[35px] data-[state=checked]:translate-x-[18px] group-active/switch:data-[state=checked]:translate-x-[15px]",
+				lg: "h-6 w-[38px] group-active/switch:w-[42px] data-[state=checked]:translate-x-[22px] group-active/switch:data-[state=checked]:translate-x-[18px]",
+			},
+		},
+		defaultVariants: {
+			size: "default",
+		},
+	},
+)
+
 function Switch({
 	className,
 	size = "default",
 	...props
-}: React.ComponentProps<typeof SwitchPrimitive.Root> & {
-	size?: "sm" | "default" | "lg"
-}) {
+}: React.ComponentProps<typeof SwitchPrimitive.Root> & VariantProps<typeof switchVariants>) {
 	return (
 		<SwitchPrimitive.Root
 			data-slot="switch"
 			data-size={size}
-			className={cn(
-				"peer group/switch inline-flex shrink-0 items-center rounded-full border border-transparent p-px outline-none transition-[background-color,opacity,filter] duration-150 ease-out active:brightness-[0.98] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-[18px] data-[size=default]:w-8 data-[size=lg]:h-6 data-[size=lg]:w-[54px] data-[size=sm]:h-4 data-[size=sm]:w-7 data-[state=checked]:bg-brand data-[state=checked]:active:bg-brand-hover data-[state=unchecked]:bg-[#78788029] dark:data-[state=unchecked]:bg-[#78788052]",
-				nativeFocusRing,
-				className,
-			)}
+			className={cn(switchVariants({ size }), nativeFocusRing, className)}
 			{...props}
 		>
 			<SwitchPrimitive.Thumb
 				data-slot="switch-thumb"
-				className={cn(
-					"pointer-events-none block rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.28)] ring-0 transition-[transform,box-shadow] duration-150 ease-out group-active/switch:scale-90 group-active/switch:shadow-[0_1px_2px_rgba(0,0,0,0.24)] group-data-[size=default]/switch:size-4 group-data-[size=lg]/switch:size-[22px] group-data-[size=sm]/switch:size-3.5 data-[state=checked]:translate-x-3.5 group-data-[size=lg]/switch:data-[state=checked]:translate-x-[30px] group-data-[size=sm]/switch:data-[state=checked]:translate-x-3 data-[state=unchecked]:translate-x-0",
-				)}
+				className={cn(switchThumbVariants({ size }))}
 			/>
 		</SwitchPrimitive.Root>
 	)
 }
 
-export { Switch }
+export { Switch, switchVariants }

@@ -1,5 +1,5 @@
 import { useTagsStore, useVaultStore, useWorkspaceStore } from "@cortex/core"
-import { Badge, Button, Input } from "@cortex/ui"
+import { Badge, Button, InputGroup, InputGroupAddon, InputGroupInput } from "@cortex/ui"
 import { ChevronRightIcon, FileIcon, TagIcon, XIcon } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 
@@ -113,16 +113,17 @@ export function TagsSidebar() {
 	return (
 		<div className="flex flex-col h-full">
 			<div className="px-3 py-2 border-b border-border">
-				<div className="relative">
-					<TagIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-					<Input
+				<InputGroup variant="search">
+					<InputGroupAddon>
+						<TagIcon />
+					</InputGroupAddon>
+					<InputGroupInput
 						type="text"
 						value={filterQuery}
 						onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilterQuery(e.target.value)}
 						placeholder="Filter tags..."
-						className="w-full h-8 pl-8 pr-3 text-sm rounded-md border border-border focus:border-ring focus:outline-none placeholder:text-muted-foreground"
 					/>
-				</div>
+				</InputGroup>
 				<div className="mt-1.5 text-[10px] text-muted-foreground">
 					{allTags.length === 0
 						? "No tags found"

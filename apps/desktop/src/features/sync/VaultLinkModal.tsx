@@ -180,7 +180,9 @@ export function VaultLinkModal({ open, onOpenChange, unlockMode }: VaultLinkModa
 								autoFocus
 							/>
 						</div>
-						{encryptionError && <p className="text-xs text-red-500">{encryptionError}</p>}
+						{encryptionError && (
+							<p className="text-xs text-status-error-foreground">{encryptionError}</p>
+						)}
 					</div>
 					<DialogFooter>
 						<DialogClose asChild>
@@ -247,7 +249,9 @@ export function VaultLinkModal({ open, onOpenChange, unlockMode }: VaultLinkModa
 								}
 							/>
 						</div>
-						{encryptionError && <p className="text-xs text-red-500">{encryptionError}</p>}
+						{encryptionError && (
+							<p className="text-xs text-status-error-foreground">{encryptionError}</p>
+						)}
 					</div>
 					<DialogFooter>
 						<Button
@@ -305,7 +309,7 @@ export function VaultLinkModal({ open, onOpenChange, unlockMode }: VaultLinkModa
 								variant="ghost"
 								size="sm"
 								onClick={handleUnlink}
-								className="text-xs h-6 px-2 text-red-500 hover:text-red-600"
+								className="h-6 px-2 text-xs text-status-error-foreground hover:text-status-error"
 							>
 								<Unlink size={12} />
 								Unlink
@@ -408,7 +412,7 @@ export function VaultLinkModal({ open, onOpenChange, unlockMode }: VaultLinkModa
 				)}
 
 				{(error || encryptionError) && (
-					<p className="text-xs text-red-500">{encryptionError || error}</p>
+					<p className="text-xs text-status-error-foreground">{encryptionError || error}</p>
 				)}
 
 				<DialogFooter>

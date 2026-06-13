@@ -54,7 +54,7 @@ export function DeviceManager() {
 	}
 
 	if (error) {
-		return <p className="text-xs text-red-500 py-2">{error}</p>
+		return <p className="py-2 text-xs text-status-error-foreground">{error}</p>
 	}
 
 	if (deviceEntries.length === 0) {
@@ -70,6 +70,7 @@ export function DeviceManager() {
 						{editingId === device.id ? (
 							<div className="flex items-center gap-1">
 								<Input
+									size="sm"
 									className="bg-transparent border border-border rounded px-1 py-0.5 outline-none focus:border-accent w-full"
 									value={editName}
 									onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditName(e.target.value)}
@@ -125,7 +126,7 @@ export function DeviceManager() {
 								variant="ghost"
 								size="icon"
 								onClick={() => handleRevoke(device.id)}
-								className="h-6 w-6 text-text-muted hover:text-red-500"
+								className="h-6 w-6 text-text-muted hover:text-status-error-foreground"
 							>
 								<Trash2 size={12} />
 							</Button>

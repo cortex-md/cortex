@@ -1,5 +1,10 @@
 import type { AppearanceSettings } from "@cortex/settings"
-import { getThemeManager, type ThemeTokens } from "@cortex/theme"
+import {
+	getThemeManager,
+	resolveAccessibleColor,
+	resolveAccessibleForeground,
+	type ThemeTokens,
+} from "@cortex/theme"
 
 const DEFAULT_ACCENT_COLOR = "#e8a83c"
 const SYSTEM_FONT_STACK = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI"'
@@ -23,6 +28,8 @@ function buildAccentOverrides(hex: string): Record<string, string> {
 	const textAmount = activeTheme.isDark ? 72 : 82
 	const accentSubtle = `color-mix(in srgb, ${hex} ${subtleAmount}%, ${bgPrimary})`
 	const accentText = `color-mix(in srgb, ${hex} ${textAmount}%, ${textPrimary})`
+	const textOnAccent = resolveAccessibleForeground(hex)
+	const focusColor = resolveAccessibleColor(hex, bgPrimary)
 
 	return {
 		"--accent": hex,
@@ -31,14 +38,20 @@ function buildAccentOverrides(hex: string): Record<string, string> {
 		"--accent-active": `color-mix(in srgb, ${hex} ${activeAmount}%, ${bgSecondary})`,
 		"--accent-subtle": accentSubtle,
 		"--accent-text": accentText,
+		"--text-on-accent": textOnAccent,
 		"--bg-selected": accentSubtle,
-		"--border-focus": hex,
-		"--ring": hex,
+		"--btn-primary-bg": hex,
+		"--btn-primary-text": textOnAccent,
+		"--primary": hex,
+		"--primary-foreground": textOnAccent,
+		"--border-focus": focusColor,
+		"--ring": focusColor,
 		"--tab-accent": hex,
 		"--sidebar-primary": hex,
+		"--sidebar-primary-foreground": textOnAccent,
 		"--sidebar-accent": accentSubtle,
 		"--sidebar-accent-foreground": accentText,
-		"--sidebar-ring": hex,
+		"--sidebar-ring": focusColor,
 		"--chart-1": hex,
 	}
 }

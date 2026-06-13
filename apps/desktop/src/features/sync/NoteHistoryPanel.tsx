@@ -257,13 +257,9 @@ export function NoteHistoryPanel({ filePath, open, onOpenChange }: NoteHistoryPa
 									</div>
 									{!loadingDiff && fileDiff && (
 										<div className="px-4 py-2 flex gap-4 text-xs text-text-muted">
-											<span className="text-green-600 dark:text-green-400">
-												+{addedLines} added
-											</span>
+											<span className="text-status-success-foreground">+{addedLines} added</span>
 											<Separator orientation="vertical" className="h-4" />
-											<span className="text-red-600 dark:text-red-400">
-												-{removedLines} removed
-											</span>
+											<span className="text-status-error-foreground">-{removedLines} removed</span>
 										</div>
 									)}
 									<Button
@@ -284,7 +280,7 @@ export function NoteHistoryPanel({ filePath, open, onOpenChange }: NoteHistoryPa
 
 						<ScrollArea className="flex-1">
 							{error && (
-								<div className="m-4 p-3 rounded-md bg-red-500/10 text-red-600 dark:text-red-400 text-sm">
+								<div className="m-4 rounded-md border border-status-error-border bg-status-error-background p-3 text-sm text-status-error-foreground">
 									{error}
 								</div>
 							)}

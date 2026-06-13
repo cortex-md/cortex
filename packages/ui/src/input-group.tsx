@@ -1,22 +1,36 @@
 import { cva, type VariantProps } from "class-variance-authority"
 import type * as React from "react"
-import { Input } from "./"
 import { Button } from "./button"
-import { nativeControlSurface, nativeGlassSurface } from "./lib/native-styles"
+import { Input } from "./input"
+import { nativeTextFieldSurface } from "./lib/native-styles"
 import { cn } from "./lib/utils"
 import { Textarea } from "./textarea"
 
 const inputGroupVariants = cva(
-	"group/input-group relative flex w-full min-w-0 items-center outline-none transition-[background-color,border-color,color,box-shadow]",
+	[
+		"group/input-group relative flex w-full min-w-0 items-center outline-none transition-[background-color,border-color,color,box-shadow]",
+		nativeTextFieldSurface,
+	],
 	{
 		variants: {
 			variant: {
-				default: ["h-6 rounded-[6px]", nativeControlSurface],
-				search: ["h-9 gap-1.5 rounded-full px-2.5", nativeGlassSurface],
+				default: "rounded-[6px]",
+				search: "gap-1.5 rounded-full",
+			},
+			size: {
+				sm: "",
+				default: "",
 			},
 		},
+		compoundVariants: [
+			{ variant: "default", size: "sm", className: "h-6" },
+			{ variant: "default", size: "default", className: "h-8" },
+			{ variant: "search", size: "sm", className: "h-8 px-2.5" },
+			{ variant: "search", size: "default", className: "h-9 px-3" },
+		],
 		defaultVariants: {
 			variant: "default",
+			size: "default",
 		},
 	},
 )
@@ -24,15 +38,17 @@ const inputGroupVariants = cva(
 function InputGroup({
 	className,
 	variant = "default",
+	size = "default",
 	...props
 }: React.ComponentProps<"div"> & VariantProps<typeof inputGroupVariants>) {
 	return (
 		<div
 			data-slot="input-group"
 			data-variant={variant}
+			data-size={size}
 			role="group"
 			className={cn(
-				inputGroupVariants({ variant }),
+				inputGroupVariants({ variant, size }),
 				"has-[>textarea]:h-auto",
 
 				// Variants based on alignment.
@@ -59,8 +75,10 @@ const inputGroupAddonVariants = cva(
 	{
 		variants: {
 			align: {
-				"inline-start": "order-first pl-3 has-[>button]:ml-[-0.45rem] has-[>kbd]:ml-[-0.35rem]",
-				"inline-end": "order-last pr-3 has-[>button]:mr-[-0.45rem] has-[>kbd]:mr-[-0.35rem]",
+				"inline-start":
+					"order-first pl-3 group-data-[variant=search]/input-group:pl-0 has-[>button]:ml-[-0.45rem] has-[>kbd]:ml-[-0.35rem]",
+				"inline-end":
+					"order-last pr-3 group-data-[variant=search]/input-group:pr-0 has-[>button]:mr-[-0.45rem] has-[>kbd]:mr-[-0.35rem]",
 				"block-start":
 					"order-first w-full justify-start px-3 pt-3 group-has-[>input]/input-group:pt-2.5 [.border-b]:pb-3",
 				"block-end":
@@ -140,12 +158,12 @@ function InputGroupText({ className, ...props }: React.ComponentProps<"span">) {
 	)
 }
 
-function InputGroupInput({ className, ...props }: React.ComponentProps<"input">) {
+function InputGroupInput({ className, ...props }: React.ComponentProps<typeof Input>) {
 	return (
 		<Input
 			data-slot="input-group-control"
 			className={cn(
-				"h-full flex-1 rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent",
+				"h-full flex-1 rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0",
 				className,
 			)}
 			{...props}

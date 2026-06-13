@@ -116,10 +116,19 @@ export interface ThemeTokens {
 	status: {
 		error: string
 		errorBg: string
+		errorForeground: string
+		errorBorder: string
+		errorOnSolid: string
 		success: string
 		successBg: string
+		successForeground: string
+		successBorder: string
+		successOnSolid: string
 		warning: string
 		warningBg: string
+		warningForeground: string
+		warningBorder: string
+		warningOnSolid: string
 	}
 	component: {
 		btnPrimaryBg: string
@@ -139,6 +148,10 @@ export interface ThemeTokens {
 		tooltipText: string
 		sidebarBg: string
 		sidebarBorder: string
+		sidebarGuide: string
+		settingsGroupBg: string
+		settingsGroupBorder: string
+		settingsGroupDivider: string
 		tabBg: string
 		tabActiveBg: string
 		tabAccent: string
@@ -209,9 +222,4 @@ export interface Theme {
 	displayName: string
 	isDark: boolean
 	tokens: ThemeTokens
-}
-
-export interface ThemeTokenMap {
-	tokens: Record<string, string>
-	theme: ThemeName
 }

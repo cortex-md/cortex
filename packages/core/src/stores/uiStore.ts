@@ -2,7 +2,7 @@ import { create } from "zustand"
 import { devtools } from "zustand/middleware"
 import { immer } from "zustand/middleware/immer"
 
-export type LeftSidebarView = "files" | "search" | "bookmarks" | "tags"
+export type LeftSidebarView = string
 export type MarketplaceTab = "plugins" | "themes"
 export type AuthView = "login" | "register"
 
@@ -68,7 +68,7 @@ export const useUIStore = create<UIState>()(
 		immer((set) => ({
 			leftSidebarCollapsed: DEFAULT_LEFT_SIDEBAR_LAYOUT.collapsed,
 			leftSidebarWidth: DEFAULT_LEFT_SIDEBAR_LAYOUT.width,
-			leftSidebarView: "files" as LeftSidebarView,
+			leftSidebarView: "files",
 			rightSidebarCollapsed: true,
 
 			toggleLeftSidebar: () =>

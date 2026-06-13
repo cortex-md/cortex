@@ -7,7 +7,9 @@ import {
 	DialogContent,
 	DialogDescription,
 	DialogTitle,
-	Input,
+	InputGroup,
+	InputGroupAddon,
+	InputGroupInput,
 	ScrollArea,
 	Spinner,
 } from "@cortex/ui"
@@ -236,18 +238,16 @@ export function DeletedNotesPanel({ open, onOpenChange }: DeletedNotesPanelProps
 									</Badge>
 								)}
 							</div>
-							<div className="relative">
-								<Search
-									size={14}
-									className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted"
-								/>
-								<Input
+							<InputGroup variant="search" size="sm">
+								<InputGroupAddon>
+									<Search />
+								</InputGroupAddon>
+								<InputGroupInput
 									placeholder="Search deleted files..."
 									value={searchQuery}
 									onChange={(e) => setSearchQuery(e.target.value)}
-									className="pl-8 h-8 text-xs"
 								/>
-							</div>
+							</InputGroup>
 						</div>
 
 						<ScrollArea className="flex-1">
@@ -326,7 +326,7 @@ export function DeletedNotesPanel({ open, onOpenChange }: DeletedNotesPanelProps
 						)}
 
 						{error && (
-							<div className="mx-4 mb-4 p-3 rounded-md bg-red-500/10 text-red-600 dark:text-red-400 text-sm">
+							<div className="mx-4 mb-4 rounded-md border border-status-error-border bg-status-error-background p-3 text-sm text-status-error-foreground">
 								{error}
 							</div>
 						)}

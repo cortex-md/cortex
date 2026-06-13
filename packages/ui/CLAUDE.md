@@ -65,11 +65,27 @@ This package uses the Figma file `ZTx4yLga2PKeyRIELjN2OS`, frame `110:2`, as the
 | `Alert` (`112:3438`) | `AlertDialog` |
 
 Native-feel rules for this package:
+- `Button` defaults to the prominent accent action: 28px high, pill-shaped, and backed by
+  `brand`/`brand-hover`. Use `secondary`, `outline`, or `ghost` for neutral actions.
+- `Switch` defaults to the 54×24 macOS content-area size. Its thumb grows horizontally while
+  pressed and returns through the same transition after a quick click. The default thumb is a
+  32×20 capsule with 2px vertical clearance; `size="sm"` is the compact 32×18 track.
+- `Slider` uses a 29px interaction area, a 3px track, and one 20px glass thumb by default.
+- Search fields with icons use `InputGroup variant="search"`, `InputGroupAddon`, and
+  `InputGroupInput`. Feature code must not recreate icon positioning, capsule material, or focus
+  treatment.
+- `Input` and `InputGroup` use solid `input-bg` and `input-border` surfaces. Their default 32px
+  text-field size is for forms and Settings; use `size="sm"` for the 24px Apple compact field.
 - Use 6px radius for text fields and compact controls; use full pills only for search, pop-up, segmented controls, and switches.
 - Use 13px control typography with 16px line height for compact macOS controls.
 - Prefer transparent or token-backed material surfaces that the app layer can place over real vibrancy.
 - Treat `Switch` as the thumb/track control. `Toggle` is the pressed-button primitive and should not inherit switch sizing or thumb behavior.
 - Use the user's accent tokens for selected control state: `brand`, `brand-hover`, `brand-subtle`, `brand-text`, and `text-text-on-accent`. Do not hardcode Apple green/blue, and do not use `primary` when the semantic meaning is "current accent".
+- Neutral UI uses `background`, `foreground`, `muted`, and `border`. Semantic feedback uses
+  `status-error-*`, `status-success-*`, and `status-warning-*`; solid fills use the corresponding
+  `on-solid` foreground. Settings composition may use `settings-group-*`.
+- Primary buttons use `brand` with the adaptive `primary-foreground`. Never force white text over a
+  configurable accent.
 - `SidebarProvider` accepts `platform?: "macos" | "windows" | "linux"` and otherwise reads `document.body[data-platform]`. macOS sidebars use translucent material-like surfaces and compact rows; Windows sidebars use opaque surfaces, clear dividers, and an accent rail for active rows.
 - Do not add `cursor-pointer` to rows, buttons, tabs, menu items, or sidebar items. Keep text cursors only for text-entry affordances and resize cursors only for resize rails.
 - Avoid broad web elevation. Use native material surfaces and subtle borders instead of generic `shadow-xs`, `shadow-sm`, or `shadow-lg`.
@@ -239,7 +255,6 @@ Before creating or modifying a component, ensure:
 | **Button** | Action button with variants (primary, secondary, ghost, danger, accent) and sizes (sm, md, lg) | `variant`, `size`, `className`, HTML attrs |
 | **Input** | Text input with optional error state and icon | `error`, `icon`, HTML attrs |
 | **Toggle** | Toggle switch for boolean states | `checked`, `onChange` callback, HTML attrs |
-| **SidebarNav** | Left sidebar navigation with icon + label items | `items`, `activeId`, `onSelect`, `bottomItems` |
 | **SplitPane** | Resizable two-pane splitter (horizontal or vertical) | `direction`, `sizes`, `onResize`, children |
 | **TabBar** | Horizontal tab list with active indicator | `tabs`, `activeId`, `onSelect` |
 | **StatusBar** | Bottom status bar with left/center/right sections | `left`, `center`, `right` (ReactNode) |

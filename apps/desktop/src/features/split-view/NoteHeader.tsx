@@ -1,4 +1,4 @@
-import { getNotePathPresentation, getPortableFileNameError, useVaultStore } from "@cortex/core"
+import { getNotePathPresentation, getNoteTitleError, useVaultStore } from "@cortex/core"
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -29,14 +29,14 @@ export function NoteHeader({ filePath }: Props) {
 
 	const handleTitleChange = useCallback((value: string) => {
 		setTitle(value)
-		setError(getPortableFileNameError(`${value.trim()}.md`))
+		setError(getNoteTitleError(value))
 	}, [])
 
 	const handleCommit = useCallback(async () => {
 		if (committingRef.current) return
 		const nextTitle = title.trim()
 		const nextName = `${nextTitle}.md`
-		const validationError = getPortableFileNameError(nextName)
+		const validationError = getNoteTitleError(nextTitle)
 		if (validationError) {
 			setError(validationError)
 			return
@@ -62,7 +62,7 @@ export function NoteHeader({ filePath }: Props) {
 		<header className="note-header">
 			<div className="note-header-title-group">
 				<Breadcrumb className="note-header-breadcrumb">
-					<BreadcrumbList className="justify-start flex-nowrap overflow-hidden">
+					<BreadcrumbList className="justify-center flex-nowrap overflow-hidden">
 						{notePath.segments.map((segment, index) => (
 							<Fragment key={segment.id}>
 								{index > 0 && <BreadcrumbSeparator />}

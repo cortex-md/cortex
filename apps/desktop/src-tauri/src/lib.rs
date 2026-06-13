@@ -6,12 +6,31 @@ mod sync;
 
 use tauri::Manager;
 
-#[cfg(target_os = "macos")]
-const MACOS_TRAFFIC_LIGHT_X: f64 = 20.0;
-#[cfg(target_os = "macos")]
-const MACOS_TRAFFIC_LIGHT_TITLEBAR_INSET: f64 = 24.0;
-#[cfg(target_os = "macos")]
-const MACOS_TRAFFIC_LIGHT_Y: f64 = 6.0;
+#[cfg(any(target_os = "macos", test))]
+const MACOS_TITLEBAR_HEIGHT: f64 = 40.0;
+#[cfg(any(target_os = "macos", test))]
+const MACOS_TRAFFIC_LIGHT_LEFT: f64 = 14.0;
+#[cfg(any(target_os = "macos", test))]
+const MACOS_TRAFFIC_LIGHT_GAP: f64 = 8.0;
+
+#[cfg(any(target_os = "macos", test))]
+#[derive(Debug, PartialEq)]
+struct TrafficLightOrigin {
+    x: f64,
+    y: f64,
+}
+
+#[cfg(any(target_os = "macos", test))]
+fn calculate_macos_traffic_light_origins(
+    button_width: f64,
+    button_height: f64,
+) -> [TrafficLightOrigin; 3] {
+    let y = (MACOS_TITLEBAR_HEIGHT - button_height) / 2.0;
+    std::array::from_fn(|index| TrafficLightOrigin {
+        x: MACOS_TRAFFIC_LIGHT_LEFT + index as f64 * (button_width + MACOS_TRAFFIC_LIGHT_GAP),
+        y,
+    })
+}
 
 #[cfg(target_os = "macos")]
 fn position_macos_traffic_lights<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>) {
@@ -46,18 +65,19 @@ fn position_macos_traffic_lights<R: tauri::Runtime>(window: &tauri::WebviewWindo
         let close_rect: CGRect = msg_send![close, frame];
         let window_frame: CGRect = msg_send![ns_window, frame];
         let mut titlebar_rect: CGRect = msg_send![titlebar_container_view, frame];
-        titlebar_rect.size.height = close_rect.size.height + MACOS_TRAFFIC_LIGHT_TITLEBAR_INSET;
+        titlebar_rect.size.height = MACOS_TITLEBAR_HEIGHT;
         titlebar_rect.origin.y = window_frame.size.height - titlebar_rect.size.height;
         let _: () = msg_send![titlebar_container_view, setFrame: titlebar_rect];
 
-        let miniaturize_rect: CGRect = msg_send![miniaturize, frame];
-        let space_between = miniaturize_rect.origin.x - close_rect.origin.x;
+        let origins =
+            calculate_macos_traffic_light_origins(close_rect.size.width, close_rect.size.height);
         let buttons = [close, miniaturize, zoom];
 
         for (index, button) in buttons.into_iter().enumerate() {
-            let mut origin: CGPoint = msg_send![button, frameOrigin];
-            origin.x = MACOS_TRAFFIC_LIGHT_X + index as f64 * space_between;
-            origin.y = MACOS_TRAFFIC_LIGHT_Y;
+            let origin = CGPoint {
+                x: origins[index].x,
+                y: origins[index].y,
+            };
             let _: () = msg_send![button, setFrameOrigin: origin];
         }
     }
@@ -185,4 +205,21 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::calculate_macos_traffic_light_origins;
+
+    #[test]
+    fn centers_fourteen_point_traffic_lights_in_the_titlebar() {
+        let origins = calculate_macos_traffic_light_origins(14.0, 14.0);
+
+        assert_eq!(origins[0].x, 14.0);
+        assert_eq!(origins[1].x, 36.0);
+        assert_eq!(origins[2].x, 58.0);
+        assert_eq!(origins[0].y, 13.0);
+        assert_eq!(origins[1].y, 13.0);
+        assert_eq!(origins[2].y, 13.0);
+    }
 }

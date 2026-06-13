@@ -44,7 +44,8 @@ export class ThemeManager {
 		if (theme) {
 			this.activeTheme = theme
 		}
-		this.adapter?.applyTheme(name)
+		const effectiveTheme = theme ?? this.activeTheme
+		this.adapter?.applyTheme(effectiveTheme.name, effectiveTheme.isDark ? "dark" : "light")
 		this.listeners.forEach((listener) => {
 			if (theme) listener(theme)
 		})
@@ -153,7 +154,8 @@ export function initThemeManager(
 	if (!instance) {
 		instance = new ThemeManager(initialTheme, adapter, cssGenerator)
 		instance.injectAllThemes()
-		adapter?.applyTheme(initialTheme)
+		const theme = instance.getActiveTheme()
+		adapter?.applyTheme(theme.name, theme.isDark ? "dark" : "light")
 	}
 	return instance
 }

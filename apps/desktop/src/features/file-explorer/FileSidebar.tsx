@@ -34,7 +34,7 @@ import {
 	PencilIcon,
 	TrashIcon,
 } from "lucide-react"
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { type CSSProperties, memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { NativeMenuActions } from "@/utils/context-menu"
 import { reportAppError } from "@/utils/reportAppError"
 import { useInternalDragSource } from "../split-view/useInternalDragSource"
@@ -48,6 +48,26 @@ import {
 import { buildFileContextMenuItems, buildRootContextMenuItems } from "./NativeMenuActions"
 
 const emptyTags: string[] = []
+export const FILE_TREE_ROW_HEIGHT = 32
+export const FILE_TREE_ROW_STEP = 36
+const FILE_TREE_INDENT = 18
+const FILE_TREE_BASE_INDENT = 10
+
+interface FileTreeDepthStyle extends CSSProperties {
+	"--file-tree-depth": number
+	"--file-tree-guide-width": string
+	"--file-tree-indent": string
+	"--file-tree-row-height": string
+}
+
+export function getFileTreeDepthStyle(depth: number): FileTreeDepthStyle {
+	return {
+		"--file-tree-depth": depth,
+		"--file-tree-guide-width": `${depth * FILE_TREE_INDENT}px`,
+		"--file-tree-indent": `${depth * FILE_TREE_INDENT + FILE_TREE_BASE_INDENT}px`,
+		"--file-tree-row-height": `${FILE_TREE_ROW_HEIGHT}px`,
+	}
+}
 
 function observeTreeElementRect(
 	instance: Virtualizer<HTMLDivElement, Element>,
@@ -106,6 +126,7 @@ function InlineInput({ defaultValue, onConfirm, onCancel, selectBaseName }: Inli
 		<Input
 			ref={inputRef}
 			type="text"
+			size="sm"
 			defaultValue={defaultValue}
 			onKeyDown={handleKeyDown}
 			onBlur={() => {
@@ -113,7 +134,7 @@ function InlineInput({ defaultValue, onConfirm, onCancel, selectBaseName }: Inli
 				if (value && value !== defaultValue) onConfirm(value)
 				else onCancel()
 			}}
-			className="w-full h-[24px] px-1.5 text-xs bg-bg-primary border border-border-focus rounded-sm outline-none text-text-primary"
+			className="w-full h-7 px-2 text-sm bg-bg-primary border border-border-focus rounded-[6px] outline-none text-text-primary"
 		/>
 	)
 }
@@ -242,11 +263,9 @@ function TreeNodeRow({
 			aria-level={depth + 1}
 			aria-expanded={node.isDir ? isExpanded : undefined}
 			tabIndex={0}
-			size={"sm"}
-			className={`file-tree-item flex items-center text-left gap-1 px-1.5 w-full rounded-sm text-text-secondary text-xs hover:bg-bg-hover hover:text-text-primary select-none outline-none focus-visible:ring-1 focus-visible:ring-border-focus ${
-				isActive ? "active bg-accent text-primary" : ""
+			className={`file-tree-item flex items-center text-left gap-1 w-full select-none outline-none focus-visible:ring-1 focus-visible:ring-border-focus ${
+				isActive ? "active" : ""
 			}`}
-			style={{ paddingLeft: `${depth * 12 + 6}px` }}
 			{...dragProps}
 			onClick={() => {
 				if (isRenaming) return
@@ -263,7 +282,7 @@ function TreeNodeRow({
 		>
 			{node.isDir && (
 				<ChevronRightIcon
-					size={12}
+					size={15}
 					strokeWidth={2.5}
 					className={`text-text-muted flex-shrink-0 transition-transform duration-100 ${
 						isExpanded ? "rotate-90" : ""
@@ -678,7 +697,7 @@ export function FileSidebar() {
 	const rowVirtualizer = useVirtualizer({
 		count: rows.length,
 		getScrollElement: () => treeScrollRef.current,
-		estimateSize: () => 26,
+		estimateSize: () => FILE_TREE_ROW_STEP,
 		overscan: 8,
 		initialRect: { width: 320, height: 600 },
 		observeElementRect: observeTreeElementRect,
@@ -708,30 +727,30 @@ export function FileSidebar() {
 
 	return (
 		<div className="file-sidebar flex flex-col h-full px-1.5 overflow-hidden">
-			<div className="file-sidebar-header flex items-center justify-between px-2 py-1.5 flex-shrink-0">
-				<span className="text-[10px] font-bold text-text-muted uppercase tracking-wide">Files</span>
-				<div className="flex items-center gap-0.5">
+			<div className="file-sidebar-header flex items-center justify-between flex-shrink-0">
+				<span className="file-sidebar-title">Files</span>
+				<div className="flex items-center gap-1">
 					<Button
 						type="button"
 						variant="ghost"
-						size="icon-xs"
+						size="icon"
 						onClick={() => handleNewFile(vault.path)}
 						className="sidebar-action-button text-text-muted hover:text-text-primary hover:bg-bg-hover"
 						title="New Note"
 						aria-label="New Note"
 					>
-						<FilePlusIcon size={14} />
+						<FilePlusIcon size={16} />
 					</Button>
 					<Button
 						type="button"
 						variant="ghost"
-						size="icon-xs"
+						size="icon"
 						onClick={() => handleNewFolder(vault.path)}
 						className="sidebar-action-button text-text-muted hover:text-text-primary hover:bg-bg-hover"
 						title="New Folder"
 						aria-label="New Folder"
 					>
-						<FolderPlusIcon size={14} />
+						<FolderPlusIcon size={16} />
 					</Button>
 				</div>
 			</div>
@@ -752,21 +771,20 @@ export function FileSidebar() {
 							return (
 								<div
 									key={virtualRow.key}
-									className="absolute left-0 top-0 w-full"
+									className="file-tree-row absolute left-0 top-0 w-full"
+									data-depth={row.depth}
 									style={{
+										...getFileTreeDepthStyle(row.depth),
 										height: `${virtualRow.size}px`,
 										transform: `translateY(${virtualRow.start}px)`,
 									}}
 								>
 									{row.kind === "create" ? (
-										<div
-											className="flex items-center gap-1 h-[26px] px-1.5"
-											style={{ paddingLeft: `${row.depth * 12 + 6}px` }}
-										>
+										<div className="file-tree-create-row flex items-center gap-1">
 											{row.createType === "folder" ? (
-												<FolderPlusIcon size={12} className="text-text-muted flex-shrink-0" />
+												<FolderPlusIcon size={16} className="text-text-muted flex-shrink-0" />
 											) : (
-												<FilePlusIcon size={12} className="text-text-muted flex-shrink-0" />
+												<FilePlusIcon size={16} className="text-text-muted flex-shrink-0" />
 											)}
 											<InlineInput
 												defaultValue={row.createType === "folder" ? "New Folder" : "Untitled.md"}

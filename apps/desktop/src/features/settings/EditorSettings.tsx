@@ -8,7 +8,7 @@ import {
 	Switch,
 } from "@cortex/ui"
 import type { UpdateSettingFn } from "."
-import { SettingsBlock, SettingsField, SettingsPage } from "./SettingsPrimitives"
+import { SettingsField, SettingsGroup, SettingsPage, SettingsSection } from "./SettingsPrimitives"
 
 interface EditorSectionProps {
 	settings: EditorSettings
@@ -19,87 +19,93 @@ interface EditorSectionProps {
 export function EditorSection({ settings, onUpdate, vaultFolders = [] }: EditorSectionProps) {
 	return (
 		<SettingsPage>
-			<SettingsBlock title="Indentation" description="Control how tabs and spaces are inserted.">
-				<SettingsField label="Tab size" htmlFor="tab-size" controlClassName="max-w-[120px]">
-					<Input
-						id="tab-size"
-						type="number"
-						min={1}
-						max={8}
-						value={settings.tabSize}
-						className="w-24"
-						onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-							onUpdate("editor", "tabSize", Number.parseInt(e.target.value, 10))
-						}
-					/>
-				</SettingsField>
+			<SettingsSection title="Indentation" description="Control how tabs and spaces are inserted.">
+				<SettingsGroup>
+					<SettingsField label="Tab size" htmlFor="tab-size" controlClassName="max-w-[120px]">
+						<Input
+							id="tab-size"
+							type="number"
+							min={1}
+							max={8}
+							value={settings.tabSize}
+							className="w-24"
+							onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+								onUpdate("editor", "tabSize", Number.parseInt(e.target.value, 10))
+							}
+						/>
+					</SettingsField>
 
-				<SettingsField label="Use spaces instead of tabs" htmlFor="use-spaces">
-					<Switch
-						id="use-spaces"
-						checked={settings.useSpaces}
-						onCheckedChange={(checked) => onUpdate("editor", "useSpaces", checked)}
-					/>
-				</SettingsField>
-			</SettingsBlock>
+					<SettingsField label="Use spaces instead of tabs" htmlFor="use-spaces">
+						<Switch
+							id="use-spaces"
+							checked={settings.useSpaces}
+							onCheckedChange={(checked) => onUpdate("editor", "useSpaces", checked)}
+						/>
+					</SettingsField>
+				</SettingsGroup>
+			</SettingsSection>
 
-			<SettingsBlock title="Editor Behavior" description="Adjust the default editor experience.">
-				<SettingsField label="Word wrap" htmlFor="word-wrap">
-					<Switch
-						id="word-wrap"
-						checked={settings.wordWrap}
-						onCheckedChange={(checked) => onUpdate("editor", "wordWrap", checked)}
-					/>
-				</SettingsField>
+			<SettingsSection title="Editor behavior" description="Adjust the default editor experience.">
+				<SettingsGroup>
+					<SettingsField label="Word wrap" htmlFor="word-wrap">
+						<Switch
+							id="word-wrap"
+							checked={settings.wordWrap}
+							onCheckedChange={(checked) => onUpdate("editor", "wordWrap", checked)}
+						/>
+					</SettingsField>
 
-				<SettingsField label="Show line numbers" htmlFor="line-numbers">
-					<Switch
-						id="line-numbers"
-						checked={settings.showLineNumbers}
-						onCheckedChange={(checked) => onUpdate("editor", "showLineNumbers", checked)}
-					/>
-				</SettingsField>
+					<SettingsField label="Show line numbers" htmlFor="line-numbers">
+						<Switch
+							id="line-numbers"
+							checked={settings.showLineNumbers}
+							onCheckedChange={(checked) => onUpdate("editor", "showLineNumbers", checked)}
+						/>
+					</SettingsField>
 
-				<SettingsField label="Auto-save" htmlFor="auto-save">
-					<Switch
-						id="auto-save"
-						checked={settings.autoSave}
-						onCheckedChange={(checked) => onUpdate("editor", "autoSave", checked)}
-					/>
-				</SettingsField>
-			</SettingsBlock>
+					<SettingsField label="Auto-save" htmlFor="auto-save">
+						<Switch
+							id="auto-save"
+							checked={settings.autoSave}
+							onCheckedChange={(checked) => onUpdate("editor", "autoSave", checked)}
+						/>
+					</SettingsField>
+				</SettingsGroup>
+			</SettingsSection>
 
-			<SettingsBlock
+			<SettingsSection
 				title="Images"
 				description="Choose where pasted and dropped images are stored."
 			>
-				<SettingsField label="Image storage location" htmlFor="image-storage">
-					<NativeSelect
-						id="image-storage"
-						value={settings.imageStorageLocation}
-						onChange={(event) => onUpdate("editor", "imageStorageLocation", event.target.value)}
-					>
-						<NativeSelectOption value="same">Same folder as note</NativeSelectOption>
-						<NativeSelectOption value="root">Vault root</NativeSelectOption>
-						<NativeSelectOption value="custom">Custom folder</NativeSelectOption>
-					</NativeSelect>
-				</SettingsField>
-
-				{settings.imageStorageLocation === "custom" && (
-					<SettingsField
-						label="Custom image folder"
-						description="Images will be saved relative to the active vault."
-						controlClassName="max-w-[360px]"
-					>
-						<FolderPicker
-							options={vaultFolders}
-							value={settings.imageStorageCustomPath}
-							onChange={(value) => onUpdate("editor", "imageStorageCustomPath", value)}
-							placeholder="Select a folder..."
-						/>
+				<SettingsGroup>
+					<SettingsField label="Image storage location" htmlFor="image-storage">
+						<NativeSelect
+							id="image-storage"
+							value={settings.imageStorageLocation}
+							onChange={(event) => onUpdate("editor", "imageStorageLocation", event.target.value)}
+						>
+							<NativeSelectOption value="same">Same folder as note</NativeSelectOption>
+							<NativeSelectOption value="root">Vault root</NativeSelectOption>
+							<NativeSelectOption value="custom">Custom folder</NativeSelectOption>
+						</NativeSelect>
 					</SettingsField>
-				)}
-			</SettingsBlock>
+
+					{settings.imageStorageLocation === "custom" && (
+						<SettingsField
+							label="Custom image folder"
+							description="Images will be saved relative to the active vault."
+							controlClassName="max-w-[360px]"
+						>
+							<FolderPicker
+								options={vaultFolders}
+								value={settings.imageStorageCustomPath}
+								onChange={(value) => onUpdate("editor", "imageStorageCustomPath", value)}
+								placeholder="Select a folder..."
+							/>
+						</SettingsField>
+					)}
+				</SettingsGroup>
+			</SettingsSection>
 		</SettingsPage>
 	)
 }

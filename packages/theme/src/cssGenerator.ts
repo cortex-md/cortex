@@ -90,10 +90,19 @@ export function generateCSSVariables(theme: Theme): Record<string, string> {
 
 	vars["--status-error"] = t.status.error
 	vars["--error-bg"] = t.status.errorBg
+	vars["--status-error-foreground"] = t.status.errorForeground
+	vars["--status-error-border"] = t.status.errorBorder
+	vars["--status-error-on-solid"] = t.status.errorOnSolid
 	vars["--status-success"] = t.status.success
 	vars["--success-bg"] = t.status.successBg
+	vars["--status-success-foreground"] = t.status.successForeground
+	vars["--status-success-border"] = t.status.successBorder
+	vars["--status-success-on-solid"] = t.status.successOnSolid
 	vars["--status-warning"] = t.status.warning
 	vars["--warning-bg"] = t.status.warningBg
+	vars["--status-warning-foreground"] = t.status.warningForeground
+	vars["--status-warning-border"] = t.status.warningBorder
+	vars["--status-warning-on-solid"] = t.status.warningOnSolid
 	const fallbackCallouts = {
 		note: { color: t.semantic.accent.default, backgroundColor: t.semantic.accent.subtle },
 		abstract: { color: t.semantic.text.secondary, backgroundColor: t.semantic.bg.secondary },
@@ -132,6 +141,10 @@ export function generateCSSVariables(theme: Theme): Record<string, string> {
 	vars["--tooltip-text"] = t.component.tooltipText
 	vars["--sidebar-bg"] = t.component.sidebarBg
 	vars["--sidebar-border"] = t.component.sidebarBorder
+	vars["--sidebar-tree-guide"] = t.component.sidebarGuide
+	vars["--settings-group-bg"] = t.component.settingsGroupBg
+	vars["--settings-group-border"] = t.component.settingsGroupBorder
+	vars["--settings-group-divider"] = t.component.settingsGroupDivider
 	vars["--tab-bg"] = t.component.tabBg
 	vars["--tab-active-bg"] = t.component.tabActiveBg
 	vars["--tab-accent"] = t.component.tabAccent
@@ -149,16 +162,16 @@ export function generateCSSVariables(theme: Theme): Record<string, string> {
 	vars["--card-foreground"] = t.semantic.text.primary
 	vars["--popover"] = t.component.menuBg
 	vars["--popover-foreground"] = t.semantic.text.primary
-	vars["--primary"] = t.component.btnPrimaryBg
-	vars["--primary-foreground"] = t.component.btnPrimaryText
+	vars["--primary"] = t.semantic.accent.default
+	vars["--primary-foreground"] = t.semantic.text.onAccent
 	vars["--secondary"] = t.semantic.bg.secondary
 	vars["--secondary-foreground"] = t.semantic.text.primary
 	vars["--muted"] = t.semantic.bg.tertiary
 	vars["--muted-foreground"] = t.semantic.text.muted
 	vars["--destructive"] = t.status.error
-	vars["--destructive-foreground"] = "#ffffff"
+	vars["--destructive-foreground"] = t.status.errorOnSolid
 	vars["--input"] = t.component.inputBorder
-	vars["--ring"] = t.semantic.accent.default
+	vars["--ring"] = t.semantic.border.focus
 
 	vars["--chart-1"] = t.semantic.accent.default
 	vars["--chart-2"] = t.semantic.syntax.string
@@ -172,7 +185,7 @@ export function generateCSSVariables(theme: Theme): Record<string, string> {
 	vars["--sidebar-primary-foreground"] = t.semantic.text.onAccent
 	vars["--sidebar-accent"] = t.semantic.accent.subtle
 	vars["--sidebar-accent-foreground"] = t.semantic.accent.text
-	vars["--sidebar-ring"] = t.semantic.accent.default
+	vars["--sidebar-ring"] = t.semantic.border.focus
 
 	vars["--tag-bg"] = t.tag.bg
 	vars["--tag-active-bg"] = t.tag.activeBg

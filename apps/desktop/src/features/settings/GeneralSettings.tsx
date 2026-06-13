@@ -4,12 +4,13 @@ import { Button, isValidLucideIconName, LucideIcon, Switch } from "@cortex/ui"
 import { Trash2, Vault } from "lucide-react"
 import type { UpdateSettingFn } from "."
 import {
-	SettingsBlock,
 	SettingsEmptyState,
 	SettingsField,
+	SettingsGroup,
 	SettingsList,
 	SettingsListItem,
 	SettingsPage,
+	SettingsSection,
 } from "./SettingsPrimitives"
 
 interface GeneralSectionProps {
@@ -90,27 +91,34 @@ export function GeneralSection({ settings, onUpdate }: GeneralSectionProps) {
 
 	return (
 		<SettingsPage>
-			<SettingsBlock title="Startup" description="Choose what Cortex opens when the app launches.">
-				<SettingsField label="Open last vault on startup" htmlFor="auto-open-vault">
-					<Switch
-						id="auto-open-vault"
-						checked={settings.autoOpenLastVault}
-						onCheckedChange={(checked) => onUpdate("general", "autoOpenLastVault", checked)}
-					/>
-				</SettingsField>
-			</SettingsBlock>
+			<SettingsSection
+				title="Startup"
+				description="Choose what Cortex opens when the app launches."
+			>
+				<SettingsGroup>
+					<SettingsField label="Open last vault on startup" htmlFor="auto-open-vault">
+						<Switch
+							id="auto-open-vault"
+							checked={settings.autoOpenLastVault}
+							onCheckedChange={(checked) => onUpdate("general", "autoOpenLastVault", checked)}
+						/>
+					</SettingsField>
+				</SettingsGroup>
+			</SettingsSection>
 
-			<SettingsBlock title="Vaults" description="Recently opened vaults on this device.">
-				{recentVaults.length === 0 ? (
-					<SettingsEmptyState>No recent vaults</SettingsEmptyState>
-				) : (
-					<SettingsList>
-						{recentVaults.map((entry) => (
-							<VaultRow key={entry.uuid} entry={entry} />
-						))}
-					</SettingsList>
-				)}
-			</SettingsBlock>
+			<SettingsSection title="Vaults" description="Recently opened vaults on this device.">
+				<SettingsGroup>
+					{recentVaults.length === 0 ? (
+						<SettingsEmptyState>No recent vaults</SettingsEmptyState>
+					) : (
+						<SettingsList>
+							{recentVaults.map((entry) => (
+								<VaultRow key={entry.uuid} entry={entry} />
+							))}
+						</SettingsList>
+					)}
+				</SettingsGroup>
+			</SettingsSection>
 		</SettingsPage>
 	)
 }

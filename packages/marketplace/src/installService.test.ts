@@ -27,11 +27,15 @@ vi.mock("@cortex/plugin-runtime", () => ({
 	},
 }))
 
-vi.mock("@cortex/theme", () => ({
-	getThemeManager: () => ({
-		unregisterTheme: vi.fn(),
-	}),
-}))
+vi.mock("@cortex/theme", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@cortex/theme")>()
+	return {
+		...actual,
+		getThemeManager: () => ({
+			unregisterTheme: vi.fn(),
+		}),
+	}
+})
 
 vi.mock("./registryService", () => ({
 	fetchLatestRelease: vi.fn(async () => testState.release),
@@ -68,6 +72,25 @@ function createManifest(partial: Record<string, unknown> = {}) {
 		main: "main.js",
 		...partial,
 	})
+}
+
+function createThemeManifest(partial: Record<string, unknown> = {}) {
+	return JSON.stringify({
+		id: "test-theme",
+		name: "test-theme",
+		displayName: "Test Theme",
+		author: "Tester",
+		version: "1.0.0",
+		colorschemes: {
+			dark: "./theme-dark.css",
+			light: "./theme-light.css",
+		},
+		...partial,
+	})
+}
+
+function createThemeStylesheet(colorScheme: "light" | "dark") {
+	return `@media (prefers-contrast: more) { body { color-scheme: ${colorScheme}; } }`
 }
 
 function createAsset(name: string): GitHubReleaseAsset {
@@ -348,19 +371,9 @@ describe("installTheme", () => {
 			createAsset("theme-light.css"),
 		])
 		registerDownloads({
-			"manifest.json": JSON.stringify({
-				id: "test-theme",
-				name: "test-theme",
-				displayName: "Test Theme",
-				author: "Tester",
-				version: "1.0.0",
-				colorschemes: {
-					dark: "./theme-dark.css",
-					light: "./theme-light.css",
-				},
-			}),
-			"theme-dark.css": ".theme-test-dark {}",
-			"theme-light.css": ".theme-test-light {}",
+			"manifest.json": createThemeManifest(),
+			"theme-dark.css": createThemeStylesheet("dark"),
+			"theme-light.css": createThemeStylesheet("light"),
 		})
 		const reloadThemes = vi.fn(async () => {})
 
@@ -370,5 +383,54 @@ describe("installTheme", () => {
 		expect(hasInstalledThemePath("theme-dark.css")).toBe(true)
 		expect(hasInstalledThemePath("theme-light.css")).toBe(true)
 		expect(reloadThemes).toHaveBeenCalledWith(themesDir)
+	})
+
+	it("rejects missing colorscheme assets without leaving staging files", async () => {
+		testState.release = createRelease([createAsset("manifest.json"), createAsset("theme-dark.css")])
+		registerDownloads({
+			"manifest.json": createThemeManifest(),
+			"theme-dark.css": createThemeStylesheet("dark"),
+		})
+
+		await expect(installTheme(themeEntry, themesDir, vi.fn())).rejects.toThrow(
+			"missing colorscheme asset: light.css",
+		)
+
+		expect(hasInstalledThemePath("manifest.json")).toBe(false)
+		expect(
+			[...testState.files.keys(), ...testState.dirs.keys()].some((path) =>
+				path.includes(".test-theme-install-"),
+			),
+		).toBe(false)
+	})
+
+	it("restores the previous theme when reload fails after promotion", async () => {
+		testState.release = createRelease([
+			createAsset("manifest.json"),
+			createAsset("theme-dark.css"),
+			createAsset("theme-light.css"),
+		])
+		registerDownloads({
+			"manifest.json": createThemeManifest({ version: "2.0.0" }),
+			"theme-dark.css": createThemeStylesheet("dark"),
+			"theme-light.css": createThemeStylesheet("light"),
+		})
+		ensureDir(`${themesDir}/test-theme`)
+		testState.files.set(
+			`${themesDir}/test-theme/manifest.json`,
+			createThemeManifest({ version: "1.0.0" }),
+		)
+		const reloadThemes = vi.fn(async () => {
+			throw new Error("reload failed")
+		})
+
+		await expect(installTheme(themeEntry, themesDir, reloadThemes)).rejects.toThrow("reload failed")
+
+		expect(testState.files.get(`${themesDir}/test-theme/manifest.json`)).toContain('"1.0.0"')
+		expect(
+			[...testState.files.keys(), ...testState.dirs.keys()].some((path) =>
+				path.includes(".test-theme-install-"),
+			),
+		).toBe(false)
 	})
 })

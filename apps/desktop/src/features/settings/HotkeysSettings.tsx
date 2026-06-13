@@ -1,14 +1,16 @@
 import { useVaultStore } from "@cortex/core"
 import { formatHotkeyDisplay, useHotkeysStore } from "@cortex/hotkeys"
-import { Button, Input, Kbd } from "@cortex/ui"
+import { Button, InputGroup, InputGroupAddon, InputGroupInput, Kbd } from "@cortex/ui"
 import { RotateCcwIcon, SearchIcon } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
-	SettingsBlock,
 	SettingsEmptyState,
+	SettingsGroup,
+	SettingsGroupContent,
 	SettingsList,
 	SettingsListItem,
 	SettingsPage,
+	SettingsSection,
 } from "./SettingsPrimitives"
 
 function HotkeyRecorder({
@@ -133,8 +135,8 @@ export function HotkeysSection() {
 
 	return (
 		<SettingsPage>
-			<SettingsBlock
-				title="Keyboard Shortcuts"
+			<SettingsSection
+				title="Keyboard shortcuts"
 				description="Search, record, and reset command bindings for this vault."
 				action={
 					<Button variant="ghost" size="sm" onClick={handleResetAll}>
@@ -143,58 +145,65 @@ export function HotkeysSection() {
 					</Button>
 				}
 			>
-				<div className="relative mb-4">
-					<SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-					<Input
-						placeholder="Search shortcuts..."
-						value={searchQuery}
-						onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-						className="pl-8 h-8 text-sm"
-					/>
-				</div>
+				<SettingsGroup>
+					<SettingsGroupContent className="flex flex-col gap-4">
+						<InputGroup variant="search">
+							<InputGroupAddon>
+								<SearchIcon />
+							</InputGroupAddon>
+							<InputGroupInput
+								placeholder="Search shortcuts..."
+								value={searchQuery}
+								onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+									setSearchQuery(e.target.value)
+								}
+							/>
+						</InputGroup>
 
-				{grouped.length === 0 && searchQuery && (
-					<SettingsEmptyState className="text-center">
-						No shortcuts matching "{searchQuery}"
-					</SettingsEmptyState>
-				)}
+						{grouped.length === 0 && searchQuery && (
+							<SettingsEmptyState className="text-center">
+								No shortcuts matching "{searchQuery}"
+							</SettingsEmptyState>
+						)}
 
-				{grouped.map(({ category, items }) => (
-					<div key={category} className="flex flex-col gap-2">
-						<h4 className="m-0 text-sm font-medium text-foreground">{category}</h4>
-						<SettingsList className="divide-y-0">
-							{items.map((binding) => {
-								const isModified = binding.keys !== binding.defaultKeys
-								return (
-									<SettingsListItem
-										key={binding.id}
-										className="justify-between rounded px-2 py-1.5 hover:bg-bg-hover"
-									>
-										<span className="text-sm text-text-primary">{binding.label}</span>
-										<div className="flex items-center gap-2">
-											<HotkeyRecorder
-												currentKeys={binding.keys}
-												onRecord={(keys) => handleRecord(binding.id, keys)}
-											/>
-											{isModified && (
-												<Button
-													variant="ghost"
-													size="sm"
-													className="text-xs text-muted-foreground h-7 w-7 p-0"
-													onClick={() => handleReset(binding.id)}
-													title="Reset to default"
-												>
-													<RotateCcwIcon className="size-3" />
-												</Button>
-											)}
-										</div>
-									</SettingsListItem>
-								)
-							})}
-						</SettingsList>
-					</div>
-				))}
-			</SettingsBlock>
+						{grouped.map(({ category, items }) => (
+							<div key={category} className="flex flex-col gap-2">
+								<h4 className="m-0 text-sm font-medium text-foreground">{category}</h4>
+								<SettingsList>
+									{items.map((binding) => {
+										const isModified = binding.keys !== binding.defaultKeys
+										return (
+											<SettingsListItem
+												key={binding.id}
+												className="justify-between hover:bg-bg-hover"
+											>
+												<span className="text-sm text-text-primary">{binding.label}</span>
+												<div className="flex items-center gap-2">
+													<HotkeyRecorder
+														currentKeys={binding.keys}
+														onRecord={(keys) => handleRecord(binding.id, keys)}
+													/>
+													{isModified && (
+														<Button
+															variant="ghost"
+															size="sm"
+															className="text-xs text-muted-foreground h-7 w-7 p-0"
+															onClick={() => handleReset(binding.id)}
+															title="Reset to default"
+														>
+															<RotateCcwIcon className="size-3" />
+														</Button>
+													)}
+												</div>
+											</SettingsListItem>
+										)
+									})}
+								</SettingsList>
+							</div>
+						))}
+					</SettingsGroupContent>
+				</SettingsGroup>
+			</SettingsSection>
 		</SettingsPage>
 	)
 }

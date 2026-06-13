@@ -93,6 +93,7 @@ export type {
 } from "./types/syncMetadata"
 export {
 	getNotePathPresentation,
+	getNoteTitleError,
 	getPortableFileNameError,
 	type NotePathPresentation,
 	type NotePathSegment,

@@ -155,7 +155,7 @@ export function MembersPanel({ vaultId, currentUserRole }: MembersPanelProps) {
 												variant="ghost"
 												size="icon"
 												onClick={() => handleRemoveMember(member.userId)}
-												className="h-7 w-7 text-muted-foreground hover:text-red-500"
+												className="h-7 w-7 text-muted-foreground hover:text-status-error-foreground"
 											>
 												<UserMinus size={13} />
 											</Button>
@@ -239,7 +239,7 @@ export function MembersPanel({ vaultId, currentUserRole }: MembersPanelProps) {
 											variant="ghost"
 											size="icon"
 											onClick={() => handleDeleteInvite(invite.id)}
-											className="h-7 w-7 text-muted-foreground hover:text-red-500"
+											className="h-7 w-7 text-muted-foreground hover:text-status-error-foreground"
 										>
 											<Trash2 size={13} />
 										</Button>
@@ -251,7 +251,7 @@ export function MembersPanel({ vaultId, currentUserRole }: MembersPanelProps) {
 				</div>
 			)}
 
-			{error && <p className="text-xs text-red-500">{error}</p>}
+			{error && <p className="text-xs text-status-error-foreground">{error}</p>}
 		</div>
 	)
 }

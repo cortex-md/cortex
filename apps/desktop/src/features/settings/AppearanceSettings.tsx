@@ -15,7 +15,7 @@ import { Store } from "lucide-react"
 import { useEffect, useState } from "react"
 import type { UpdateSettingFn } from "."
 import { applyAppearanceSettings, buildAppearanceOverrides } from "./applyAppearance"
-import { SettingsBlock, SettingsField, SettingsPage } from "./SettingsPrimitives"
+import { SettingsField, SettingsGroup, SettingsPage, SettingsSection } from "./SettingsPrimitives"
 
 interface AppearanceSectionProps {
 	settings: AppearanceSettings
@@ -114,7 +114,7 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 
 	return (
 		<SettingsPage>
-			<SettingsBlock
+			<SettingsSection
 				title="Theme"
 				description="Choose the active theme, color scheme, and accent color."
 				action={
@@ -124,116 +124,135 @@ export function AppearanceSection({ settings, onUpdate }: AppearanceSectionProps
 					</Button>
 				}
 			>
-				<SettingsField label="Theme" htmlFor="theme">
-					<NativeSelect
-						id="theme"
-						value={settings.theme}
-						onChange={(e) => handleThemeChange(e.target.value)}
+				<SettingsGroup>
+					<SettingsField label="Theme" htmlFor="theme">
+						<NativeSelect
+							id="theme"
+							value={settings.theme}
+							onChange={(e) => handleThemeChange(e.target.value)}
+						>
+							{themeFamilies.map((family) => (
+								<NativeSelectOption key={family.name} value={family.name}>
+									{family.displayName}
+								</NativeSelectOption>
+							))}
+						</NativeSelect>
+					</SettingsField>
+
+					<SettingsField label="Colorscheme" htmlFor="colorscheme">
+						<NativeSelect
+							id="colorscheme"
+							value={settings.colorscheme}
+							onChange={(e) =>
+								handleColorschemeChange(e.target.value as "light" | "dark" | "system")
+							}
+						>
+							<NativeSelectOption value="light">Light</NativeSelectOption>
+							<NativeSelectOption value="dark">Dark</NativeSelectOption>
+							<NativeSelectOption value="system">System</NativeSelectOption>
+						</NativeSelect>
+					</SettingsField>
+
+					<SettingsField
+						label="Accent color"
+						htmlFor="accent-color"
+						controlClassName="max-w-[280px]"
 					>
-						{themeFamilies.map((family) => (
-							<NativeSelectOption key={family.name} value={family.name}>
-								{family.displayName}
-							</NativeSelectOption>
-						))}
-					</NativeSelect>
-				</SettingsField>
-
-				<SettingsField label="Colorscheme" htmlFor="colorscheme">
-					<NativeSelect
-						id="colorscheme"
-						value={settings.colorscheme}
-						onChange={(e) => handleColorschemeChange(e.target.value as "light" | "dark" | "system")}
-					>
-						<NativeSelectOption value="light">Light</NativeSelectOption>
-						<NativeSelectOption value="dark">Dark</NativeSelectOption>
-						<NativeSelectOption value="system">System</NativeSelectOption>
-					</NativeSelect>
-				</SettingsField>
-
-				<SettingsField label="Accent color" htmlFor="accent-color" controlClassName="max-w-[280px]">
-					<ColorPicker
-						customInputId="accent-color"
-						value={settings.accentColor}
-						options={accentColorOptions}
-						allowClear={false}
-						customLabel="Accent Color"
-						onChange={(color) => {
-							if (color) handleAccentColorChange(color)
-						}}
-						className="max-w-[240px] items-end"
-					/>
-				</SettingsField>
-			</SettingsBlock>
-
-			<SettingsBlock title="Interface" description="Tune the app chrome and navigation typography.">
-				<SettingsField label="UI font" htmlFor="ui-font-family">
-					<NativeSelect
-						id="ui-font-family"
-						value={settings.uiFontFamily}
-						onChange={(e) => handleUIFontFamilyChange(e.target.value)}
-					>
-						<NativeSelectOption value="System Default">System Default</NativeSelectOption>
-						{systemFonts.map((font) => (
-							<NativeSelectOption key={font.family} value={font.family}>
-								{font.family}
-							</NativeSelectOption>
-						))}
-					</NativeSelect>
-				</SettingsField>
-
-				<SettingsField label="UI font size" htmlFor="ui-font-size" controlClassName="max-w-[420px]">
-					<div className="flex items-center gap-3 flex-1">
-						<Slider
-							id="ui-font-size"
-							min={10}
-							max={20}
-							defaultValue={[settings.uiFontSize]}
-							onValueChange={(value: number[]) => handleUIFontSizeChange(value[0])}
-							className="flex-1 h-1 accent-color-accent"
+						<ColorPicker
+							customInputId="accent-color"
+							value={settings.accentColor}
+							options={accentColorOptions}
+							allowClear={false}
+							customLabel="Accent Color"
+							onChange={(color) => {
+								if (color) handleAccentColorChange(color)
+							}}
+							className="max-w-[240px] items-end"
 						/>
-						<span className="text-[11px] text-text-muted min-w-[36px] text-right font-family-mono">
-							{settings.uiFontSize}px
-						</span>
-					</div>
-				</SettingsField>
-			</SettingsBlock>
+					</SettingsField>
+				</SettingsGroup>
+			</SettingsSection>
 
-			<SettingsBlock title="Editor" description="Tune note editing typography.">
-				<SettingsField label="Editor font" htmlFor="editor-font-family">
-					<NativeSelect
-						id="editor-font-family"
-						value={settings.editorFontFamily}
-						onChange={(e) => handleEditorFontFamilyChange(e.target.value)}
+			<SettingsSection
+				title="Interface"
+				description="Tune the app chrome and navigation typography."
+			>
+				<SettingsGroup>
+					<SettingsField label="UI font" htmlFor="ui-font-family">
+						<NativeSelect
+							id="ui-font-family"
+							value={settings.uiFontFamily}
+							onChange={(e) => handleUIFontFamilyChange(e.target.value)}
+						>
+							<NativeSelectOption value="System Default">System Default</NativeSelectOption>
+							{systemFonts.map((font) => (
+								<NativeSelectOption key={font.family} value={font.family}>
+									{font.family}
+								</NativeSelectOption>
+							))}
+						</NativeSelect>
+					</SettingsField>
+
+					<SettingsField
+						label="UI font size"
+						htmlFor="ui-font-size"
+						controlClassName="max-w-[420px]"
 					>
-						<NativeSelectOption value="System Default">System Default</NativeSelectOption>
-						{systemFonts.map((font) => (
-							<NativeSelectOption key={font.family} value={font.family}>
-								{font.family}
-							</NativeSelectOption>
-						))}
-					</NativeSelect>
-				</SettingsField>
+						<div className="flex items-center gap-3 flex-1">
+							<Slider
+								id="ui-font-size"
+								min={10}
+								max={20}
+								defaultValue={[settings.uiFontSize]}
+								onValueChange={(value: number[]) => handleUIFontSizeChange(value[0])}
+								className="flex-1 h-1 accent-color-accent"
+							/>
+							<span className="text-[11px] text-text-muted min-w-[36px] text-right font-family-mono">
+								{settings.uiFontSize}px
+							</span>
+						</div>
+					</SettingsField>
+				</SettingsGroup>
+			</SettingsSection>
 
-				<SettingsField
-					label="Editor font size"
-					htmlFor="editor-font-size"
-					controlClassName="max-w-[420px]"
-				>
-					<div className="flex items-center gap-3 flex-1">
-						<Slider
-							id="editor-font-size"
-							min={12}
-							max={24}
-							defaultValue={[settings.editorFontSize]}
-							onValueChange={(value: number[]) => handleEditorFontSizeChange(value[0])}
-							className="flex-1 h-1 accent-color-accent"
-						/>
-						<span className="text-[11px] text-text-muted min-w-[36px] text-right font-family-mono">
-							{settings.editorFontSize}px
-						</span>
-					</div>
-				</SettingsField>
-			</SettingsBlock>
+			<SettingsSection title="Editor" description="Tune note editing typography.">
+				<SettingsGroup>
+					<SettingsField label="Editor font" htmlFor="editor-font-family">
+						<NativeSelect
+							id="editor-font-family"
+							value={settings.editorFontFamily}
+							onChange={(e) => handleEditorFontFamilyChange(e.target.value)}
+						>
+							<NativeSelectOption value="System Default">System Default</NativeSelectOption>
+							{systemFonts.map((font) => (
+								<NativeSelectOption key={font.family} value={font.family}>
+									{font.family}
+								</NativeSelectOption>
+							))}
+						</NativeSelect>
+					</SettingsField>
+
+					<SettingsField
+						label="Editor font size"
+						htmlFor="editor-font-size"
+						controlClassName="max-w-[420px]"
+					>
+						<div className="flex items-center gap-3 flex-1">
+							<Slider
+								id="editor-font-size"
+								min={12}
+								max={24}
+								defaultValue={[settings.editorFontSize]}
+								onValueChange={(value: number[]) => handleEditorFontSizeChange(value[0])}
+								className="flex-1 h-1 accent-color-accent"
+							/>
+							<span className="text-[11px] text-text-muted min-w-[36px] text-right font-family-mono">
+								{settings.editorFontSize}px
+							</span>
+						</div>
+					</SettingsField>
+				</SettingsGroup>
+			</SettingsSection>
 		</SettingsPage>
 	)
 }

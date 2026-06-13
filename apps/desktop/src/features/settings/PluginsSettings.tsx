@@ -12,11 +12,12 @@ import { Button, LucideIcon, Switch } from "@cortex/ui"
 import { FolderOpen, Store } from "lucide-react"
 import { useCallback } from "react"
 import {
-	SettingsBlock,
 	SettingsEmptyState,
+	SettingsGroup,
 	SettingsList,
 	SettingsListItem,
 	SettingsPage,
+	SettingsSection,
 } from "./SettingsPrimitives"
 
 function PluginRow({ record }: { record: PluginRecord }) {
@@ -55,7 +56,7 @@ function PluginRow({ record }: { record: PluginRecord }) {
 					{record.manifest.description}
 				</span>
 				{hasError && record.error && (
-					<span className="text-xs text-red-500 truncate">{record.error}</span>
+					<span className="truncate text-xs text-status-error-foreground">{record.error}</span>
 				)}
 			</div>
 			<Switch checked={isEnabled} onCheckedChange={handleToggle} />
@@ -89,23 +90,25 @@ export function PluginsSection() {
 
 	return (
 		<SettingsPage>
-			<SettingsBlock
-				title="Core Plugins"
+			<SettingsSection
+				title="Core plugins"
 				description="Built-in plugin modules shipped with Cortex."
 			>
-				{corePlugins.length === 0 ? (
-					<SettingsEmptyState>No core plugins installed</SettingsEmptyState>
-				) : (
-					<SettingsList>
-						{corePlugins.map((record) => (
-							<PluginRow key={record.manifest.id} record={record} />
-						))}
-					</SettingsList>
-				)}
-			</SettingsBlock>
+				<SettingsGroup>
+					{corePlugins.length === 0 ? (
+						<SettingsEmptyState>No core plugins installed</SettingsEmptyState>
+					) : (
+						<SettingsList>
+							{corePlugins.map((record) => (
+								<PluginRow key={record.manifest.id} record={record} />
+							))}
+						</SettingsList>
+					)}
+				</SettingsGroup>
+			</SettingsSection>
 
-			<SettingsBlock
-				title="Community Plugins"
+			<SettingsSection
+				title="Community plugins"
 				description="Vault-scoped plugins installed in this workspace."
 				action={
 					<>
@@ -120,18 +123,21 @@ export function PluginsSection() {
 					</>
 				}
 			>
-				{communityPlugins.length === 0 ? (
-					<SettingsEmptyState>
-						No community plugins installed. Place plugins in vault/.cortex/plugins/ to get started.
-					</SettingsEmptyState>
-				) : (
-					<SettingsList>
-						{communityPlugins.map((record) => (
-							<PluginRow key={record.manifest.id} record={record} />
-						))}
-					</SettingsList>
-				)}
-			</SettingsBlock>
+				<SettingsGroup>
+					{communityPlugins.length === 0 ? (
+						<SettingsEmptyState>
+							No community plugins installed. Place plugins in vault/.cortex/plugins/ to get
+							started.
+						</SettingsEmptyState>
+					) : (
+						<SettingsList>
+							{communityPlugins.map((record) => (
+								<PluginRow key={record.manifest.id} record={record} />
+							))}
+						</SettingsList>
+					)}
+				</SettingsGroup>
+			</SettingsSection>
 		</SettingsPage>
 	)
 }

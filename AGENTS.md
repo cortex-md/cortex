@@ -54,7 +54,8 @@ cortex/
 │   ├── platform/                   # Abstração de plataforma: adapters para Tauri e RN, definição dos tipos principais do filesystem, dialogs e etc.
 │   ├── settings/                   # Engine de configurações, cache em memória, persistência
 │   ├── search/                     # MiniSearch: indexação, serialização, queries
-│   ├── theme/                      # Engine de temas, variáveis CSS, Theme Token Bridge (CSS→RN)
+│   ├── theme/                      # Engine de temas e variáveis CSS para superfícies web
+│   ├── theme-mobile/               # Extrator opt-in CSS→tokens para o futuro app React Native
 │   ├── sync-client/                # Estado reativo do sync no frontend: status, conflitos, UI bridge
 │   └── ipc/                        # Implementação do pacote plataform para o tauri, utilizando suas dependencias e implementações
 ├── plugins/                        # Plugins core bundled
@@ -70,6 +71,10 @@ cortex/
 
 ### UI components 
 Aways use the components from `@cortex/ui` as needed instead of creating new things or using primitive components from html.
+Primary actions use the accent-backed default `Button`; neutral actions select `secondary`, `outline`,
+or `ghost` explicitly. Icon search fields use `InputGroup variant="search"` with `InputGroupAddon`
+and `InputGroupInput` instead of locally positioning icons around `Input`.
+Inputs default to the comfortable 32px form size; inline rename and dense controls use `size="sm"`.
 
 ### Command Surfaces
 Use `CommandDialog`, `CommandInput`, `CommandList`, `CommandGroup`, `CommandItem`, and
@@ -149,7 +154,7 @@ bun run tauri build       # Build release binary
 
 | Package | Purpose | Key Exports |
 |---------|---------|------------|
-| **ui** | React UI primitives (Button, Input, SidebarNav, etc.) | Component functions, CSS class contracts |
+| **ui** | React UI primitives (Button, Input, Command, etc.) | Component functions, CSS class contracts |
 | **core** | Zustand state stores + NoteCache | Stores (vaultStore, editorStore, workspaceStore, uiStore), noteCache |
 | **platform** | Abstract platform interface | FileSystem, Dialog, Vault, Storage interfaces + Tauri adapter |
 | **ipc** | Typed IPC wrappers over Tauri | invoke() and event wrappers for commands |
@@ -320,6 +325,21 @@ UI doesn't directly access files; it reads/writes through noteCache.
 - Community plugin `styles.css` files require the `markdown:extensions` capability. The runtime
   parses and scopes them to `.markdown-surface`, installs them only while the plugin is enabled,
   and rejects global at-rules.
+- Community theme manifests contain identity and light/dark stylesheet paths without API
+  versioning. Desktop and Marketplace treat stylesheet contents as opaque browser CSS; they do not
+  parse selectors, require tokens, or reject CSS based on future mobile compatibility.
+- Theme installation validates paths and assets in staging and restores the previous theme if
+  promotion or reload fails. These filesystem protections remain independent from CSS parsing.
+- `@cortex/theme-mobile` is the only package allowed to parse theme CSS into portable tokens. It is
+  opt-in for the future React Native app and must never be imported by `@cortex/theme`,
+  Marketplace, or desktop code. Desktop never generates `.tokens.json`.
+- Theme adapters set `data-theme-scheme` from the effective scheme. Dark variants, charts, and
+  platform-specific dark styling must use that attribute instead of `.theme-ink`.
+- Custom accents resolve light or dark foregrounds at 4.5:1 and derive focus colors at 3:1.
+  Primary, sidebar, and button foreground aliases must update together.
+- Standard Settings pages use a page header in the scroll area followed by section headings outside
+  `SettingsGroup` surfaces. Rows share 56px minimum height and thematic dividers. Compact layouts
+  use grouped `NativeSelect`; Marketplace remains a separate full-height browser.
 - The note header owns the editable filename title and display-only breadcrumb. It shares the note
   scroll container across Editing, Live Preview, Reading, and Side-by-Side modes. Title renames must
   go through `vaultStore.renameFile` so NoteCache, tabs, bookmarks, and filesystem state move
@@ -357,12 +377,18 @@ UI doesn't directly access files; it reads/writes through noteCache.
 macOS window material is configured through `apps/desktop/src-tauri/tauri.macos.conf.json`.
 Do not apply vibrancy manually in Rust for the main window; keep the native sidebar material in
 Tauri window configuration so it stays platform-scoped and avoids duplicate `NSVisualEffectView`
-layers. Traffic light placement is adjusted in the macOS setup path because Tauri's native
-`trafficLightPosition` controls the horizontal inset and titlebar height but not the button
-origin inside the titlebar. The React shell uses `app-shell`, `app-titlebar`, `app-content`,
+layers. Traffic light placement is owned entirely by the macOS setup path: use a 40px titlebar,
+14px left inset, 8px gaps, and center the native button size vertically. Do not duplicate this
+geometry with `trafficLightPosition` in Tauri JSON. The React shell uses `app-shell`, `app-titlebar`, `app-content`,
 `app-sidebar`, `app-sidebar-resizer`, and `app-main` as CSS contracts for macOS-only native
-layout styling. The macOS sidebar toggle is rendered in the titlebar with `app-sidebar-toggle`
-and drives the existing `leftSidebarCollapsed` state with width-based native-style animation.
+layout styling. The sidebar is edge-to-edge with only a themed right divider; do not restore the
+Tahoe-era inset card, inner radius, or CSS blur. The macOS sidebar toggle is rendered in the
+titlebar with `app-sidebar-toggle` and drives the existing `leftSidebarCollapsed` state with
+width-based native-style animation.
+Left-sidebar view navigation lives in `SidebarViewCarousel`: core views precede plugin views, the
+active item reveals its label, and the fixed `All views` Command picker provides direct access.
+Settings stays outside the carousel in the footer while the active view owns the flexible scroll
+region. Do not add CSS backdrop blur over the native sidebar material.
 
 ### Native Desktop Shell
 Keep `apps/desktop/src-tauri/tauri.conf.json` platform-neutral. macOS-only chrome belongs in
