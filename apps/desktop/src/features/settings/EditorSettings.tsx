@@ -63,6 +63,18 @@ export function EditorSection({ settings, onUpdate, vaultFolders = [] }: EditorS
 						/>
 					</SettingsField>
 
+					<SettingsField
+						label="Vim mode"
+						description="Use Vim motions, modes, and command-line actions in the editor."
+						htmlFor="vim-mode"
+					>
+						<Switch
+							id="vim-mode"
+							checked={settings.vimMode}
+							onCheckedChange={(checked) => onUpdate("editor", "vimMode", checked)}
+						/>
+					</SettingsField>
+
 					<SettingsField label="Auto-save" htmlFor="auto-save">
 						<Switch
 							id="auto-save"

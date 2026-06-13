@@ -16,6 +16,7 @@ export const EditorSettingsSchema = z.object({
 	useSpaces: z.boolean().default(true),
 	wordWrap: z.boolean().default(true),
 	showLineNumbers: z.boolean().default(true),
+	vimMode: z.boolean().default(false),
 	autoSave: z.boolean().default(true),
 	autoSaveInterval: z.number().min(1000).default(2000),
 	imageStorageLocation: z.enum(["root", "same", "custom"]).default("same"),

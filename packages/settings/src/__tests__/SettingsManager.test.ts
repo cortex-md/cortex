@@ -36,6 +36,7 @@ describe("constructor", () => {
 		const manager = new SettingsManager()
 		expect(manager.getSection("general").autoOpenLastVault).toBe(true)
 		expect(manager.getSection("editor").wordWrap).toBe(true)
+		expect(manager.getSection("editor").vimMode).toBe(false)
 	})
 
 	it("merges provided initial values with defaults", () => {
@@ -109,6 +110,7 @@ describe("getSection()", () => {
 			tabSize: 2,
 			wordWrap: true,
 			showLineNumbers: true,
+			vimMode: false,
 		})
 	})
 })

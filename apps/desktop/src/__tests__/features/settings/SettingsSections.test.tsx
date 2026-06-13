@@ -39,6 +39,7 @@ const editorSettings: EditorSettings = {
 	useSpaces: false,
 	wordWrap: true,
 	showLineNumbers: true,
+	vimMode: false,
 	autoSave: true,
 	autoSaveInterval: 2,
 	imageStorageLocation: "same",
@@ -86,6 +87,7 @@ describe("settings sections", () => {
 		expect(screen.getByLabelText("Tab size")).toBeInTheDocument()
 		expect(screen.getByRole("switch", { name: "Use spaces instead of tabs" })).toBeInTheDocument()
 		expect(screen.getByText("Editor behavior")).toBeInTheDocument()
+		expect(screen.getByRole("switch", { name: "Vim mode" })).toBeInTheDocument()
 		expect(screen.getByText("Images")).toBeInTheDocument()
 	})
 

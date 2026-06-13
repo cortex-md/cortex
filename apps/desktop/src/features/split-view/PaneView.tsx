@@ -88,6 +88,7 @@ function useEditorConfig(): EditorConfig {
 			tabSize: settings.editor.tabSize,
 			useSpaces: settings.editor.useSpaces,
 			showLineNumbers: settings.editor.showLineNumbers,
+			vimMode: settings.editor.vimMode,
 		}),
 		[
 			settings.appearance.editorFontSize,
@@ -95,6 +96,7 @@ function useEditorConfig(): EditorConfig {
 			settings.editor.tabSize,
 			settings.editor.useSpaces,
 			settings.editor.showLineNumbers,
+			settings.editor.vimMode,
 		],
 	)
 }

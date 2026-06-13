@@ -26,8 +26,23 @@ describe("buildEditorTypographyRules", () => {
 		expect(rules[".cm-content ::selection"]).toMatchObject({
 			backgroundColor: "var(--editor-selection-bg, var(--bg-selected))",
 		})
+		expect(rules[".cm-fat-cursor"]).toMatchObject({
+			backgroundColor: "var(--accent)",
+		})
+		expect(rules[".cm-selectionBackground"]).toMatchObject({
+			backgroundColor: "var(--editor-selection-bg, var(--bg-selected)) !important",
+		})
 		expect(".cm-selectionLayer" in rules).toBe(false)
 		expect(rules[".cm-cursorLayer"]).toMatchObject({ zIndex: "10" })
+		expect(rules[".cm-panel.cm-vim-panel"]).toMatchObject({
+			backgroundColor: "var(--bg-elevated)",
+			borderTop: "1px solid var(--border-subtle)",
+		})
+		expect(rules[".cm-panel.cm-vim-panel input"]).toMatchObject({
+			backgroundColor: "var(--input-bg)",
+			border: "1px solid var(--input-border)",
+			fontFamily: "var(--font-editor)",
+		})
 		expect(rules[".cm-panel.cm-search"]).toMatchObject({
 			backgroundColor: "var(--bg-elevated)",
 			borderBottom: "1px solid var(--border-subtle)",

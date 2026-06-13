@@ -328,6 +328,9 @@ UI doesn't directly access files; it reads/writes through noteCache.
   Reading View, Side-by-Side, and shell layout.
 - The editor Markdown language must keep the Lezer GFM extensions enabled so tables,
   strikethrough, task lists, and autolinks exist in the syntax tree used by Live Preview.
+- Vim mode uses `@replit/codemirror-vim` in a reconfigurable compartment before all editor keymaps.
+  Enable `drawSelection()` only with Vim mode, and theme its cursor, visual selection, and command
+  panel through the existing editor and semantic CSS variables.
 - Community plugin `styles.css` files require the `markdown:extensions` capability. The runtime
   parses and scopes them to `.markdown-surface`, installs them only while the plugin is enabled,
   and rejects global at-rules.

@@ -17,8 +17,16 @@ import {
 } from "@codemirror/language"
 import { search, searchKeymap } from "@codemirror/search"
 import { Compartment, EditorState } from "@codemirror/state"
-import { dropCursor, EditorView, highlightActiveLine, keymap, lineNumbers } from "@codemirror/view"
+import {
+	drawSelection,
+	dropCursor,
+	EditorView,
+	highlightActiveLine,
+	keymap,
+	lineNumbers,
+} from "@codemirror/view"
 import { GFM } from "@lezer/markdown"
+import { vim } from "@replit/codemirror-vim"
 import type { EditorScrollMode } from "./EditorView"
 import { buildHighlightStyle } from "./highlight"
 import { livePreviewExtension } from "./livePreview"
@@ -56,6 +64,7 @@ export interface EditorConfig {
 	tabSize: number
 	useSpaces: boolean
 	showLineNumbers: boolean
+	vimMode?: boolean
 }
 
 export const DEFAULT_EDITOR_CONFIG: EditorConfig = {
@@ -64,8 +73,10 @@ export const DEFAULT_EDITOR_CONFIG: EditorConfig = {
 	tabSize: 2,
 	useSpaces: true,
 	showLineNumbers: false,
+	vimMode: false,
 }
 
+const vimCompartment = new Compartment()
 const typographyCompartment = new Compartment()
 const lineWrappingCompartment = new Compartment()
 const indentCompartment = new Compartment()
@@ -107,8 +118,20 @@ export function buildEditorTypographyRules(
 			borderLeftColor: "var(--accent)",
 			borderLeftWidth: "2px",
 		},
+		".cm-fat-cursor": {
+			backgroundColor: "var(--accent)",
+			borderRadius: "1px",
+			boxSizing: "border-box",
+		},
+		"&:not(.cm-focused) .cm-fat-cursor": {
+			backgroundColor: "transparent",
+			outline: "1px solid var(--accent)",
+		},
 		".cm-content ::selection": {
 			backgroundColor: "var(--editor-selection-bg, var(--bg-selected))",
+		},
+		".cm-selectionBackground": {
+			backgroundColor: "var(--editor-selection-bg, var(--bg-selected)) !important",
 		},
 		".cm-cursorLayer": {
 			zIndex: "10",
@@ -135,6 +158,40 @@ export function buildEditorTypographyRules(
 			borderBottom: "1px solid var(--border-subtle)",
 			boxShadow: "var(--shadow-raised)",
 			position: "relative",
+		},
+		".cm-panel.cm-vim-panel": {
+			display: "flex",
+			alignItems: "center",
+			gap: "6px",
+			minHeight: "40px",
+			padding: "6px 10px",
+			color: "var(--text-primary)",
+			backgroundColor: "var(--bg-elevated)",
+			borderTop: "1px solid var(--border-subtle)",
+			boxShadow: "var(--shadow-raised)",
+			fontFamily: "var(--font-ui)",
+			fontSize: "var(--ui-font-size, 14px)",
+		},
+		".cm-panel.cm-vim-panel input": {
+			flex: "1",
+			minWidth: "0",
+			height: "28px",
+			padding: "0 8px",
+			color: "var(--text-primary)",
+			backgroundColor: "var(--input-bg)",
+			border: "1px solid var(--input-border)",
+			borderRadius: "4px",
+			fontFamily: "var(--font-editor)",
+			fontSize: "var(--ui-font-size, 14px)",
+			outline: "none",
+		},
+		".cm-panel.cm-vim-panel input:focus": {
+			borderColor: "var(--border-focus)",
+			boxShadow: "0 0 0 2px var(--input-focus-ring)",
+		},
+		".cm-panel.cm-vim-panel .cm-vim-message": {
+			color: "var(--text-secondary) !important",
+			whiteSpace: "pre-wrap",
 		},
 		".cm-panel.cm-search br": {
 			display: "none",
@@ -214,6 +271,10 @@ function typographyExtension(fontSize: number, scrollMode: EditorScrollMode) {
 	return EditorView.theme(buildEditorTypographyRules(fontSize, scrollMode))
 }
 
+function vimModeExtension(enabled: boolean) {
+	return enabled ? [vim(), drawSelection()] : []
+}
+
 export interface BaseExtensionsOptions {
 	livePreview?: boolean
 	resolveImageUrl?: (src: string, filePath: string) => string
@@ -231,6 +292,7 @@ export function baseExtensions(
 	}: BaseExtensionsOptions = {},
 ) {
 	return [
+		vimCompartment.of(vimModeExtension(config.vimMode ?? false)),
 		history(),
 		dropCursor(),
 		indentOnInput(),
@@ -264,6 +326,7 @@ export function reconfigureEditor(
 ) {
 	view.dispatch({
 		effects: [
+			vimCompartment.reconfigure(vimModeExtension(config.vimMode ?? false)),
 			typographyCompartment.reconfigure(typographyExtension(config.fontSize, scrollMode)),
 			lineWrappingCompartment.reconfigure(config.wordWrap ? EditorView.lineWrapping : []),
 			indentCompartment.reconfigure(
