@@ -59,7 +59,9 @@ describe("GFM inline rendering", () => {
 		expect(document.querySelector(".cm-table-rendered-line")).toBeNull()
 		expect(document.querySelector(".cm-table-cell")).toBeNull()
 		expect(document.querySelectorAll(".cm-table-source-line")).toHaveLength(3)
-		expect(document.querySelector(".cm-table-wrapper")?.textContent).toContain("| **bold** | value |")
+		expect(document.querySelector(".cm-table-wrapper")?.textContent).toContain(
+			"| **bold** | value |",
+		)
 	})
 
 	it("maps table cell DOM positions to their exact source offsets", () => {
@@ -80,16 +82,8 @@ describe("GFM inline rendering", () => {
 		createEditor("| Left | Center | Right |\n| :--- | :---: | ---: |\n| a | b | c |\n\ntail")
 		const cells = Array.from(document.querySelectorAll<HTMLElement>(".cm-table-cell"))
 
-		expect(cells.slice(0, 3).map((cell) => cell.dataset.align)).toEqual([
-			"left",
-			"center",
-			"right",
-		])
-		expect(cells.slice(3).map((cell) => cell.dataset.align)).toEqual([
-			"left",
-			"center",
-			"right",
-		])
+		expect(cells.slice(0, 3).map((cell) => cell.dataset.align)).toEqual(["left", "center", "right"])
+		expect(cells.slice(3).map((cell) => cell.dataset.align)).toEqual(["left", "center", "right"])
 	})
 
 	it("reveals blockquote markers from any cursor position in the block", () => {

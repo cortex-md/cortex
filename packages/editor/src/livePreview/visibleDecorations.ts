@@ -174,6 +174,18 @@ function addQuoteMarker(
 	replacementRange(ranges, node.from, Math.min(node.to + 1, line.to))
 }
 
+function addListMarker(view: EditorView, ranges: Range<Decoration>[], node: SyntaxNodeLike): void {
+	const line = view.state.doc.lineAt(node.from)
+	if (selectionOverlapsRange(view, line.from, line.to)) return
+	const source = view.state.sliceDoc(node.from, node.to)
+	const marker = /^[*+-]$/.test(source) ? "•" : source
+	ranges.push(
+		Decoration.replace({
+			widget: new TextWidget(marker, "cm-list-marker"),
+		}).range(node.from, node.to),
+	)
+}
+
 function addCalloutTitle(view: EditorView, ranges: Range<Decoration>[], block: CalloutBlock): void {
 	if (selectionOverlapsBlock(view.state.selection, block)) return
 	const firstLine = view.state.doc.line(block.firstLine)
@@ -309,7 +321,11 @@ function buildVisibleDecorations(
 			visibleRange.to,
 		)
 		const codeBlocks = findBlocksInRange(blockState.index.code, visibleRange.from, visibleRange.to)
-		const tableBlocks = findBlocksInRange(blockState.index.tables, visibleRange.from, visibleRange.to)
+		const tableBlocks = findBlocksInRange(
+			blockState.index.tables,
+			visibleRange.from,
+			visibleRange.to,
+		)
 		const sourceTables = tableBlocks.filter((block) =>
 			selectionOverlapsBlock(view.state.selection, block),
 		)
@@ -351,6 +367,8 @@ function buildVisibleDecorations(
 					addHeadingMarker(view, ranges, node)
 				} else if (node.name === "QuoteMark") {
 					addQuoteMarker(view, ranges, node, callout ?? blockquote)
+				} else if (node.name === "ListMark") {
+					addListMarker(view, ranges, node)
 				} else if (node.name === "TaskMarker") {
 					if (!selectionOverlapsRange(view, node.from, node.to)) {
 						const checked = /^\[[xX]\]$/.test(view.state.sliceDoc(node.from, node.to))

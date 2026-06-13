@@ -308,6 +308,12 @@ UI doesn't directly access files; it reads/writes through noteCache.
   callouts keep their source lines in CodeMirror. Table rows, images, and horizontal rules may use
   replacement decorations only within one source line. Do not replace ranges containing line
   breaks.
+- Live Preview tables keep cell text mapped to CodeMirror positions and hide only Markdown pipe and
+  spacing ranges. Never replace a full table row. Any selection entering a table restores source
+  mode for the whole table.
+- Live Preview list markers are viewport-scoped inline projections from Lezer `ListMark` nodes.
+  Entering a list item line restores its raw marker while task checkbox projection remains
+  independent.
 - CodeMirror widgets with interactive controls must consume pointer events before CodeMirror moves
   the selection. Hover and active state must be scoped to the owning widget or Markdown block.
 - CodeMirror block decorations must be provided by a `StateField`; `ViewPlugin` decoration facets

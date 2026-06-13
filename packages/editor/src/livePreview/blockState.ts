@@ -221,12 +221,7 @@ function buildDecorations(
 					Decoration.line({ class: "cm-table-line cm-table-source-line" }),
 				)
 			} else {
-				addTableRowDecorations(
-					ranges,
-					block.table.header,
-					true,
-					block.table.columnCount,
-				)
+				addTableRowDecorations(ranges, block.table.header, true, block.table.columnCount)
 				ranges.push(
 					Decoration.line({
 						class: "cm-table-line cm-table-delimiter-line",

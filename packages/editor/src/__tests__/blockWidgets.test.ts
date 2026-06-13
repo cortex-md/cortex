@@ -119,5 +119,4 @@ title: Navigation
 		expect(document.querySelectorAll(".cm-frontmatter-line")).toHaveLength(3)
 		expect(document.querySelectorAll(".cm-callout-line")).toHaveLength(2)
 	})
-
 })

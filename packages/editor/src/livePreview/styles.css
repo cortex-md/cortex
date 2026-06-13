@@ -60,6 +60,11 @@
 	margin-right: 4px;
 }
 
+.cm-list-marker {
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}
+
 .cm-codeblock-wrapper {
 	background: var(--bg-code);
 }
