@@ -1,9 +1,12 @@
-import { parseFrontmatter } from "./frontmatter"
-import { getPropertiesRuntime } from "./runtime"
-import { getVaultSchema } from "./schema"
-import type { PrimitivePropertyType, PropertyDefinition, PropertyMap, VaultSchema } from "./types"
-
-const excludedObservedKeys = new Set(["tags", "aliases", "cortex-tags"])
+import { parseFrontmatter } from "../frontmatter"
+import { getPropertiesRuntime } from "../runtime"
+import { getVaultSchema } from "../schemaStore"
+import type { PropertyDefinition } from "../types"
+import {
+	createObservedPropertyDefinition,
+	EXCLUDED_OBSERVED_PROPERTY_KEYS,
+	isObservablePropertyValue,
+} from "./observed"
 
 interface IndexedProperty {
 	definition: PropertyDefinition
@@ -18,30 +21,6 @@ interface SuggestionCacheEntry {
 }
 
 const suggestionCache = new Map<string, SuggestionCacheEntry>()
-
-function isScalar(value: unknown): boolean {
-	return (
-		value === null ||
-		typeof value === "string" ||
-		typeof value === "number" ||
-		typeof value === "boolean" ||
-		value instanceof Date
-	)
-}
-
-function inferType(value: unknown): PrimitivePropertyType {
-	if (typeof value === "boolean") return "checkbox"
-	if (typeof value === "number") return "number"
-	if (value instanceof Date) return "date"
-	if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return "date"
-	if (typeof value === "string" && /^https?:\/\//i.test(value)) return "url"
-	if (typeof value === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "email"
-	return "text"
-}
-
-function displayNameFromKey(key: string): string {
-	return key.replaceAll(/[-_]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
-}
 
 function fuzzyScore(query: string, candidate: string): number {
 	if (!query) return 1
@@ -67,27 +46,20 @@ async function buildIndex(vaultPath: string): Promise<IndexedProperty[]> {
 			{ definition, usage: 0 },
 		]),
 	)
-	for (const filePath of await runtime.listMarkdownFiles(vaultPath)) {
+	for (const filePath of await runtime.notes.listMarkdownFiles(vaultPath)) {
 		try {
-			const { meta } = parseFrontmatter(await runtime.readNote(filePath))
+			const { meta } = parseFrontmatter(await runtime.notes.readNote(filePath))
 			for (const [key, value] of Object.entries(meta)) {
-				if (excludedObservedKeys.has(key.toLocaleLowerCase())) continue
 				const normalizedKey = key.toLocaleLowerCase()
+				if (EXCLUDED_OBSERVED_PROPERTY_KEYS.has(normalizedKey)) continue
 				const existing = indexed.get(normalizedKey)
 				if (existing) {
 					existing.usage++
 					continue
 				}
-				if (!isScalar(value)) continue
+				if (!isObservablePropertyValue(value)) continue
 				indexed.set(normalizedKey, {
-					definition: {
-						id: crypto.randomUUID(),
-						key,
-						name: displayNameFromKey(key),
-						type: inferType(value),
-						createdAt: new Date(0).toISOString(),
-						observed: true,
-					},
+					definition: createObservedPropertyDefinition(key, value),
 					usage: 1,
 				})
 			}
@@ -128,35 +100,6 @@ async function getSuggestionIndex(vaultPath: string): Promise<IndexedProperty[]>
 		await entry.pending
 	}
 	return entry.indexed
-}
-
-export function getObservedPropertyDefinitions(
-	meta: PropertyMap,
-	schema: VaultSchema,
-): PropertyDefinition[] {
-	const definedKeys = new Set(
-		schema.properties.map((definition) => definition.key.toLocaleLowerCase()),
-	)
-	const observed: PropertyDefinition[] = []
-	for (const [key, value] of Object.entries(meta)) {
-		const normalizedKey = key.toLocaleLowerCase()
-		if (
-			definedKeys.has(normalizedKey) ||
-			excludedObservedKeys.has(normalizedKey) ||
-			!isScalar(value)
-		) {
-			continue
-		}
-		observed.push({
-			id: `observed:${key}`,
-			key,
-			name: displayNameFromKey(key),
-			type: inferType(value),
-			createdAt: new Date(0).toISOString(),
-			observed: true,
-		})
-	}
-	return observed
 }
 
 export function invalidatePropertySuggestions(vaultPath?: string): void {

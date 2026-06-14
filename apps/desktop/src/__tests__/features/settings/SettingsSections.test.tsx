@@ -1,7 +1,9 @@
 import { cleanup, render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("@cortex/core", () => ({
+	useAuthStore: vi.fn(),
 	useUIStore: vi.fn(),
 	useVaultStore: vi.fn(),
 }))
@@ -14,7 +16,7 @@ vi.mock("@cortex/plugin-runtime", () => ({
 	usePluginStore: vi.fn(),
 }))
 
-import { useUIStore, useVaultStore } from "@cortex/core"
+import { useAuthStore, useUIStore, useVaultStore } from "@cortex/core"
 import { usePluginStore } from "@cortex/plugin-runtime"
 import type { EditorSettings, GeneralSettings } from "@cortex/settings"
 import { EditorSection } from "../../../features/settings/EditorSettings"
@@ -29,6 +31,8 @@ import {
 
 const onUpdate = vi.fn()
 const openMarketplace = vi.fn()
+const openAuth = vi.fn()
+const logout = vi.fn().mockResolvedValue(undefined)
 
 const generalSettings: GeneralSettings = {
 	autoOpenLastVault: true,
@@ -46,9 +50,25 @@ const editorSettings: EditorSettings = {
 	imageStorageCustomPath: "",
 }
 
-function setupCoreStores() {
+function setupCoreStores({ authenticated = false }: { authenticated?: boolean } = {}) {
 	vi.mocked(useUIStore).mockImplementation(((selector?: (state: unknown) => unknown) => {
-		const state = { openMarketplace }
+		const state = { openMarketplace, openAuth }
+		return selector ? selector(state) : state
+	}) as never)
+
+	vi.mocked(useAuthStore).mockImplementation(((selector?: (state: unknown) => unknown) => {
+		const state = {
+			authenticated,
+			user: authenticated
+				? {
+						userId: "user-id",
+						email: "jane.doe@example.com",
+						displayName: "Jane Doe",
+					}
+				: null,
+			logout,
+			serverUrl: "https://sync.example.com",
+		}
 		return selector ? selector(state) : state
 	}) as never)
 
@@ -75,9 +95,34 @@ describe("settings sections", () => {
 		render(<GeneralSection settings={generalSettings} onUpdate={onUpdate} />)
 
 		expect(screen.getByText("Startup")).toBeInTheDocument()
+		expect(screen.getByText("Account")).toBeInTheDocument()
+		expect(screen.getByText("No account connected")).toBeInTheDocument()
 		expect(screen.getByRole("switch", { name: "Open last vault on startup" })).toBeInTheDocument()
 		expect(screen.getByText("Vaults")).toBeInTheDocument()
 		expect(screen.getByText("No recent vaults")).toBeInTheDocument()
+	})
+
+	it("shows the connected account and signs out from General settings", async () => {
+		setupCoreStores({ authenticated: true })
+		render(<GeneralSection settings={generalSettings} onUpdate={onUpdate} />)
+
+		expect(screen.getByText("Jane Doe")).toBeInTheDocument()
+		expect(screen.getByText("jane.doe@example.com")).toBeInTheDocument()
+		expect(screen.getByText("JD")).toBeInTheDocument()
+		expect(screen.getByText("Connected to sync.example.com")).toBeInTheDocument()
+
+		await userEvent.click(screen.getByRole("button", { name: "Sign out" }))
+
+		expect(logout).toHaveBeenCalledWith(false, "https://sync.example.com")
+	})
+
+	it("opens the account modal from General settings", async () => {
+		setupCoreStores()
+		render(<GeneralSection settings={generalSettings} onUpdate={onUpdate} />)
+
+		await userEvent.click(screen.getByRole("button", { name: "Sign in" }))
+
+		expect(openAuth).toHaveBeenCalledWith("login", "general")
 	})
 
 	it("renders Editor settings with standardized form labels", () => {

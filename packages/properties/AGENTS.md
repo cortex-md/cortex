@@ -4,6 +4,13 @@
   suggestions, author resolution, system metadata, and per-note property UI state.
 - Keep the root package framework-free and platform-agnostic. Platform access is injected through
   `initializeProperties`.
+- Runtime services are separated into `files`, `notes`, `identity`, and `metadata`. Keep service
+  methods narrow and batch note presentation through `loadNotePropertiesSnapshot`.
+- Keep pure definition factories and transformations in `definitions.ts`, value parsing and
+  coercion in `values.ts`, actor resolution in `actors.ts`, persistence in `schemaStore.ts` and
+  `noteStore.ts`, and vault discovery under `discovery/`.
+- Test-only runtimes and definitions live under `src/__tests__/fixtures`; never expose them from the
+  production package.
 - Keep CodeMirror imports isolated to the `@cortex/properties/codemirror` subpath.
 - Note CodeMirror documents contain only Markdown bodies. The CodeMirror subpath stores structured
   frontmatter metadata through state effects and must not hide, replace, or protect raw YAML ranges.

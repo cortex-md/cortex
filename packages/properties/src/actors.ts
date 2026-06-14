@@ -1,8 +1,6 @@
-import { getPropertiesRuntime } from "./runtime"
-import type { ResolvedAuthorConfig, ResolvedPropertyActor } from "./types"
+import type { PropertyAuthorContext, ResolvedAuthorConfig, ResolvedPropertyActor } from "./types"
 
-export async function resolveAuthorProperty(vaultPath: string): Promise<ResolvedAuthorConfig> {
-	const context = await getPropertiesRuntime().getAuthorContext(vaultPath)
+export function resolveAuthorConfig(context: PropertyAuthorContext): ResolvedAuthorConfig {
 	if (!context.authenticated || !context.remoteVaultId) return { variant: "text" }
 	return {
 		variant: "person",
@@ -11,21 +9,18 @@ export async function resolveAuthorProperty(vaultPath: string): Promise<Resolved
 	}
 }
 
-export async function resolvePropertyActor(vaultPath: string): Promise<string> {
-	const runtime = getPropertiesRuntime()
-	const context = await runtime.getAuthorContext(vaultPath)
+export function resolveCurrentPropertyActor(context: PropertyAuthorContext): string {
 	if (context.authenticated && context.remoteVaultId && context.currentUserId) {
 		return context.currentUserId
 	}
-	return `device:${await runtime.getDeviceId()}`
+	return `device:${context.currentDeviceId}`
 }
 
-export async function resolvePropertyActorValue(
-	vaultPath: string,
+export function resolvePropertyActorValue(
+	context: PropertyAuthorContext,
 	value: unknown,
-): Promise<ResolvedPropertyActor> {
+): ResolvedPropertyActor {
 	const id = String(value ?? "")
-	const context = await getPropertiesRuntime().getAuthorContext(vaultPath)
 	const person = context.members.find((member) => member.id === id)
 	if (person) {
 		return {

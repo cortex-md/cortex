@@ -192,6 +192,14 @@ export const useRemoteVaultStore = create<RemoteVaultState>()(
 			},
 
 			setSyncEnabled: async (vaultPath, enabled) => {
+				if (enabled) {
+					const { useAuthStore } = await import("./authStore")
+					const authStore = useAuthStore.getState()
+					await authStore.checkAuth(get().syncConfig.serverUrl ?? DEFAULT_SYNC_SERVER_URL)
+					if (!useAuthStore.getState().authenticated) {
+						throw new Error("Sign in before enabling sync")
+					}
+				}
 				await get().updateSyncConfigValue(vaultPath, "enabled", enabled)
 			},
 

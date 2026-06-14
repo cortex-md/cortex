@@ -1075,8 +1075,9 @@ body[data-platform="windows"] .file-tree-item.active {
 }
 
 .note-properties {
+	position: relative;
 	max-width: var(--markdown-content-width, 720px);
-	margin: calc(var(--inline-title-margin-bottom, 1rem) * -0.55) auto 18px;
+	margin: calc(var(--inline-title-margin-bottom, 1rem) * -0.45) auto 22px;
 	padding-inline: var(--markdown-content-gutter, 40px);
 	font-family: var(--font-ui);
 }
@@ -1084,43 +1085,49 @@ body[data-platform="windows"] .file-tree-item.active {
 .note-properties-header {
 	display: flex;
 	align-items: center;
-	min-height: 24px;
+	min-height: 28px;
 	color: var(--text-muted);
 }
 
 .note-properties-header [data-slot="button"] {
 	margin-left: -8px;
 	color: var(--text-muted);
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
 }
 
 .note-properties-content {
 	display: flex;
 	flex-direction: column;
-	gap: 1px;
-	padding-top: 4px;
+	gap: 0;
+	padding-top: 3px;
 }
 
 .note-property-row {
+	position: relative;
 	display: grid;
 	grid-template-columns: minmax(120px, 35%) minmax(0, 65%);
 	align-items: center;
-	min-height: 32px;
-	border-radius: 6px;
-	transition: background-color 100ms ease;
+	min-height: 38px;
+	transition:
+		background-color 120ms ease,
+		border-color 120ms ease;
 }
 
 .note-property-row:hover {
-	background: color-mix(in srgb, var(--bg-secondary) 72%, transparent);
+	background: color-mix(in srgb, var(--bg-secondary) 54%, transparent);
 }
 
 .note-property-name,
 .note-property-value {
 	width: 100%;
 	min-width: 0;
-	height: 30px;
-	padding: 0 8px;
+	height: 37px;
+	padding: 0 9px;
 	border: 0;
-	border-radius: 6px;
+	border-radius: 4px;
 	background: transparent;
 	box-shadow: none;
 	font-size: 13px;
@@ -1137,9 +1144,12 @@ body[data-platform="windows"] .file-tree-item.active {
 }
 
 .note-property-name > svg:first-child {
-	width: 15px;
-	height: 15px;
-	color: var(--text-muted);
+	width: 24px;
+	height: 24px;
+	padding: 5px;
+	border: 1px solid color-mix(in srgb, var(--border-subtle) 75%, transparent);
+	border-radius: 7px;
+	background: color-mix(in srgb, var(--bg-tertiary) 72%, transparent);
 }
 
 .note-property-settings-chevron {
@@ -1245,12 +1255,21 @@ body[data-platform="windows"] .file-tree-item.active {
 }
 
 .note-property-popover {
-	width: min(320px, calc(100vw - 24px));
-	padding: 6px;
-	border: 1px solid color-mix(in srgb, var(--border-default) 70%, transparent);
+	position: relative;
+	width: min(336px, calc(100vw - 24px));
+	overflow: hidden;
+	padding: 0;
+	border: 1px solid color-mix(in srgb, var(--border-default) 82%, transparent);
+	border-radius: 12px;
+	background: linear-gradient(
+		180deg,
+		color-mix(in srgb, var(--bg-secondary) 94%, var(--brand) 6%),
+		var(--bg-secondary) 42px
+	);
 	box-shadow:
-		0 14px 36px color-mix(in srgb, black 24%, transparent),
-		0 2px 8px color-mix(in srgb, black 18%, transparent);
+		0 20px 48px color-mix(in srgb, black 22%, transparent),
+		0 3px 10px color-mix(in srgb, black 16%, transparent);
+	animation: note-property-inspector-in 120ms ease-out;
 }
 
 .note-property-popover [data-slot="command"] {
@@ -1258,8 +1277,10 @@ body[data-platform="windows"] .file-tree-item.active {
 }
 
 .note-property-popover [data-slot="command-input-wrapper"] {
-	margin: 0;
+	margin: 8px;
 	border-color: var(--border-subtle);
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--bg-primary) 62%, transparent);
 }
 
 .note-property-popover [data-slot="command-list"] {
@@ -1272,10 +1293,11 @@ body[data-platform="windows"] .file-tree-item.active {
 
 .note-property-popover-header {
 	display: flex;
-	height: 32px;
+	height: 40px;
 	align-items: center;
 	gap: 6px;
-	padding: 0 4px;
+	padding: 0 10px;
+	border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 68%, transparent);
 	font-size: 13px;
 }
 
@@ -1290,7 +1312,7 @@ body[data-platform="windows"] .file-tree-item.active {
 }
 
 .note-property-editor {
-	padding: 2px;
+	padding: 10px;
 }
 
 .note-property-editor-message {
@@ -1304,8 +1326,8 @@ body[data-platform="windows"] .file-tree-item.active {
 	display: flex;
 	align-items: center;
 	gap: 7px;
-	min-height: 34px;
-	padding: 4px 8px;
+	min-height: 40px;
+	padding: 7px 10px;
 	border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -1349,8 +1371,8 @@ body[data-platform="windows"] .file-tree-item.active {
 .note-property-name-field {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	padding: 2px;
+	gap: 0;
+	padding: 10px 10px 6px;
 }
 
 .note-property-config-list,
@@ -1359,6 +1381,15 @@ body[data-platform="windows"] .file-tree-item.active {
 .note-property-color-list {
 	display: flex;
 	flex-direction: column;
+}
+
+.note-property-config-list,
+.note-property-settings-actions {
+	margin: 4px 8px 8px;
+	padding: 3px;
+	border: 1px solid color-mix(in srgb, var(--border-subtle) 75%, transparent);
+	border-radius: 9px;
+	background: color-mix(in srgb, var(--bg-primary) 42%, transparent);
 }
 
 .note-property-config-list [data-slot="button"],
@@ -1383,7 +1414,7 @@ body[data-platform="windows"] .file-tree-item.active {
 	height: 28px;
 	align-items: center;
 	justify-content: space-between;
-	padding: 0 8px;
+	padding: 0 12px;
 	color: var(--text-muted);
 	font-size: 11px;
 	font-weight: 600;
@@ -1392,19 +1423,21 @@ body[data-platform="windows"] .file-tree-item.active {
 .note-property-option-list {
 	display: flex;
 	flex-direction: column;
-	gap: 1px;
-	margin: 0;
-	padding: 0;
+	gap: 2px;
+	margin: 0 8px 8px;
+	padding: 4px;
+	border: 1px solid color-mix(in srgb, var(--border-subtle) 70%, transparent);
+	border-radius: 9px;
+	background: color-mix(in srgb, var(--bg-primary) 38%, transparent);
 	list-style: none;
 }
 
 .note-property-option-row {
-	display: grid;
-	grid-template-columns: 16px minmax(0, 1fr) 24px 24px;
+	display: flex;
 	align-items: center;
 	gap: 2px;
 	min-height: 30px;
-	padding-left: 6px;
+	padding-left: 0;
 	border-radius: 6px;
 }
 
@@ -1479,38 +1512,6 @@ body[data-platform="windows"] .file-tree-item.active {
 	line-height: 16px;
 }
 
-.note-properties {
-	position: relative;
-	margin: calc(var(--inline-title-margin-bottom, 1rem) * -0.45) auto 22px;
-}
-
-.note-properties-header {
-	min-height: 28px;
-}
-
-.note-properties-header [data-slot="button"] {
-	font-size: 11px;
-	font-weight: 600;
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
-}
-
-.note-properties-content {
-	gap: 0;
-	padding-top: 3px;
-	border-top: 1px solid color-mix(in srgb, var(--border-subtle) 70%, transparent);
-}
-
-.note-property-row {
-	position: relative;
-	min-height: 38px;
-	border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 55%, transparent);
-	border-radius: 0;
-	transition:
-		background-color 120ms ease,
-		border-color 120ms ease;
-}
-
 .note-property-row::before {
 	position: absolute;
 	top: 7px;
@@ -1527,31 +1528,10 @@ body[data-platform="windows"] .file-tree-item.active {
 		transform 120ms ease;
 }
 
-.note-property-row:hover {
-	background: color-mix(in srgb, var(--bg-secondary) 54%, transparent);
-	border-color: color-mix(in srgb, var(--border-default) 62%, transparent);
-}
-
 .note-property-row:hover::before,
 .note-property-row:focus-within::before {
 	opacity: 0.8;
 	transform: scaleY(1);
-}
-
-.note-property-name,
-.note-property-value {
-	height: 37px;
-	padding: 0 9px;
-	border-radius: 4px;
-}
-
-.note-property-name > svg:first-child {
-	width: 24px;
-	height: 24px;
-	padding: 5px;
-	border: 1px solid color-mix(in srgb, var(--border-subtle) 75%, transparent);
-	border-radius: 7px;
-	background: color-mix(in srgb, var(--bg-tertiary) 72%, transparent);
 }
 
 .note-property-identity-copy {
@@ -1636,24 +1616,6 @@ body[data-platform="windows"] .file-tree-item.active {
 	--property-color: var(--text-muted);
 }
 
-.note-property-popover {
-	position: relative;
-	width: min(336px, calc(100vw - 24px));
-	overflow: hidden;
-	padding: 0;
-	border-color: color-mix(in srgb, var(--border-default) 82%, transparent);
-	border-radius: 12px;
-	background: linear-gradient(
-		180deg,
-		color-mix(in srgb, var(--bg-secondary) 94%, var(--brand) 6%),
-		var(--bg-secondary) 42px
-	);
-	box-shadow:
-		0 20px 48px color-mix(in srgb, black 22%, transparent),
-		0 3px 10px color-mix(in srgb, black 16%, transparent);
-	animation: note-property-inspector-in 120ms ease-out;
-}
-
 .note-property-popover::before {
 	position: absolute;
 	top: 0;
@@ -1677,65 +1639,10 @@ body[data-platform="windows"] .file-tree-item.active {
 	}
 }
 
-.note-property-popover [data-slot="command-input-wrapper"] {
-	margin: 8px;
-	border-radius: 8px;
-	background: color-mix(in srgb, var(--bg-primary) 62%, transparent);
-}
-
-.note-property-popover-header {
-	height: 40px;
-	padding: 0 10px;
-	border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 68%, transparent);
-}
-
 .note-property-popover-header strong {
 	font-size: 12px;
 	font-weight: 650;
 	letter-spacing: 0.025em;
-}
-
-.note-property-editor {
-	padding: 10px;
-}
-
-.note-property-selected-value,
-.note-property-selected-person {
-	min-height: 40px;
-	padding: 7px 10px;
-}
-
-.note-property-name-field {
-	gap: 0;
-	padding: 10px 10px 6px;
-}
-
-.note-property-config-list,
-.note-property-settings-actions {
-	margin: 4px 8px 8px;
-	padding: 3px;
-	border: 1px solid color-mix(in srgb, var(--border-subtle) 75%, transparent);
-	border-radius: 9px;
-	background: color-mix(in srgb, var(--bg-primary) 42%, transparent);
-}
-
-.note-property-options-header {
-	padding: 0 12px;
-}
-
-.note-property-option-list {
-	gap: 2px;
-	margin: 0 8px 8px;
-	padding: 4px;
-	border: 1px solid color-mix(in srgb, var(--border-subtle) 70%, transparent);
-	border-radius: 9px;
-	background: color-mix(in srgb, var(--bg-primary) 38%, transparent);
-}
-
-.note-property-option-row {
-	display: flex;
-	min-height: 30px;
-	padding-left: 0;
 }
 
 .note-property-option-main .note-property-option-value {

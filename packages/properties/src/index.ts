@@ -1,8 +1,27 @@
 export {
-	resolveAuthorProperty,
-	resolvePropertyActor,
+	resolveAuthorConfig,
+	resolveCurrentPropertyActor,
 	resolvePropertyActorValue,
-} from "./author"
+} from "./actors"
+export {
+	changePropertyType,
+	createPropertyDefinition,
+	createPropertyKey,
+	createPropertyOption,
+	defineProperty,
+	duplicatePropertyDefinition,
+	getSortedPropertyOptions,
+	isPropertyDefinitionEditable,
+	removePropertyOption,
+	setDefaultPropertyOption,
+	updatePropertyOption,
+	validateVaultSchema,
+} from "./definitions"
+export { getObservedPropertyDefinitions } from "./discovery/observed"
+export {
+	invalidatePropertySuggestions,
+	suggestProperties,
+} from "./discovery/suggestions"
 export {
 	extractFrontmatterBody,
 	FrontmatterParseError,
@@ -16,10 +35,10 @@ export {
 } from "./frontmatter"
 export {
 	getPropertyMap,
-	getResolvedPropertyMap,
+	loadNotePropertiesSnapshot,
 	removeProperty,
 	setProperty,
-} from "./operations"
+} from "./noteStore"
 export {
 	getPropertyType,
 	getPropertyTypes,
@@ -33,23 +52,11 @@ export {
 	resetPropertiesRuntime,
 } from "./runtime"
 export {
-	changePropertyType,
-	createPropertyKey,
-	defineProperty,
-	duplicatePropertyDefinition,
-	getSortedPropertyOptions,
 	getVaultSchema,
-	isPropertyDefinitionEditable,
 	notifyVaultSchemaChanged,
 	onVaultSchemaChange,
 	updateVaultSchema,
-	validateVaultSchema,
-} from "./schema"
-export {
-	getObservedPropertyDefinitions,
-	invalidatePropertySuggestions,
-	suggestProperties,
-} from "./suggestions"
+} from "./schemaStore"
 export {
 	createNoteWithPropertyDefaults,
 	prepareDuplicatedNote,
@@ -57,19 +64,26 @@ export {
 } from "./system"
 export type {
 	BuiltInPropertyType,
+	CreatePropertyDefinitionInput,
 	CustomPropertyType,
 	FrontmatterEditorState,
 	FrontmatterExtensionOptions,
 	FrontmatterLocation,
 	FrontmatterResult,
+	NotePropertiesSnapshot,
 	NotePropertiesUiState,
 	NoteSourceMetadata,
 	PrimitivePropertyType,
+	PropertiesFileService,
+	PropertiesIdentityService,
+	PropertiesMetadataService,
+	PropertiesNoteService,
 	PropertiesRuntime,
 	PropertyAuthorContext,
 	PropertyColor,
 	PropertyDefinition,
 	PropertyDevice,
+	PropertyFactoryOptions,
 	PropertyMap,
 	PropertyOption,
 	PropertyPerson,
@@ -89,3 +103,11 @@ export {
 	renameNotePropertiesUiState,
 	setNotePropertiesExpanded,
 } from "./uiState"
+export {
+	isEmptyPropertyValue,
+	isResolvedPropertyActor,
+	parsePropertyDate,
+	parsePropertyInput,
+	resolvePropertyOption,
+	serializePropertyDate,
+} from "./values"

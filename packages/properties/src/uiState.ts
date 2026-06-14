@@ -15,7 +15,7 @@ function getRelativeNotePath(vaultPath: string, filePath: string): string {
 
 async function readUiState(vaultPath: string): Promise<NotePropertiesUiState> {
 	try {
-		const raw = await getPropertiesRuntime().readFile(`${vaultPath}/.cortex/ui-state.json`)
+		const raw = await getPropertiesRuntime().files.readFile(`${vaultPath}/.cortex/ui-state.json`)
 		const parsed = JSON.parse(raw) as Partial<NotePropertiesUiState>
 		return {
 			version: 1,
@@ -27,7 +27,7 @@ async function readUiState(vaultPath: string): Promise<NotePropertiesUiState> {
 }
 
 async function writeUiState(vaultPath: string, state: NotePropertiesUiState): Promise<void> {
-	await getPropertiesRuntime().atomicWriteFile(
+	await getPropertiesRuntime().files.atomicWriteFile(
 		`${vaultPath}/.cortex/ui-state.json`,
 		JSON.stringify(state, null, "\t"),
 	)

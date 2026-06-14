@@ -1,5 +1,5 @@
-import { initializeProperties } from "./runtime"
-import type { PropertiesRuntime, PropertyAuthorContext } from "./types"
+import { initializeProperties } from "../../runtime"
+import type { PropertiesRuntime, PropertyAuthorContext } from "../../types"
 
 export interface TestPropertiesRuntime {
 	files: Map<string, string>
@@ -27,32 +27,36 @@ export function createTestPropertiesRuntime(
 		return value
 	}
 	const runtime: PropertiesRuntime = {
-		readFile: read,
-		writeFile: async (path, content) => {
-			files.set(path, content)
+		files: {
+			readFile: read,
+			atomicWriteFile: async (path, content) => {
+				atomicWrites.push(path)
+				files.set(path, content)
+			},
 		},
-		atomicWriteFile: async (path, content) => {
-			atomicWrites.push(path)
-			files.set(path, content)
+		notes: {
+			readNote: read,
+			writeNote: async (path, content) => {
+				files.set(path, content)
+			},
+			resolveVaultPath: (filePath) => (filePath.startsWith("/vault/") ? "/vault" : null),
+			listMarkdownFiles: async (vaultPath) =>
+				Array.from(files.keys()).filter(
+					(path) => path.startsWith(`${vaultPath}/`) && path.endsWith(".md"),
+				),
 		},
-		readNote: read,
-		writeNote: async (path, content) => {
-			files.set(path, content)
+		identity: {
+			getAuthorContext: async () => authorContext,
 		},
-		resolveVaultPath: (filePath) => (filePath.startsWith("/vault/") ? "/vault" : null),
-		listMarkdownFiles: async (vaultPath) =>
-			Array.from(files.keys()).filter(
-				(path) => path.startsWith(`${vaultPath}/`) && path.endsWith(".md"),
-			),
-		getAuthorContext: async () => authorContext,
-		getNoteSourceMetadata: async () => ({
-			source: "local",
-			synced: false,
-			dirty: false,
-			createdAt: "2026-06-12T08:00:00.000Z",
-			lastEditedAt: "2026-06-12T09:00:00.000Z",
-		}),
-		getDeviceId: async () => "test-device",
+		metadata: {
+			getNoteSourceMetadata: async () => ({
+				source: "local",
+				synced: false,
+				dirty: false,
+				createdAt: "2026-06-12T08:00:00.000Z",
+				lastEditedAt: "2026-06-12T09:00:00.000Z",
+			}),
+		},
 		now: () => new Date("2026-06-13T12:00:00.000Z"),
 		createId: () => "11111111-1111-4111-8111-111111111111",
 	}

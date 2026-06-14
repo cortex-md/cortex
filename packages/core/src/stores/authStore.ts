@@ -36,7 +36,11 @@ function applyAuthStatus(state: AuthState, status: AuthStatus, serverUrl: string
 	state.authenticated = status.authenticated
 	state.user =
 		status.authenticated && status.userId && status.email
-			? { userId: status.userId, email: status.email }
+			? {
+					userId: status.userId,
+					email: status.email,
+					displayName: status.displayName,
+				}
 			: null
 	state.loading = false
 }
@@ -90,7 +94,11 @@ export const useAuthStore = create<AuthState>()(
 					const result = await platform.auth.login(resolvedServerUrl, email, password)
 					set((state) => {
 						state.authenticated = true
-						state.user = { userId: result.userId, email: result.email }
+						state.user = {
+							userId: result.userId,
+							email: result.email,
+							displayName: result.displayName,
+						}
 						state.loading = false
 					})
 				} catch (e) {
@@ -111,8 +119,16 @@ export const useAuthStore = create<AuthState>()(
 				})
 				try {
 					const platform = getPlatform()
-					await platform.auth.register(resolvedServerUrl, email, password, displayName)
+					const result = await platform.auth.register(
+						resolvedServerUrl,
+						email,
+						password,
+						displayName,
+					)
 					await get().login(email, password, resolvedServerUrl)
+					set((state) => {
+						if (state.user) state.user.displayName = result.displayName
+					})
 				} catch (e) {
 					set((state) => {
 						state.loading = false
@@ -127,9 +143,27 @@ export const useAuthStore = create<AuthState>()(
 				try {
 					const { useSyncStore } = await import("./syncStore")
 					await useSyncStore.getState().stopSync()
+				} catch (error) {
+					console.error("[Auth logout sync stop failed]", { error })
+				}
+				try {
+					const [{ useRemoteVaultStore }, { useVaultStore }] = await Promise.all([
+						import("./remoteVaultStore"),
+						import("./vaultStore"),
+					])
+					const vaultPath = useVaultStore.getState().vault?.path
+					const remoteVaultState = useRemoteVaultStore.getState()
+					if (vaultPath && remoteVaultState.syncConfig.enabled) {
+						await remoteVaultState.setSyncEnabled(vaultPath, false)
+					}
+				} catch (error) {
+					console.error("[Auth logout sync disable failed]", { error })
+				}
+				try {
 					const platform = getPlatform()
 					await platform.auth.logout(resolvedServerUrl, allDevices)
-				} catch {
+				} catch (error) {
+					console.error("[Auth logout remote session failed]", { error })
 				} finally {
 					set((state) => {
 						state.serverUrl = resolvedServerUrl

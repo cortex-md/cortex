@@ -352,10 +352,24 @@ Manages authentication state for the active sync server:
 
 - Auth is scoped by normalized `serverUrl`; Cortex Cloud and self-hosted servers must not share tokens.
 - `login(email, password, serverUrl)` and `register(..., serverUrl)` authenticate against the vault's configured sync server.
-- `logout(allDevices, serverUrl)` stops active sync and clears only that server session. It must not disable sync or unlink the vault.
+- Auth identity keeps `userId`, email, and an optional persisted display name. UI may derive a
+  readable fallback from email, but must not perform a member request just to render the account.
+- `logout(allDevices, serverUrl)` stops and disables active sync before clearing only that server
+  session. It must not unlink the vault or clear Self-host configuration.
 
 ### remoteVaultStore
 Manages vault-scoped sync configuration. `syncConfig` is persisted on disk at `vault_path/.cortex/sync-config.json` and includes `enabled`, `remoteVaultId`, `selfHosted`, `serverUrl`, `offlineMode`, and non-secret `selfHostedEnvironment` values. `linkedVaultId` mirrors `syncConfig.remoteVaultId`. `clearLink()` clears memory only; `unlinkVault(path)` clears only the remote vault link from disk and preserves the rest of the sync config.
+
+`setSyncEnabled(path, true)` must confirm the server-scoped auth status before persisting. Self-host
+selection and server/environment configuration remain available while signed out; enabling sync
+still requires a valid account on the selected server.
+
+### Sync Settings Models
+
+`src/sync` owns framework-free settings data shared with future clients: the typed self-host field
+catalog, ordered `.env` serialization, vault-scoped keychain key generation, engine-state labels and
+tones, and relative last-sync formatting with an injectable clock. React hooks, native dialogs,
+clipboard access, exports, and keychain reads remain desktop adapter responsibilities.
 
 ## NoteCache
 

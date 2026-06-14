@@ -12,6 +12,7 @@ const REFRESH_TOKEN_KEY: &str = "refresh_token";
 const SERVER_URL_KEY: &str = "server_url";
 const USER_ID_KEY: &str = "user_id";
 const USER_EMAIL_KEY: &str = "user_email";
+const USER_DISPLAY_NAME_KEY: &str = "user_display_name";
 
 pub struct SyncHttpClient {
     client: Client,
@@ -291,10 +292,21 @@ pub fn clear_tokens_for_server(server_url: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub fn store_user_for_server(server_url: &str, user_id: &str, email: &str) -> Result<(), String> {
+pub fn store_user_for_server(
+    server_url: &str,
+    user_id: &str,
+    email: &str,
+    display_name: Option<&str>,
+) -> Result<(), String> {
     let normalized = normalize_server_url(server_url);
     keychain::set(&scoped_key(&normalized, USER_ID_KEY), user_id)?;
     keychain::set(&scoped_key(&normalized, USER_EMAIL_KEY), email)?;
+    if let Some(display_name) = display_name {
+        keychain::set(
+            &scoped_key(&normalized, USER_DISPLAY_NAME_KEY),
+            display_name,
+        )?;
+    }
     Ok(())
 }
 
@@ -303,6 +315,7 @@ pub fn clear_tokens_and_user_info_for_server(server_url: &str) -> Result<(), Str
     clear_tokens_for_server(&normalized)?;
     let _ = keychain::delete(&scoped_key(&normalized, USER_ID_KEY));
     let _ = keychain::delete(&scoped_key(&normalized, USER_EMAIL_KEY));
+    let _ = keychain::delete(&scoped_key(&normalized, USER_DISPLAY_NAME_KEY));
     Ok(())
 }
 
@@ -318,12 +331,15 @@ pub fn get_refresh_token_for_server(server_url: &str) -> Result<Option<String>, 
     keychain::get(&scoped_key(&normalized, REFRESH_TOKEN_KEY))
 }
 
-pub fn get_user_for_server(server_url: &str) -> Result<(Option<String>, Option<String>), String> {
+pub fn get_user_for_server(
+    server_url: &str,
+) -> Result<(Option<String>, Option<String>, Option<String>), String> {
     let normalized = normalize_server_url(server_url);
     migrate_legacy_auth(&normalized)?;
     Ok((
         keychain::get(&scoped_key(&normalized, USER_ID_KEY))?,
         keychain::get(&scoped_key(&normalized, USER_EMAIL_KEY))?,
+        keychain::get(&scoped_key(&normalized, USER_DISPLAY_NAME_KEY))?,
     ))
 }
 
@@ -367,11 +383,18 @@ fn migrate_legacy_auth(server_url: &str) -> Result<(), String> {
     if let Some(email) = keychain::get(USER_EMAIL_KEY)? {
         keychain::set(&scoped_key(&normalized, USER_EMAIL_KEY), &email)?;
     }
+    if let Some(display_name) = keychain::get(USER_DISPLAY_NAME_KEY)? {
+        keychain::set(
+            &scoped_key(&normalized, USER_DISPLAY_NAME_KEY),
+            &display_name,
+        )?;
+    }
 
     let _ = keychain::delete(ACCESS_TOKEN_KEY);
     let _ = keychain::delete(REFRESH_TOKEN_KEY);
     let _ = keychain::delete(USER_ID_KEY);
     let _ = keychain::delete(USER_EMAIL_KEY);
+    let _ = keychain::delete(USER_DISPLAY_NAME_KEY);
     Ok(())
 }
 

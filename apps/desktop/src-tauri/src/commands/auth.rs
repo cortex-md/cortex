@@ -9,6 +9,7 @@ use crate::sync::http::SyncHttpClient;
 pub struct LoginResult {
     pub user_id: String,
     pub email: String,
+    pub display_name: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -31,6 +32,7 @@ pub async fn auth_login(
     Ok(LoginResult {
         user_id: result.user_id,
         email: result.email,
+        display_name: result.display_name,
     })
 }
 

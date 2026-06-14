@@ -289,6 +289,11 @@ UI doesn't directly access files; it reads/writes through noteCache.
   colors take precedence.
 - `@cortex/properties` owns structured YAML frontmatter parsing, property schemas, note property
   mutations, body projection helpers, and the metadata-only CodeMirror extension.
+- Properties runtime access is split into `files`, `notes`, `identity`, and `metadata` services.
+  Desktop panels load one `NotePropertiesSnapshot`; future mobile adapters reuse factories, value
+  parsing, actor resolution, schema storage, and note operations without importing React DOM code.
+- Desktop property UI stays decomposed into the panel controller, rows, value editors, inspectors,
+  and Add Property discovery. Draft editors must deduplicate Enter, blur, and popover dismissal.
 - `select` is the only built-in colored option type. Legacy unavailable property types remain
   preserved and read-only; do not reinterpret them during schema loads.
 - System note metadata resolves through injected filesystem and sync snapshots. Creation fields and
@@ -371,6 +376,9 @@ UI doesn't directly access files; it reads/writes through noteCache.
 - The sync overview never exposes remote vault IDs. Prefer already-loaded vault metadata, sync
   state, device state, and file lists; fetch devices only for a visible, authenticated linked
   overview when the store is empty.
+- Self-host field catalogs, secret keys, ordered `.env` serialization, engine-state presentation,
+  and relative sync time formatting belong to `@cortex/core`. Desktop owns keychain, clipboard,
+  native export, and React settings composition.
 - Self-hosted environment settings use one controlled disclosure across Server, Database,
   Authentication, and Storage. Keep secret values in the OS keychain and preserve `.env` copy and
   export behavior.
@@ -495,6 +503,11 @@ Sync logs follow a **single-source-of-truth** model — Rust is the authority fo
   already equals `sync_state.local_hash` must not enqueue uploads.
 - Sync queue operations are deduplicated by operation type and path in memory and SQLite. Creation
   history lookups are low-priority, persisted, and never run during note opening.
+- General Settings owns the visible Cortex account summary and opens the shared `AuthModal`.
+  Identity is server-scoped and includes an optional display name stored in the OS keychain.
+- Enabling sync requires a valid session for the configured server at both UI and store layers.
+  Signing out stops and disables sync, while Self-host selection, URL, and environment settings stay
+  available and unchanged.
 
 ### Sync Ignore Preferences
 Vault-scoped sync ignore preferences live in `<vault>/.cortex/sync-preferences.json`.

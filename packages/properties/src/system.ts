@@ -1,8 +1,8 @@
-import { resolvePropertyActor } from "./author"
+import { resolveCurrentPropertyActor } from "./actors"
 import { parseFrontmatter, setFrontmatterValue } from "./frontmatter"
 import { getPropertyType } from "./registry"
 import { getOptionalPropertiesRuntime } from "./runtime"
-import { getVaultSchema } from "./schema"
+import { getVaultSchema } from "./schemaStore"
 import type { PropertyDefinition, VaultSchema } from "./types"
 
 function getSystemDefinition(schema: VaultSchema, type: string): PropertyDefinition | undefined {
@@ -23,10 +23,11 @@ async function applySystemValues(
 	if (!runtime) return raw
 	const schema = await getVaultSchema(vaultPath)
 	if (schema.properties.length === 0) return raw
-	const actor = await resolvePropertyActor(vaultPath)
+	const authorContext = await runtime.identity.getAuthorContext(vaultPath)
+	const actor = resolveCurrentPropertyActor(authorContext)
 	const timestamp = (runtime.now?.() ?? new Date()).toISOString()
 	const sourceMetadata = options.filePath
-		? await runtime.getNoteSourceMetadata(options.filePath)
+		? await runtime.metadata.getNoteSourceMetadata(options.filePath)
 		: undefined
 	const createdTimestamp =
 		!options.duplicate && sourceMetadata?.createdAt ? sourceMetadata.createdAt : timestamp
@@ -89,7 +90,7 @@ export async function prepareDuplicatedNote(vaultPath: string, raw: string): Pro
 export async function prepareNoteForSave(filePath: string, raw: string): Promise<string> {
 	const runtime = getOptionalPropertiesRuntime()
 	if (!runtime) return raw
-	const vaultPath = runtime.resolveVaultPath(filePath)
+	const vaultPath = runtime.notes.resolveVaultPath(filePath)
 	if (!vaultPath) return raw
 	return applySystemValues(vaultPath, raw, {
 		filePath,

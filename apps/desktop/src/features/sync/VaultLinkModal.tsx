@@ -296,9 +296,9 @@ export function VaultLinkModal({ open, onOpenChange, unlockMode }: VaultLinkModa
 				{linkedVaultId && linkedVault ? (
 					<div className="flex flex-col gap-3 py-2">
 						<div className="flex items-center gap-2 p-3 border border-border rounded-md">
-							<Cloud size={16} className="text-accent shrink-0" />
+							<Cloud size={18} className="shrink-0" />
 							<div className="flex flex-col min-w-0 flex-1">
-								<span className="text-xs font-medium truncate">{linkedVault.name}</span>
+								<span className="text-sm font-medium truncate">{linkedVault.name}</span>
 								{linkedVault.description && (
 									<span className="text-[10px] text-text-muted truncate">
 										{linkedVault.description}

@@ -1,6 +1,7 @@
 export interface LoginResult {
 	userId: string
 	email: string
+	displayName: string | null
 }
 
 export interface RegisterResult {
@@ -13,11 +14,13 @@ export interface AuthStatus {
 	authenticated: boolean
 	userId: string | null
 	email: string | null
+	displayName: string | null
 }
 
 export interface CurrentUser {
 	userId: string
 	email: string
+	displayName: string | null
 }
 
 export interface Auth {

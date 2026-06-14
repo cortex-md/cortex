@@ -145,19 +145,56 @@ export interface PropertyAuthorContext {
 	devices: PropertyDevice[]
 }
 
-export interface PropertiesRuntime {
+export interface PropertiesFileService {
 	readFile(path: string): Promise<string>
-	writeFile(path: string, content: string): Promise<void>
 	atomicWriteFile(path: string, content: string): Promise<void>
+}
+
+export interface PropertiesNoteService {
 	readNote(path: string): Promise<string>
 	writeNote(path: string, content: string): Promise<void>
 	resolveVaultPath(filePath: string): string | null
 	listMarkdownFiles(vaultPath: string): Promise<string[]>
+}
+
+export interface PropertiesIdentityService {
 	getAuthorContext(vaultPath: string): Promise<PropertyAuthorContext>
+}
+
+export interface PropertiesMetadataService {
 	getNoteSourceMetadata(filePath: string): Promise<NoteSourceMetadata>
-	getDeviceId(): Promise<string>
+}
+
+export interface PropertiesRuntime {
+	files: PropertiesFileService
+	notes: PropertiesNoteService
+	identity: PropertiesIdentityService
+	metadata: PropertiesMetadataService
 	now?(): Date
 	createId?(): string
+}
+
+export interface NotePropertiesSnapshot {
+	schema: VaultSchema
+	persistedMeta: PropertyMap
+	resolvedMeta: PropertyMap
+	authorConfig: ResolvedAuthorConfig
+	observedDefinitions: PropertyDefinition[]
+}
+
+export interface CreatePropertyDefinitionInput {
+	name: string
+	type: string
+	properties?: readonly PropertyDefinition[]
+	key?: string
+	options?: PropertyOption[]
+	defaultOptionId?: string
+	optionSort?: "manual" | "alphabetical"
+}
+
+export interface PropertyFactoryOptions {
+	createId?: () => string
+	now?: () => Date
 }
 
 export interface FrontmatterResult {

@@ -56,7 +56,7 @@ function VersionRow({ version, isSelected, isLatest, onSelect }: VersionRowProps
 			}`}
 		>
 			<div className="flex min-w-0 items-center gap-2">
-				<UserRound className="size-3 shrink-0 text-muted-foreground" />
+				<UserRound size={18} className="shrink-0 text-muted-foreground" />
 				<span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
 					{version.authorName ?? "Unknown"}
 				</span>
@@ -220,8 +220,8 @@ export function NoteHistoryPanel({ filePath, open, onOpenChange }: NoteHistoryPa
 
 				<div className="grid min-h-0 flex-1 grid-cols-[240px_minmax(0,1fr)] overflow-hidden">
 					<aside className="flex min-h-0 flex-col overflow-hidden border-r border-border bg-muted/30">
-						<div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
-							<p className="m-0 text-xs font-medium text-foreground">Versions</p>
+						<div className="flex shrink-0 items-center justify-between px-4 py-3">
+							<p className="m-0 text-sm font-medium text-foreground">Versions</p>
 							{!loadingVersions && versions.length > 0 && (
 								<span className="text-xs tabular-nums text-muted-foreground">
 									{versions.length}

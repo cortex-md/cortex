@@ -85,6 +85,21 @@ export {
 	type ViewTabState,
 	type WorkspaceState,
 } from "./stores/workspaceStore"
+export {
+	formatLastSyncedAt,
+	SYNC_STATUS_PRESENTATION,
+	type SyncStatusPresentation,
+	type SyncStatusTone,
+} from "./sync/presentation"
+export {
+	createSyncEnvironmentSecretKey,
+	SELF_HOSTED_ENVIRONMENT_FIELDS,
+	SELF_HOSTED_ENVIRONMENT_GROUPS,
+	type SelfHostedEnvironmentField,
+	type SelfHostedEnvironmentGroup,
+	type SelfHostedEnvironmentSubsection,
+	serializeSelfHostedEnvironment,
+} from "./sync/selfHostedEnvironment"
 export type {
 	SyncPluginEntry,
 	SyncPluginsManifest,

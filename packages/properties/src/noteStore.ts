@@ -1,30 +1,25 @@
-import { resolvePropertyActorValue } from "./author"
+import { resolveAuthorConfig, resolvePropertyActorValue } from "./actors"
+import { getObservedPropertyDefinitions } from "./discovery/observed"
+import { invalidatePropertySuggestions } from "./discovery/suggestions"
 import { parseFrontmatter, removeFrontmatterValue, setFrontmatterValue } from "./frontmatter"
 import { getPropertyType } from "./registry"
 import { getPropertiesRuntime } from "./runtime"
-import { getVaultSchema } from "./schema"
-import { invalidatePropertySuggestions } from "./suggestions"
-import type { PropertyMap } from "./types"
+import { getVaultSchema } from "./schemaStore"
+import type {
+	NotePropertiesSnapshot,
+	NoteSourceMetadata,
+	PropertyAuthorContext,
+	PropertyMap,
+	VaultSchema,
+} from "./types"
+import { isEmptyPropertyValue } from "./values"
 
-function isEmptyValue(value: unknown): boolean {
-	return value === undefined || value === null || value === ""
-}
-
-export async function getPropertyMap(filePath: string): Promise<PropertyMap> {
-	const raw = await getPropertiesRuntime().readNote(filePath)
-	return parseFrontmatter(raw).meta
-}
-
-export async function getResolvedPropertyMap(filePath: string): Promise<PropertyMap> {
-	const runtime = getPropertiesRuntime()
-	const vaultPath = runtime.resolveVaultPath(filePath)
-	if (!vaultPath) return getPropertyMap(filePath)
-	const [raw, schema, sourceMetadata] = await Promise.all([
-		runtime.readNote(filePath),
-		getVaultSchema(vaultPath),
-		runtime.getNoteSourceMetadata(filePath),
-	])
-	const meta = parseFrontmatter(raw).meta
+function resolveSystemPropertyMap(
+	meta: PropertyMap,
+	schema: VaultSchema,
+	sourceMetadata: NoteSourceMetadata,
+	authorContext: PropertyAuthorContext,
+): PropertyMap {
 	const resolved = { ...meta }
 	const remoteAuthoritative =
 		sourceMetadata.source === "remote" && sourceMetadata.synced && !sourceMetadata.dirty
@@ -53,11 +48,9 @@ export async function getResolvedPropertyMap(filePath: string): Promise<Property
 		}
 		if (
 			(definition.type === "created_by" || definition.type === "last_edited_by") &&
-			value !== undefined &&
-			value !== null &&
-			value !== ""
+			!isEmptyPropertyValue(value)
 		) {
-			resolved[definition.key] = await resolvePropertyActorValue(vaultPath, value)
+			resolved[definition.key] = resolvePropertyActorValue(authorContext, value)
 		} else if (value !== undefined) {
 			resolved[definition.key] = value
 		}
@@ -65,13 +58,40 @@ export async function getResolvedPropertyMap(filePath: string): Promise<Property
 	return resolved
 }
 
+export async function getPropertyMap(filePath: string): Promise<PropertyMap> {
+	const raw = await getPropertiesRuntime().notes.readNote(filePath)
+	return parseFrontmatter(raw).meta
+}
+
+export async function loadNotePropertiesSnapshot(
+	filePath: string,
+): Promise<NotePropertiesSnapshot> {
+	const runtime = getPropertiesRuntime()
+	const vaultPath = runtime.notes.resolveVaultPath(filePath)
+	if (!vaultPath) throw new Error(`Cannot resolve vault for "${filePath}"`)
+	const [raw, schema, sourceMetadata, authorContext] = await Promise.all([
+		runtime.notes.readNote(filePath),
+		getVaultSchema(vaultPath),
+		runtime.metadata.getNoteSourceMetadata(filePath),
+		runtime.identity.getAuthorContext(vaultPath),
+	])
+	const persistedMeta = parseFrontmatter(raw).meta
+	return {
+		schema,
+		persistedMeta,
+		resolvedMeta: resolveSystemPropertyMap(persistedMeta, schema, sourceMetadata, authorContext),
+		authorConfig: resolveAuthorConfig(authorContext),
+		observedDefinitions: getObservedPropertyDefinitions(persistedMeta, schema),
+	}
+}
+
 export async function setProperty(filePath: string, key: string, value: unknown): Promise<void> {
-	if (isEmptyValue(value)) {
+	if (isEmptyPropertyValue(value)) {
 		await removeProperty(filePath, key)
 		return
 	}
 	const runtime = getPropertiesRuntime()
-	const vaultPath = runtime.resolveVaultPath(filePath)
+	const vaultPath = runtime.notes.resolveVaultPath(filePath)
 	if (!vaultPath) throw new Error(`Cannot resolve vault for "${filePath}"`)
 	const schema = await getVaultSchema(vaultPath)
 	const definition = schema.properties.find((property) => property.key === key)
@@ -83,16 +103,16 @@ export async function setProperty(filePath: string, key: string, value: unknown)
 		if (!validation.valid) throw new Error(validation.message ?? "Invalid property value")
 		value = type.serialize(value)
 	}
-	const raw = await runtime.readNote(filePath)
-	await runtime.writeNote(filePath, setFrontmatterValue(raw, key, value))
+	const raw = await runtime.notes.readNote(filePath)
+	await runtime.notes.writeNote(filePath, setFrontmatterValue(raw, key, value))
 	invalidatePropertySuggestions(vaultPath)
 }
 
 export async function removeProperty(filePath: string, key: string): Promise<void> {
 	const runtime = getPropertiesRuntime()
-	const raw = await runtime.readNote(filePath)
+	const raw = await runtime.notes.readNote(filePath)
 	const updated = removeFrontmatterValue(raw, key)
-	if (updated !== raw) await runtime.writeNote(filePath, updated)
-	const vaultPath = runtime.resolveVaultPath(filePath)
+	if (updated !== raw) await runtime.notes.writeNote(filePath, updated)
+	const vaultPath = runtime.notes.resolveVaultPath(filePath)
 	if (vaultPath) invalidatePropertySuggestions(vaultPath)
 }

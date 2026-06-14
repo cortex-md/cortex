@@ -18,6 +18,8 @@ pub struct LoginResponse {
     pub refresh_token: String,
     pub user_id: String,
     pub email: String,
+    #[serde(default)]
+    pub display_name: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -45,6 +47,7 @@ pub struct AuthStatus {
     pub authenticated: bool,
     pub user_id: Option<String>,
     pub email: Option<String>,
+    pub display_name: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -52,6 +55,7 @@ pub struct AuthStatus {
 pub struct CurrentUser {
     pub user_id: String,
     pub email: String,
+    pub display_name: Option<String>,
 }
 
 pub async fn login(
@@ -78,7 +82,12 @@ pub async fn login(
         &login_resp.access_token,
         &login_resp.refresh_token,
     )?;
-    http::store_user_for_server(&server_url, &login_resp.user_id, &login_resp.email)?;
+    http::store_user_for_server(
+        &server_url,
+        &login_resp.user_id,
+        &login_resp.email,
+        login_resp.display_name.as_deref(),
+    )?;
 
     Ok(login_resp)
 }
@@ -97,6 +106,13 @@ pub async fn register(
 
     let response = client.post_json("/auth/v1/register", &body).await?;
     let register_resp: RegisterResponse = parse_response(response).await?;
+    let server_url = client.get_server_url();
+    http::store_user_for_server(
+        &server_url,
+        &register_resp.user_id,
+        &register_resp.email,
+        Some(&register_resp.display_name),
+    )?;
 
     Ok(register_resp)
 }
@@ -127,27 +143,30 @@ pub async fn logout(
 pub fn get_auth_status(server_url: &str) -> Result<AuthStatus, String> {
     let authenticated = http::has_tokens_for_server(server_url)?;
     if authenticated {
-        let (user_id, email) = http::get_user_for_server(server_url)?;
+        let (user_id, email, display_name) = http::get_user_for_server(server_url)?;
         Ok(AuthStatus {
             authenticated: true,
             user_id,
             email,
+            display_name,
         })
     } else {
         Ok(AuthStatus {
             authenticated: false,
             user_id: None,
             email: None,
+            display_name: None,
         })
     }
 }
 
 pub fn get_current_user(server_url: &str) -> Result<Option<CurrentUser>, String> {
-    let (user_id, email) = http::get_user_for_server(server_url)?;
+    let (user_id, email, display_name) = http::get_user_for_server(server_url)?;
     match (user_id, email) {
         (Some(uid), Some(e)) => Ok(Some(CurrentUser {
             user_id: uid,
             email: e,
+            display_name,
         })),
         _ => Ok(None),
     }
