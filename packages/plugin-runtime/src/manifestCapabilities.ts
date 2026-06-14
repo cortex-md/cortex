@@ -18,6 +18,7 @@ const validPluginCapabilities: PluginCapability[] = [
 	"themes",
 	"bookmarks:read",
 	"bookmarks:write",
+	"properties:types",
 	"notifications",
 ]
 

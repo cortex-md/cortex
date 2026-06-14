@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use crate::atomic_fs::atomic_write_bytes;
 use crate::sync::conflict::{self, AutoMergeResult};
 use crate::sync::crypto;
 use crate::sync::db::{SyncDb, SyncState};
@@ -119,8 +120,7 @@ impl<'a> Downloader<'a> {
                                 remote_text,
                                 conflict_text,
                             } => {
-                                std::fs::write(&full_path, conflict_text.as_bytes())
-                                    .map_err(|e| e.to_string())?;
+                                atomic_write_bytes(&full_path, conflict_text.as_bytes())?;
 
                                 let now = std::time::SystemTime::now()
                                     .duration_since(std::time::UNIX_EPOCH)
@@ -188,9 +188,14 @@ impl<'a> Downloader<'a> {
         );
 
         let response = self.client.get(&api_path).await?;
-        if !response.status().is_success() {
+        let status = response.status();
+        if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
-            return Err(format!("Version history failed: {}", body));
+            return Err(format!(
+                "Version history failed with HTTP {}: {}",
+                status.as_u16(),
+                body
+            ));
         }
 
         let versions: Vec<VersionInfo> = response.json().await.map_err(|e| e.to_string())?;
@@ -205,10 +210,7 @@ impl<'a> Downloader<'a> {
         snapshot_id: Option<String>,
     ) -> Result<(), String> {
         let full_path = Path::new(self.vault_path).join(file_path);
-        if let Some(parent) = full_path.parent() {
-            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-        }
-        std::fs::write(&full_path, content).map_err(|e| e.to_string())?;
+        atomic_write_bytes(&full_path, content)?;
         self.update_state_synced(file_path, hash, snapshot_id)
     }
 
@@ -293,10 +295,7 @@ impl<'a> Downloader<'a> {
 
         let content = self.download_version(file_path, "0").await?;
         let full_path = Path::new(self.vault_path).join(file_path);
-        if let Some(parent) = full_path.parent() {
-            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-        }
-        std::fs::write(&full_path, &content).map_err(|e| e.to_string())?;
+        atomic_write_bytes(&full_path, &content)?;
 
         let hash = blake3::hash(&content).to_hex().to_string();
         let now = std::time::SystemTime::now()
@@ -334,6 +333,7 @@ impl<'a> Downloader<'a> {
             state.file_path = new_path.to_string();
             self.db.upsert_sync_state(&state)?;
         }
+        self.db.rename_note_metadata(old_path, new_path)?;
 
         Ok(())
     }
@@ -384,6 +384,7 @@ pub struct VersionInfo {
     pub version: u64,
     pub size_bytes: Option<u64>,
     pub checksum: Option<String>,
+    #[serde(alias = "created_by")]
     pub author_id: Option<String>,
     pub author_name: Option<String>,
     pub device_id: Option<String>,
@@ -397,4 +398,97 @@ fn urlencoded(s: &str) -> String {
         .replace('#', "%23")
         .replace('&', "%26")
         .replace('?', "%3F")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+    use wiremock::matchers::{method, path, query_param};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    #[tokio::test]
+    async fn downloads_remote_content_and_updates_state_after_the_write() {
+        let server = MockServer::start().await;
+        let directory = tempdir().unwrap();
+        let db = SyncDb::open(directory.path().to_str().unwrap()).unwrap();
+        let vek = [7_u8; 32];
+        let plaintext = b"remote note";
+        let encrypted = crypto::encrypt(plaintext, &vek).unwrap();
+        Mock::given(method("GET"))
+            .and(path("/sync/v1/vaults/vault/files"))
+            .and(query_param("path", "note.md"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .insert_header("X-Snapshot-ID", "snapshot-1")
+                    .set_body_bytes(encrypted),
+            )
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let client = SyncHttpClient::new_for_test(&server.uri());
+        let downloader = Downloader::new(
+            &client,
+            &db,
+            "vault",
+            directory.path().to_str().unwrap(),
+            &vek,
+        );
+
+        downloader.download_file("note.md").await.unwrap();
+
+        assert_eq!(
+            std::fs::read(directory.path().join("note.md")).unwrap(),
+            plaintext
+        );
+        let expected_hash = blake3::hash(plaintext).to_hex().to_string();
+        let state = db.get_sync_state("note.md").unwrap().unwrap();
+        assert_eq!(state.local_hash.as_deref(), Some(expected_hash.as_str()));
+        assert_eq!(state.server_version_id.as_deref(), Some("snapshot-1"));
+    }
+
+    #[tokio::test]
+    async fn decrypt_failure_preserves_the_previous_file_and_state() {
+        let server = MockServer::start().await;
+        let directory = tempdir().unwrap();
+        let file_path = directory.path().join("note.md");
+        std::fs::write(&file_path, b"local note").unwrap();
+        let db = SyncDb::open(directory.path().to_str().unwrap()).unwrap();
+        db.upsert_sync_state(&SyncState {
+            file_path: "note.md".to_string(),
+            local_hash: Some("old-local".to_string()),
+            remote_hash: Some("old-remote".to_string()),
+            ancestor_hash: Some("old-ancestor".to_string()),
+            local_mtime: None,
+            remote_mtime: None,
+            sync_status: "synced".to_string(),
+            last_synced_at: None,
+            server_version_id: Some("old-snapshot".to_string()),
+        })
+        .unwrap();
+        Mock::given(method("GET"))
+            .and(path("/sync/v1/vaults/vault/files"))
+            .and(query_param("path", "note.md"))
+            .respond_with(ResponseTemplate::new(200).set_body_bytes(vec![1, 2, 3]))
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let client = SyncHttpClient::new_for_test(&server.uri());
+        let vek = [7_u8; 32];
+        let downloader = Downloader::new(
+            &client,
+            &db,
+            "vault",
+            directory.path().to_str().unwrap(),
+            &vek,
+        );
+
+        assert!(downloader.download_file("note.md").await.is_err());
+        assert_eq!(std::fs::read(&file_path).unwrap(), b"local note");
+        let state = db.get_sync_state("note.md").unwrap().unwrap();
+        assert_eq!(state.local_hash.as_deref(), Some("old-local"));
+        assert_eq!(state.server_version_id.as_deref(), Some("old-snapshot"));
+    }
 }

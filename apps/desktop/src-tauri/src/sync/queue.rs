@@ -33,6 +33,9 @@ pub enum SyncOp {
         path: String,
         resolution: Option<ConflictResolution>,
     },
+    LookupCreationMetadata {
+        path: String,
+    },
     InitialSync,
     Reconcile,
 }
@@ -47,6 +50,7 @@ impl SyncOp {
             SyncOp::Rename { .. } => "rename",
             SyncOp::RenameRemote { .. } => "rename_remote",
             SyncOp::ResolveConflict { .. } => "resolve_conflict",
+            SyncOp::LookupCreationMetadata { .. } => "lookup_creation_metadata",
             SyncOp::InitialSync => "initial_sync",
             SyncOp::Reconcile => "reconcile",
         }
@@ -61,6 +65,7 @@ impl SyncOp {
             SyncOp::Rename { old_path, .. } => old_path,
             SyncOp::RenameRemote { old_path, .. } => old_path,
             SyncOp::ResolveConflict { path, .. } => path,
+            SyncOp::LookupCreationMetadata { path } => path,
             SyncOp::InitialSync => "",
             SyncOp::Reconcile => "",
         }
@@ -124,6 +129,9 @@ impl SyncOp {
                     resolution,
                 })
             }
+            "lookup_creation_metadata" => Some(SyncOp::LookupCreationMetadata {
+                path: row.path.clone(),
+            }),
             "initial_sync" => Some(SyncOp::InitialSync),
             "reconcile" => Some(SyncOp::Reconcile),
             _ => None,
@@ -235,11 +243,30 @@ impl SyncQueue {
         Ok(count)
     }
 
-    pub fn push(&mut self, op: SyncOp, priority: u32) {
+    pub fn push(&mut self, mut op: SyncOp, priority: u32) {
+        if let SyncOp::Download { path, version } = &mut op {
+            let existing_version = self.heap.iter().find_map(|item| match &item.op {
+                SyncOp::Download {
+                    path: existing_path,
+                    version,
+                } if existing_path == path => Some(*version),
+                _ => None,
+            });
+            if let Some(existing_version) = existing_version {
+                if existing_version >= *version {
+                    return;
+                }
+                *version = (*version).max(existing_version);
+            }
+        }
+        let op_type = op.op_type().to_string();
+        let path = op.path().to_string();
+        self.heap
+            .retain(|item| item.op.op_type() != op_type || item.op.path() != path);
         let id = new_id();
 
         if let Some(ref db) = self.db {
-            let _ = db.remove_duplicate_queue_op(op.op_type(), op.path());
+            let _ = db.remove_duplicate_queue_op(&op_type, &path);
 
             let row = QueueRow {
                 id: id.clone(),
@@ -364,6 +391,10 @@ impl SyncQueue {
         )
     }
 
+    pub fn lookup_creation_metadata(path: String) -> (SyncOp, u32) {
+        (SyncOp::LookupCreationMetadata { path }, 10)
+    }
+
     #[allow(dead_code)]
     pub fn initial_sync() -> (SyncOp, u32) {
         (SyncOp::InitialSync, 20)
@@ -372,5 +403,93 @@ impl SyncQueue {
     #[allow(dead_code)]
     pub fn reconcile() -> (SyncOp, u32) {
         (SyncOp::Reconcile, 90)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use uuid::Uuid;
+
+    fn test_db() -> (std::path::PathBuf, Arc<SyncDb>) {
+        let directory = std::env::temp_dir().join(format!("cortex-sync-queue-{}", Uuid::new_v4()));
+        let db = Arc::new(SyncDb::open(directory.to_str().unwrap()).unwrap());
+        (directory, db)
+    }
+
+    #[test]
+    fn deduplicates_uploads_in_memory_and_sqlite() {
+        let (directory, db) = test_db();
+        let mut queue = SyncQueue::with_db(db.clone());
+        let (first, priority) = SyncQueue::upload("note.md".to_string());
+        queue.push(first, priority);
+        let (second, priority) = SyncQueue::upload("note.md".to_string());
+        queue.push(second, priority);
+
+        assert_eq!(queue.len(), 1);
+        assert_eq!(db.load_pending_queue(now_secs()).unwrap().len(), 1);
+        drop(queue);
+        drop(db);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn keeps_only_the_latest_download_version() {
+        let (directory, db) = test_db();
+        let mut queue = SyncQueue::with_db(db.clone());
+        let (older, priority) = SyncQueue::download("note.md".to_string(), 2);
+        queue.push(older, priority);
+        let (stale, priority) = SyncQueue::download("note.md".to_string(), 1);
+        queue.push(stale, priority);
+        let (newer, priority) = SyncQueue::download("note.md".to_string(), 5);
+        queue.push(newer, priority);
+
+        assert_eq!(queue.len(), 1);
+        let item = queue.pop().unwrap();
+        assert!(matches!(item.op, SyncOp::Download { version: 5, .. }));
+        let rows = db.load_pending_queue(now_secs()).unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].extra_data.as_deref(), Some("5"));
+        drop(queue);
+        drop(db);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn deduplicates_creation_metadata_lookups() {
+        let mut queue = SyncQueue::new();
+        let (first, priority) = SyncQueue::lookup_creation_metadata("note.md".to_string());
+        queue.push(first, priority);
+        let (second, priority) = SyncQueue::lookup_creation_metadata("note.md".to_string());
+        queue.push(second, priority);
+
+        assert_eq!(queue.len(), 1);
+    }
+
+    #[test]
+    fn retry_remains_single_in_memory_and_sqlite() {
+        let (directory, db) = test_db();
+        let mut queue = SyncQueue::with_db(db.clone());
+        let (operation, priority) = SyncQueue::upload("note.md".to_string());
+        queue.push(operation, priority);
+        let item = queue.pop().unwrap();
+        queue.mark_failed(item, "temporary", true);
+
+        assert!(db.load_pending_queue(now_secs()).unwrap().is_empty());
+        assert_eq!(
+            db.load_pending_queue(now_secs() + retry_backoff_secs(0) + 1)
+                .unwrap()
+                .len(),
+            1
+        );
+
+        let (replacement, priority) = SyncQueue::upload("note.md".to_string());
+        queue.push(replacement, priority);
+
+        assert_eq!(queue.len(), 1);
+        assert_eq!(db.load_pending_queue(now_secs()).unwrap().len(), 1);
+        drop(queue);
+        drop(db);
+        std::fs::remove_dir_all(directory).unwrap();
     }
 }

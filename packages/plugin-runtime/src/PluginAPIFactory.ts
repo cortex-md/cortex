@@ -7,6 +7,7 @@ import { createHotkeysAPI } from "./apis/HotkeysAPI"
 import { createMarkdownAPI } from "./apis/MarkdownAPI"
 import { createMetadataAPI } from "./apis/MetadataAPI"
 import { createNotificationsAPI } from "./apis/NotificationsAPI"
+import { createPropertiesAPI } from "./apis/PropertiesAPI"
 import { createSettingsAPI } from "./apis/SettingsAPI"
 import { createThemeAPI } from "./apis/ThemeAPI"
 import { createVaultAPI } from "./apis/VaultAPI"
@@ -29,6 +30,7 @@ export function createPluginAPI(pluginId: string, getVaultPath: () => string | n
 	const workspace = createWorkspaceAPI()
 	const bookmarks = createBookmarksAPI()
 	const notifications = createNotificationsAPI(pluginId)
+	const properties = createPropertiesAPI(pluginId)
 
 	const settingsWithSchema: PluginAPI["settings"] = {
 		...settings,
@@ -51,6 +53,7 @@ export function createPluginAPI(pluginId: string, getVaultPath: () => string | n
 		workspace,
 		bookmarks,
 		notifications,
+		properties,
 
 		ui: {
 			registerView(registration) {

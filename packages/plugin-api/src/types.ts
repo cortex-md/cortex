@@ -19,6 +19,7 @@ export type PluginCapability =
 	| "themes"
 	| "bookmarks:read"
 	| "bookmarks:write"
+	| "properties:types"
 	| "notifications"
 
 export interface PluginManifest {
@@ -299,6 +300,32 @@ export interface Theme {
 	colors: Record<string, string>
 }
 
+export type PluginPropertyBaseType =
+	| "text"
+	| "number"
+	| "select"
+	| "person"
+	| "date"
+	| "checkbox"
+	| "url"
+	| "email"
+	| "phone"
+
+export interface PluginPropertyValidationResult {
+	valid: boolean
+	message?: string
+}
+
+export interface PluginPropertyTypeRegistration {
+	type: string
+	baseType: PluginPropertyBaseType
+	displayName: string
+	icon: string
+	deserialize(value: unknown): unknown
+	serialize(value: unknown): unknown
+	validate(value: unknown): PluginPropertyValidationResult
+}
+
 export type WorkspaceOpenTarget = "active" | "left" | "right" | "top" | "bottom"
 
 export interface WorkspaceOpenOptions {
@@ -344,6 +371,10 @@ export interface PluginAPI {
 		registerSemantic(registration: MarkdownSemanticRegistration): Disposable
 		registerProcessor(processor: MarkdownProcessorRegistration): Disposable
 		registerCalloutType(registration: CalloutTypeRegistration): Disposable
+	}
+
+	properties: {
+		registerType(registration: PluginPropertyTypeRegistration): Disposable
 	}
 
 	ui: {

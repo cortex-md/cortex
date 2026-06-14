@@ -1,5 +1,6 @@
 import type {
 	FileEntry,
+	FileMetadata,
 	FileSystem as IFileSystem,
 	WatchEvent,
 	WatchOptions,
@@ -14,6 +15,10 @@ export class FileSystem implements IFileSystem {
 
 	async writeFile(path: string, content: string): Promise<void> {
 		await invoke<void>("write_file", { path, content })
+	}
+
+	async atomicWriteFile(path: string, content: string): Promise<void> {
+		await invoke<void>("atomic_write_file", { path, content })
 	}
 
 	async writeBinaryFile(path: string, data: number[]): Promise<void> {
@@ -38,6 +43,10 @@ export class FileSystem implements IFileSystem {
 
 	async hashFile(path: string): Promise<string> {
 		return await invoke<string>("hash_file", { path })
+	}
+
+	async getFileMetadata(path: string): Promise<FileMetadata> {
+		return await invoke<FileMetadata>("get_file_metadata", { path })
 	}
 
 	async startWatching(

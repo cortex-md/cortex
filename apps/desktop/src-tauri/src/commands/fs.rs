@@ -4,6 +4,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
+use crate::atomic_fs::atomic_write_string;
+
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FileEntry {
@@ -12,6 +14,13 @@ pub struct FileEntry {
     pub is_dir: bool,
     pub size: u64,
     pub mtime: u64,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FileMetadata {
+    pub created_at: u64,
+    pub modified_at: u64,
 }
 
 #[tauri::command]
@@ -25,6 +34,11 @@ pub fn write_file(path: String, content: String) -> Result<(), String> {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     fs::write(&path, content).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn atomic_write_file(path: String, content: String) -> Result<(), String> {
+    atomic_write_string(Path::new(&path), &content)
 }
 
 #[tauri::command]
@@ -108,6 +122,24 @@ pub fn hash_file(path: String) -> Result<String, String> {
     let data = fs::read(&path).map_err(|e| e.to_string())?;
     let hash = blake3::hash(&data);
     Ok(hash.to_hex().to_string())
+}
+
+#[tauri::command]
+pub fn get_file_metadata(path: String) -> Result<FileMetadata, String> {
+    let metadata = fs::metadata(path).map_err(|e| e.to_string())?;
+    let modified = metadata
+        .modified()
+        .unwrap_or_else(|_| std::time::SystemTime::now());
+    let created = metadata.created().unwrap_or(modified);
+    let to_millis = |time: std::time::SystemTime| {
+        time.duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as u64
+    };
+    Ok(FileMetadata {
+        created_at: to_millis(created),
+        modified_at: to_millis(modified),
+    })
 }
 
 #[tauri::command]
@@ -238,6 +270,31 @@ mod tests {
             .map(|entry| entry.unwrap().file_name().to_string_lossy().to_string())
             .collect::<Vec<_>>();
         assert_eq!(names, vec!["note.md"]);
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn atomic_write_path_replaces_existing_content() {
+        let directory = test_directory();
+        let path = directory.join("schema.json");
+        fs::write(&path, "old").unwrap();
+
+        atomic_write_string(&path, "new").unwrap();
+
+        assert_eq!(fs::read_to_string(&path).unwrap(), "new");
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn file_metadata_reports_stable_creation_and_modification_times() {
+        let directory = test_directory();
+        let path = directory.join("note.md");
+        fs::write(&path, "content").unwrap();
+
+        let metadata = get_file_metadata(path.to_string_lossy().to_string()).unwrap();
+
+        assert!(metadata.created_at > 0);
+        assert!(metadata.modified_at >= metadata.created_at);
         fs::remove_dir_all(directory).unwrap();
     }
 }

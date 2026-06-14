@@ -9,7 +9,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::sync::conflict::ConflictResolver;
 use crate::sync::crypto;
-use crate::sync::db::SyncDb;
+use crate::sync::db::{NoteSyncMetadata, SyncDb};
 use crate::sync::downloader::{DownloadResult, Downloader};
 use crate::sync::http::SyncHttpClient;
 use crate::sync::ignore::{should_ignore, SyncPreferences};
@@ -43,6 +43,27 @@ struct SyncFileEvent {
 struct SyncLogEvent {
     level: String,
     message: String,
+}
+
+fn matches_synced_hash(db: Option<&SyncDb>, path: &str, hash: &str) -> bool {
+    db.and_then(|database| database.get_sync_state(path).ok().flatten())
+        .and_then(|state| state.local_hash)
+        .is_some_and(|synced_hash| synced_hash == hash)
+}
+
+fn complete_creation_lookup(db: &SyncDb, path: &str) -> Result<(), String> {
+    db.upsert_note_metadata(
+        path,
+        &NoteSyncMetadata {
+            created_at: None,
+            created_by: None,
+            last_edited_at: None,
+            last_edited_by: None,
+            last_device_id: None,
+            synced: true,
+            creation_lookup_complete: true,
+        },
+    )
 }
 
 pub struct SyncEngine {
@@ -152,8 +173,29 @@ impl SyncEngine {
                                 self.queue.push(op, priority);
                             }
                         }
-                        Some(SyncCommand::RemoteFileChanged { path, version }) => {
+                        Some(SyncCommand::RemoteFileChanged {
+                            path,
+                            version,
+                            actor_id,
+                            device_id,
+                            edited_at,
+                            created,
+                        }) => {
                             if !should_ignore(&path, &self.sync_preferences) {
+                                if let Some(db) = &self.db {
+                                    let _ = db.upsert_note_metadata(
+                                        &path,
+                                        &NoteSyncMetadata {
+                                            created_at: created.then(|| edited_at.clone()).flatten(),
+                                            created_by: created.then(|| actor_id.clone()),
+                                            last_edited_at: edited_at,
+                                            last_edited_by: Some(actor_id),
+                                            last_device_id: Some(device_id),
+                                            synced: true,
+                                            creation_lookup_complete: created,
+                                        },
+                                    );
+                                }
                                 let (op, priority) = SyncQueue::download(path, version);
                                 self.queue.push(op, priority);
                             }
@@ -237,6 +279,9 @@ impl SyncEngine {
             let full_path = std::path::Path::new(vault_path).join(&relative);
             if let Ok(content) = std::fs::read(&full_path) {
                 let new_hash = blake3::hash(&content).to_hex().to_string();
+                if matches_synced_hash(self.db.as_deref(), &relative, &new_hash) {
+                    return;
+                }
 
                 let mut matched_old_path: Option<String> = None;
                 for (del_path, (del_time, del_hash)) in &self.pending_deletes {
@@ -346,6 +391,9 @@ impl SyncEngine {
         self.server_url = Some(server_url);
 
         let initial_ok = self.run_initial_sync().await;
+        if initial_ok {
+            self.enqueue_incomplete_creation_metadata();
+        }
         let sse_started = self.start_sse_listener();
         if initial_ok && sse_started {
             self.set_state(SyncEngineState::Live);
@@ -358,6 +406,9 @@ impl SyncEngine {
     fn reset_engine(&mut self) {
         if let Some(cancel) = self.sse_cancel.take() {
             cancel.cancel();
+        }
+        if let Some(db) = &self.db {
+            let _ = db.remove_queue_ops_by_type("lookup_creation_metadata");
         }
         self.vault_id = None;
         self.vault_path = None;
@@ -478,18 +529,36 @@ impl SyncEngine {
             vek,
             &self.sync_preferences,
         );
-        match reconciler.run(self.last_event_id.as_deref()).await {
+        let reconciled = match reconciler.run(self.last_event_id.as_deref()).await {
             Ok(Some(new_event_id)) => {
                 self.last_event_id = Some(new_event_id.clone());
                 if let Some(ref db) = self.db {
                     let _ = db.set_metadata("last_event_id", &new_event_id);
                 }
+                true
             }
-            Ok(None) => {}
+            Ok(None) => true,
             Err(e) => {
                 self.emit_log("error", &format!("Reconciliation failed: {}", e));
                 self.emit_file_event("", &format!("reconcile-error: {}", e));
+                false
             }
+        };
+        if reconciled {
+            self.enqueue_incomplete_creation_metadata();
+        }
+    }
+
+    fn enqueue_incomplete_creation_metadata(&mut self) {
+        let Some(ref db) = self.db else {
+            return;
+        };
+        let Ok(paths) = db.list_incomplete_creation_metadata() else {
+            return;
+        };
+        for path in paths {
+            let (operation, priority) = SyncQueue::lookup_creation_metadata(path);
+            self.queue.push(operation, priority);
         }
     }
 
@@ -533,9 +602,10 @@ impl SyncEngine {
             id: i64,
             event_type: String,
             file_path: String,
-            #[allow(dead_code)]
             version: Option<u64>,
             device_id: String,
+            actor_id: String,
+            created_at: String,
             metadata: Option<serde_json::Value>,
         }
 
@@ -552,6 +622,24 @@ impl SyncEngine {
             }
             if should_ignore(&event.file_path, &self.sync_preferences) {
                 continue;
+            }
+            if event.event_type != "file_deleted" {
+                if let Some(db) = &self.db {
+                    let _ = db.upsert_note_metadata(
+                        &event.file_path,
+                        &NoteSyncMetadata {
+                            created_at: (event.event_type == "file_created")
+                                .then(|| event.created_at.clone()),
+                            created_by: (event.event_type == "file_created")
+                                .then(|| event.actor_id.clone()),
+                            last_edited_at: Some(event.created_at.clone()),
+                            last_edited_by: Some(event.actor_id.clone()),
+                            last_device_id: Some(event.device_id.clone()),
+                            synced: true,
+                            creation_lookup_complete: event.event_type == "file_created",
+                        },
+                    );
+                }
             }
 
             match event.event_type.as_str() {
@@ -747,6 +835,10 @@ impl SyncEngine {
         let client = &*client_state;
 
         while let Some(item) = self.queue.pop() {
+            let creation_lookup_path = match &item.op {
+                SyncOp::LookupCreationMetadata { path } => Some(path.clone()),
+                _ => None,
+            };
             if self.should_ignore_queue_item(&item.op) {
                 self.queue.mark_completed(&item);
                 continue;
@@ -884,6 +976,32 @@ impl SyncEngine {
                         Ok(())
                     }
                 }
+                SyncOp::LookupCreationMetadata { ref path } => {
+                    let downloader = Downloader::new(client, db, vault_id, vault_path, vek);
+                    match downloader.get_version_history(path).await {
+                        Ok(mut versions) => {
+                            versions.sort_by_key(|version| version.version);
+                            let first = versions.first();
+                            db.upsert_note_metadata(
+                                path,
+                                &NoteSyncMetadata {
+                                    created_at: first
+                                        .and_then(|version| version.created_at.clone()),
+                                    created_by: first.and_then(|version| version.author_id.clone()),
+                                    last_edited_at: None,
+                                    last_edited_by: None,
+                                    last_device_id: None,
+                                    synced: true,
+                                    creation_lookup_complete: true,
+                                },
+                            )
+                        }
+                        Err(error) if error.contains("HTTP 404") => {
+                            complete_creation_lookup(db, path)
+                        }
+                        Err(error) => Err(error),
+                    }
+                }
                 SyncOp::InitialSync => Ok(()),
                 SyncOp::Reconcile => Ok(()),
             };
@@ -895,8 +1013,17 @@ impl SyncEngine {
                 Err(ref e) => {
                     self.emit_log("error", &format!("Sync operation failed: {}", e));
                     let retriable = !e.contains("HTTP 4");
+                    let exhausted = item.retry_count + 1 >= item.max_retries;
+                    if let Some(path) = creation_lookup_path.as_deref() {
+                        if !retriable || exhausted {
+                            let _ = complete_creation_lookup(db, path);
+                        }
+                    }
                     self.queue.mark_failed(item, e, retriable);
                 }
+            }
+            if creation_lookup_path.is_some() {
+                break;
             }
         }
     }
@@ -907,11 +1034,44 @@ impl SyncEngine {
             | SyncOp::Download { path, .. }
             | SyncOp::Delete { path }
             | SyncOp::DeleteRemote { path }
-            | SyncOp::ResolveConflict { path, .. } => should_ignore(path, &self.sync_preferences),
+            | SyncOp::ResolveConflict { path, .. }
+            | SyncOp::LookupCreationMetadata { path } => {
+                should_ignore(path, &self.sync_preferences)
+            }
             SyncOp::Rename { new_path, .. } | SyncOp::RenameRemote { new_path, .. } => {
                 should_ignore(new_path, &self.sync_preferences)
             }
             SyncOp::InitialSync | SyncOp::Reconcile => false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::sync::db::SyncState;
+    use uuid::Uuid;
+
+    #[test]
+    fn recognizes_watcher_echoes_from_synced_downloads() {
+        let directory = std::env::temp_dir().join(format!("cortex-sync-engine-{}", Uuid::new_v4()));
+        let db = SyncDb::open(directory.to_str().unwrap()).unwrap();
+        db.upsert_sync_state(&SyncState {
+            file_path: "note.md".to_string(),
+            local_hash: Some("synced-hash".to_string()),
+            remote_hash: Some("synced-hash".to_string()),
+            ancestor_hash: Some("synced-hash".to_string()),
+            local_mtime: None,
+            remote_mtime: None,
+            sync_status: "synced".to_string(),
+            last_synced_at: None,
+            server_version_id: None,
+        })
+        .unwrap();
+
+        assert!(matches_synced_hash(Some(&db), "note.md", "synced-hash"));
+        assert!(!matches_synced_hash(Some(&db), "note.md", "local-change"));
+        drop(db);
+        std::fs::remove_dir_all(directory).unwrap();
     }
 }

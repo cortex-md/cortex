@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::sync::crypto;
-use crate::sync::db::{SyncDb, SyncState};
+use crate::sync::db::{NoteSyncMetadata, SyncDb, SyncState};
 use crate::sync::http::SyncHttpClient;
 
 pub struct Uploader<'a> {
@@ -65,6 +65,20 @@ impl<'a> Uploader<'a> {
 
         let response_body: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
         let snapshot_id = response_body["snapshot_id"].as_str().map(|s| s.to_string());
+        self.db.upsert_note_metadata(
+            file_path,
+            &NoteSyncMetadata {
+                created_at: response_body["created_at"].as_str().map(String::from),
+                created_by: (response_body["version"].as_u64() == Some(1))
+                    .then(|| response_body["last_modified_by"].as_str().map(String::from))
+                    .flatten(),
+                last_edited_at: response_body["updated_at"].as_str().map(String::from),
+                last_edited_by: response_body["last_modified_by"].as_str().map(String::from),
+                last_device_id: response_body["last_device_id"].as_str().map(String::from),
+                synced: true,
+                creation_lookup_complete: response_body["version"].as_u64() == Some(1),
+            },
+        )?;
 
         let mtime = std::fs::metadata(&full_path)
             .ok()
@@ -126,12 +140,26 @@ impl<'a> Uploader<'a> {
             let body = response.text().await.unwrap_or_default();
             return Err(format!("Rename failed: HTTP {}: {}", status.as_u16(), body));
         }
+        let response_body: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
 
         if let Some(mut state) = self.db.get_sync_state(old_path)? {
             self.db.delete_sync_state(old_path)?;
             state.file_path = new_path.to_string();
             self.db.upsert_sync_state(&state)?;
         }
+        self.db.rename_note_metadata(old_path, new_path)?;
+        self.db.upsert_note_metadata(
+            new_path,
+            &NoteSyncMetadata {
+                created_at: response_body["created_at"].as_str().map(String::from),
+                created_by: None,
+                last_edited_at: response_body["updated_at"].as_str().map(String::from),
+                last_edited_by: response_body["last_modified_by"].as_str().map(String::from),
+                last_device_id: response_body["last_device_id"].as_str().map(String::from),
+                synced: true,
+                creation_lookup_complete: false,
+            },
+        )?;
 
         Ok(())
     }
@@ -143,4 +171,79 @@ fn urlencoded(s: &str) -> String {
         .replace('#', "%23")
         .replace('&', "%26")
         .replace('?', "%3F")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+    use wiremock::matchers::{header, method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    #[tokio::test]
+    async fn duplicate_local_events_result_in_one_upload_request() {
+        let server = MockServer::start().await;
+        let directory = tempdir().unwrap();
+        std::fs::write(directory.path().join("note.md"), b"local note").unwrap();
+        let db = SyncDb::open(directory.path().to_str().unwrap()).unwrap();
+        Mock::given(method("POST"))
+            .and(path("/sync/v1/vaults/vault/files"))
+            .and(header("X-File-Path", "note.md"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "snapshot_id": "snapshot-1",
+                "version": 1,
+                "created_at": "2026-06-14T12:00:00Z",
+                "updated_at": "2026-06-14T12:00:00Z",
+                "last_modified_by": "user-1",
+                "last_device_id": "device-1"
+            })))
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let client = SyncHttpClient::new_for_test(&server.uri());
+        let vek = [7_u8; 32];
+        let uploader = Uploader::new(
+            &client,
+            &db,
+            "vault",
+            directory.path().to_str().unwrap(),
+            &vek,
+        );
+
+        uploader.upload_file("note.md").await.unwrap();
+        uploader.upload_file("note.md").await.unwrap();
+
+        let metadata = db.get_note_metadata("note.md").unwrap().unwrap();
+        assert_eq!(metadata.created_by.as_deref(), Some("user-1"));
+        assert!(metadata.creation_lookup_complete);
+    }
+
+    #[tokio::test]
+    async fn failed_upload_does_not_mark_the_file_as_synced() {
+        let server = MockServer::start().await;
+        let directory = tempdir().unwrap();
+        std::fs::write(directory.path().join("note.md"), b"local note").unwrap();
+        let db = SyncDb::open(directory.path().to_str().unwrap()).unwrap();
+        Mock::given(method("POST"))
+            .and(path("/sync/v1/vaults/vault/files"))
+            .respond_with(ResponseTemplate::new(503))
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let client = SyncHttpClient::new_for_test(&server.uri());
+        let vek = [7_u8; 32];
+        let uploader = Uploader::new(
+            &client,
+            &db,
+            "vault",
+            directory.path().to_str().unwrap(),
+            &vek,
+        );
+
+        assert!(uploader.upload_file("note.md").await.is_err());
+        assert!(db.get_sync_state("note.md").unwrap().is_none());
+        assert!(db.get_note_metadata("note.md").unwrap().is_none());
+    }
 }

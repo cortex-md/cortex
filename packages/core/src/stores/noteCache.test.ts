@@ -269,6 +269,42 @@ describe("handleExternalChange()", () => {
 		expect(listener).not.toHaveBeenCalled()
 	})
 
+	it("coalesces concurrent external events into one disk read", async () => {
+		await seedEntry("old content", "hash-old")
+		let releaseRead: ((content: string) => void) | undefined
+		const pendingRead = new Promise<string>((resolve) => {
+			releaseRead = resolve
+		})
+		mockReadFile.mockReturnValue(pendingRead)
+		mockHashFile.mockResolvedValue("hash-latest")
+		const contentListener = vi.fn()
+		noteCache.onContentChange(FILE_PATH, contentListener)
+
+		const first = noteCache.handleExternalChange(FILE_PATH, "hash-first")
+		const second = noteCache.handleExternalChange(FILE_PATH, "hash-latest")
+		releaseRead?.("latest content")
+		await Promise.all([first, second])
+
+		expect(mockReadFile).toHaveBeenCalledTimes(2)
+		expect(contentListener).toHaveBeenCalledTimes(1)
+		expect(noteCache.getEntry(FILE_PATH)?.content).toBe("latest content")
+	})
+
+	it("does not publish an external event when only the hash changes", async () => {
+		await seedEntry("same content", "hash-old")
+		mockReadFile.mockResolvedValue("same content")
+		mockHashFile.mockResolvedValue("hash-new")
+		const contentListener = vi.fn()
+		const externalListener = vi.fn()
+		noteCache.onContentChange(FILE_PATH, contentListener)
+		noteCache.onExternalChange(externalListener)
+
+		await noteCache.handleExternalChange(FILE_PATH, "hash-new")
+
+		expect(contentListener).not.toHaveBeenCalled()
+		expect(externalListener).not.toHaveBeenCalled()
+	})
+
 	it("is a no-op when entry does not exist", async () => {
 		const listener = vi.fn()
 		noteCache.onExternalChange(listener)

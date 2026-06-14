@@ -1,3 +1,4 @@
+mod atomic_fs;
 mod commands;
 mod device;
 mod dock_menu;
@@ -85,6 +86,9 @@ fn position_macos_traffic_lights<R: tauri::Runtime>(window: &tauri::WebviewWindo
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(debug_assertions)]
+    let devtools = tauri_plugin_devtools::init();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
@@ -96,14 +100,17 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(devtools)
         .invoke_handler(tauri::generate_handler![
             commands::fs::read_file,
             commands::fs::write_file,
+            commands::fs::atomic_write_file,
             commands::fs::write_binary_file,
             commands::fs::delete_file,
             commands::fs::rename_file,
             commands::fs::create_dir,
             commands::fs::hash_file,
+            commands::fs::get_file_metadata,
             commands::fs::list_dir,
             commands::fs::download_file,
             commands::fs::download_text,
@@ -134,6 +141,7 @@ pub fn run() {
             commands::sync::sync_resolve_conflict,
             commands::sync::sync_get_conflicts,
             commands::sync::sync_get_version_history,
+            commands::sync::sync_get_note_metadata,
             commands::sync::sync_restore_version,
             commands::sync::sync_download_version,
             commands::sync::sync_list_deleted_files,

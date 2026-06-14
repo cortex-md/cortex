@@ -2,6 +2,7 @@ use std::path::Path;
 
 use serde::Serialize;
 
+use crate::atomic_fs::atomic_write_bytes;
 use crate::sync::crypto;
 use crate::sync::db::{SyncDb, SyncState};
 use crate::sync::http::SyncHttpClient;
@@ -162,19 +163,13 @@ impl<'a> ConflictResolver<'a> {
             ConflictResolution::KeepRemote => {
                 let remote_content = self.download_latest(file_path).await?;
                 let remote_hash = blake3::hash(&remote_content).to_hex().to_string();
-                if let Some(parent) = full_path.parent() {
-                    std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-                }
-                std::fs::write(&full_path, &remote_content).map_err(|e| e.to_string())?;
+                atomic_write_bytes(&full_path, &remote_content)?;
                 self.update_sync_state_resolved(file_path, &remote_hash)?;
             }
             ConflictResolution::Merged { content } => {
                 let bytes = content.as_bytes();
                 let merged_hash = blake3::hash(bytes).to_hex().to_string();
-                if let Some(parent) = full_path.parent() {
-                    std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-                }
-                std::fs::write(&full_path, bytes).map_err(|e| e.to_string())?;
+                atomic_write_bytes(&full_path, bytes)?;
                 self.upload_resolved(file_path, bytes, &merged_hash).await?;
             }
         }

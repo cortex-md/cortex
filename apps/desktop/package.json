@@ -18,6 +18,7 @@
 		"@cortex/platform": "workspace:*",
 		"@cortex/plugin-github-emoji": "workspace:*",
 		"@cortex/plugin-runtime": "workspace:*",
+		"@cortex/properties": "workspace:*",
 		"@cortex/search": "workspace:*",
 		"@cortex/settings": "workspace:*",
 		"@cortex/theme": "workspace:*",

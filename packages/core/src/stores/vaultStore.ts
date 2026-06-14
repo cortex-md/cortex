@@ -1,5 +1,14 @@
 import type { FileEntry, VaultMetadata, VaultRegistryEntry } from "@cortex/platform"
 import { getPlatform } from "@cortex/platform"
+import {
+	createNoteWithPropertyDefaults,
+	getOptionalPropertiesRuntime,
+	invalidatePropertySuggestions,
+	notifyVaultSchemaChanged,
+	prepareDuplicatedNote,
+	removeNotePropertiesUiState,
+	renameNotePropertiesUiState,
+} from "@cortex/properties"
 import { getSettingsManager, initSettingsManager } from "@cortex/settings"
 import { create } from "zustand"
 import { noteCache } from "../noteCache"
@@ -10,6 +19,63 @@ import { useSyncStore } from "./syncStore"
 import { useWorkspaceStore } from "./workspaceStore"
 
 export type { VaultMetadata, VaultRegistryEntry }
+
+const WATCHER_REFRESH_DELAY_MS = 200
+
+let watcherRefreshTimer: ReturnType<typeof setTimeout> | null = null
+let watcherRefreshPromise: Promise<void> | null = null
+let trailingWatcherRefresh: (() => Promise<void>) | null = null
+let watcherRefreshGeneration = 0
+
+function isMarkdownPath(path: string): boolean {
+	return path.toLocaleLowerCase().endsWith(".md")
+}
+
+function isPropertySchemaPath(path: string): boolean {
+	const normalized = path.replaceAll("\\", "/")
+	return (
+		normalized === ".cortex/schema/properties.json" ||
+		normalized.endsWith("/.cortex/schema/properties.json")
+	)
+}
+
+function startWatcherRefresh(refreshFiles: () => Promise<void>, generation: number): void {
+	if (watcherRefreshPromise) {
+		trailingWatcherRefresh = refreshFiles
+		return
+	}
+
+	watcherRefreshPromise = (async () => {
+		let nextRefresh: (() => Promise<void>) | null = refreshFiles
+		while (nextRefresh && generation === watcherRefreshGeneration) {
+			await nextRefresh()
+			if (generation !== watcherRefreshGeneration) break
+			nextRefresh = trailingWatcherRefresh
+			trailingWatcherRefresh = null
+		}
+	})().finally(() => {
+		watcherRefreshPromise = null
+		const nextRefresh = trailingWatcherRefresh
+		trailingWatcherRefresh = null
+		if (nextRefresh) startWatcherRefresh(nextRefresh, watcherRefreshGeneration)
+	})
+}
+
+function scheduleWatcherRefresh(refreshFiles: () => Promise<void>): void {
+	if (watcherRefreshTimer) clearTimeout(watcherRefreshTimer)
+	const generation = watcherRefreshGeneration
+	watcherRefreshTimer = setTimeout(() => {
+		watcherRefreshTimer = null
+		startWatcherRefresh(refreshFiles, generation)
+	}, WATCHER_REFRESH_DELAY_MS)
+}
+
+function clearWatcherRefresh(): void {
+	if (watcherRefreshTimer) clearTimeout(watcherRefreshTimer)
+	watcherRefreshTimer = null
+	trailingWatcherRefresh = null
+	watcherRefreshGeneration += 1
+}
 
 export interface VaultState {
 	vault: VaultMetadata | null
@@ -59,8 +125,14 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 			const files = await platform.vault.scanVault(path)
 
 			const stopWatcher = await platform.fs.startWatching(path, async (event) => {
-				void get().refreshFiles()
+				scheduleWatcherRefresh(get().refreshFiles)
+				if (isPropertySchemaPath(event.path)) {
+					notifyVaultSchemaChanged(path)
+				} else if (isMarkdownPath(event.path)) {
+					invalidatePropertySuggestions(path)
+				}
 				if (event.kind !== "created" && event.kind !== "modified") return
+				if (!noteCache.getEntry(event.path)) return
 				try {
 					const hash = await platform.fs.hashFile(event.path)
 					await noteCache.handleExternalChange(event.path, hash)
@@ -110,6 +182,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 	closeVault: async () => {
 		const { stopWatcher } = get()
 		stopWatcher?.()
+		clearWatcherRefresh()
 		await getSettingsManager().flush()
 		set({
 			vault: null,
@@ -162,9 +235,13 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 		const platform = getPlatform()
 		const fileName = name.endsWith(".md") ? name : `${name}.md`
 		const filePath = `${parentPath}/${fileName}`
-		const content = createDefaultFrontmatter()
+		const content = await createNoteWithPropertyDefaults(
+			get().vault?.path ?? parentPath,
+			createDefaultFrontmatter(),
+		)
 		await platform.fs.writeFile(filePath, content)
 		await get().refreshFiles()
+		invalidatePropertySuggestions(get().vault?.path)
 		return filePath
 	},
 
@@ -178,8 +255,13 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
 	deleteFile: async (filePath) => {
 		const platform = getPlatform()
+		const vaultPath = get().vault?.path
 		await platform.fs.deleteFile(filePath)
+		if (vaultPath && getOptionalPropertiesRuntime()) {
+			await removeNotePropertiesUiState(vaultPath, filePath)
+		}
 		await get().refreshFiles()
+		if (vaultPath && isMarkdownPath(filePath)) invalidatePropertySuggestions(vaultPath)
 	},
 
 	renameFile: async (oldPath, newName) => {
@@ -197,8 +279,14 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 		const vaultPath = get().vault?.path
 		if (vaultPath) {
 			await useBookmarksStore.getState().renameBookmark(vaultPath, oldPath, newPath)
+			if (getOptionalPropertiesRuntime()) {
+				await renameNotePropertiesUiState(vaultPath, oldPath, newPath)
+			}
 		}
 		await get().refreshFiles()
+		if (vaultPath && (isMarkdownPath(oldPath) || isMarkdownPath(newPath))) {
+			invalidatePropertySuggestions(vaultPath)
+		}
 		return newPath
 	},
 
@@ -209,8 +297,11 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 		const extension = ext > 0 ? filePath.substring(ext) : ""
 		const newPath = `${basePath} (copy)${extension}`
 		const content = await platform.fs.readFile(filePath)
-		await platform.fs.writeFile(newPath, content)
+		const vaultPath = get().vault?.path
+		const duplicatedContent = vaultPath ? await prepareDuplicatedNote(vaultPath, content) : content
+		await platform.fs.writeFile(newPath, duplicatedContent)
 		await get().refreshFiles()
+		if (vaultPath && isMarkdownPath(newPath)) invalidatePropertySuggestions(vaultPath)
 		return newPath
 	},
 
@@ -232,12 +323,16 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 			await platform.fs.createDir(dailyDir)
 		}
 
-		const content = createDefaultFrontmatter({
-			tags: ["daily"],
-			extraFields: { date: dateStr },
-		})
+		const content = await createNoteWithPropertyDefaults(
+			vault.path,
+			createDefaultFrontmatter({
+				tags: ["daily"],
+				extraFields: { date: dateStr },
+			}),
+		)
 		await platform.fs.writeFile(filePath, `${content}\n# ${dateStr}\n\n`)
 		await get().refreshFiles()
+		invalidatePropertySuggestions(vault.path)
 		return filePath
 	},
 }))

@@ -9,6 +9,7 @@ import type {
 	VersionInfo,
 } from "@cortex/platform"
 import { getPlatform } from "@cortex/platform"
+import { notifyVaultSchemaChanged } from "@cortex/properties"
 import { create } from "zustand"
 import { devtools } from "zustand/middleware"
 import { immer } from "zustand/middleware/immer"
@@ -243,6 +244,8 @@ export function shouldIgnoreSyncPath(relativePath: string, preferences: SyncPref
 		: normalized.startsWith(".cortex/")
 			? normalized.slice(".cortex/".length)
 			: normalized
+
+	if (cortexFile === "schema/properties.json") return false
 
 	if (
 		cortexFile === "sync-preferences.json" ||
@@ -545,7 +548,7 @@ export const useSyncStore = create<SyncState>()(
 					})
 				})
 
-				const unlistenFile = await platform.sync.onFileEvent(async (event) => {
+				const unlistenFile = await platform.sync.onFileEvent((event) => {
 					set((state) => {
 						if (
 							event.status === "synced" ||
@@ -561,15 +564,14 @@ export const useSyncStore = create<SyncState>()(
 						}
 					})
 
-					if (event.path && (event.status === "synced" || event.status === "merged")) {
-						const { useVaultStore } = await import("./vaultStore")
-						const vault = useVaultStore.getState().vault
-						if (vault?.path) {
-							const { noteCache } = await import("../noteCache")
-							const absolutePath = `${vault.path}/${event.path}`
-							const hash = await platform.fs.hashFile(absolutePath)
-							await noteCache.handleExternalChange(absolutePath, hash)
-						}
+					if (
+						event.path === ".cortex/schema/properties.json" &&
+						(event.status === "synced" || event.status === "merged")
+					) {
+						void import("./vaultStore").then(({ useVaultStore }) => {
+							const vaultPath = useVaultStore.getState().vault?.path
+							if (vaultPath) notifyVaultSchemaChanged(vaultPath)
+						})
 					}
 				})
 

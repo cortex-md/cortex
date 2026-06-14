@@ -1,9 +1,7 @@
-import { parseFrontmatter } from "@cortex/core"
+import { parseFrontmatter } from "@cortex/properties"
 
 export function stripMarkdown(raw: string): string {
-	let text = raw
-
-	text = text.replace(/^---\n[\s\S]*?\n---\n?/, "")
+	let text = parseFrontmatter(raw).body
 
 	text = text.replace(/```[\s\S]*?```/g, "")
 	text = text.replace(/`[^`]+`/g, "")
@@ -34,8 +32,8 @@ export function extractFrontmatter(raw: string): {
 } {
 	const parsed = parseFrontmatter(raw)
 	return {
-		tags: parsed.frontmatter?.tags ?? [],
-		aliases: parsed.frontmatter?.aliases ?? [],
+		tags: Array.isArray(parsed.meta.tags) ? parsed.meta.tags.map(String) : [],
+		aliases: Array.isArray(parsed.meta.aliases) ? parsed.meta.aliases.map(String) : [],
 		content: parsed.body,
 	}
 }

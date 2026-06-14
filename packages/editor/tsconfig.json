@@ -19,5 +19,6 @@
 			"@/*": ["./*"]
 		}
 	},
-	"include": ["src"]
+	"include": ["src"],
+	"references": [{ "path": "../properties" }, { "path": "../renderer" }]
 }

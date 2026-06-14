@@ -16,7 +16,7 @@ const USER_EMAIL_KEY: &str = "user_email";
 pub struct SyncHttpClient {
     client: Client,
     server_url: Mutex<String>,
-    app: AppHandle,
+    app: Option<AppHandle>,
     refresh_lock: AsyncMutex<()>,
 }
 
@@ -25,7 +25,17 @@ impl SyncHttpClient {
         Self {
             client: Client::new(),
             server_url: Mutex::new(String::new()),
-            app,
+            app: Some(app),
+            refresh_lock: AsyncMutex::new(()),
+        }
+    }
+
+    #[cfg(test)]
+    pub fn new_for_test(server_url: &str) -> Self {
+        Self {
+            client: Client::new(),
+            server_url: Mutex::new(normalize_server_url(server_url)),
+            app: None,
             refresh_lock: AsyncMutex::new(()),
         }
     }
@@ -47,6 +57,9 @@ impl SyncHttpClient {
     }
 
     async fn inject_auth_headers(&self, builder: RequestBuilder) -> Result<RequestBuilder, String> {
+        if self.app.is_none() {
+            return Ok(builder);
+        }
         let server_url = self.get_server_url();
         migrate_legacy_auth(&server_url)?;
         let access_token = get_access_token_for_server(&server_url)?;
@@ -194,6 +207,9 @@ impl SyncHttpClient {
 
     async fn refresh_tokens_internal(&self) -> Result<(), String> {
         let _guard = self.refresh_lock.lock().await;
+        let app = self.app.as_ref().ok_or_else(|| {
+            "Authentication is unavailable without an application context".to_string()
+        })?;
 
         let server_url = self.get_server_url();
         migrate_legacy_auth(&server_url)?;
@@ -214,7 +230,7 @@ impl SyncHttpClient {
 
         if status.as_u16() == 401 || status.as_u16() == 403 {
             clear_tokens_and_user_info_for_server(&server_url)?;
-            let _ = self.app.emit("auth-session-expired", ());
+            let _ = app.emit("auth-session-expired", ());
             return Err("Session expired: refresh token revoked or invalid".to_string());
         }
 

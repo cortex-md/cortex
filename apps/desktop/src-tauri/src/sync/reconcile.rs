@@ -4,7 +4,7 @@ use std::path::Path;
 use serde::Deserialize;
 use tauri::{AppHandle, Emitter};
 
-use crate::sync::db::{SyncDb, SyncState};
+use crate::sync::db::{NoteSyncMetadata, SyncDb, SyncState};
 use crate::sync::downloader::{DownloadResult, Downloader};
 use crate::sync::http::SyncHttpClient;
 use crate::sync::ignore::{should_ignore, SyncPreferences};
@@ -22,11 +22,9 @@ struct ChangeEvent {
     file_path: String,
     #[allow(dead_code)]
     version: Option<u64>,
-    #[allow(dead_code)]
     actor_id: String,
     device_id: String,
     metadata: Option<serde_json::Value>,
-    #[allow(dead_code)]
     created_at: String,
 }
 
@@ -35,15 +33,16 @@ struct ChangeEvent {
 struct RemoteFileInfo {
     file_path: String,
     checksum: Option<String>,
-    #[allow(dead_code)]
     version: Option<u64>,
     #[allow(dead_code)]
     snapshot_id: Option<String>,
     deleted: Option<bool>,
     #[allow(dead_code)]
     size_bytes: Option<u64>,
-    #[allow(dead_code)]
     updated_at: Option<String>,
+    created_at: Option<String>,
+    last_modified_by: Option<String>,
+    last_device_id: Option<String>,
 }
 
 struct LocalFileInfo {
@@ -52,6 +51,7 @@ struct LocalFileInfo {
     size: u64,
 }
 
+#[derive(Debug, PartialEq)]
 enum ReconcileAction {
     Download { path: String },
     Upload { path: String },
@@ -146,8 +146,29 @@ impl<'a> Reconciler<'a> {
                 break;
             }
 
-            let actions = self.events_to_actions(&events);
-            self.execute_actions(&actions).await;
+            for event in &events {
+                if event.event_type == "file_deleted" {
+                    continue;
+                }
+                self.db.upsert_note_metadata(
+                    &event.file_path,
+                    &NoteSyncMetadata {
+                        created_at: (event.event_type == "file_created")
+                            .then(|| event.created_at.clone()),
+                        created_by: (event.event_type == "file_created")
+                            .then(|| event.actor_id.clone()),
+                        last_edited_at: Some(event.created_at.clone()),
+                        last_edited_by: Some(event.actor_id.clone()),
+                        last_device_id: Some(event.device_id.clone()),
+                        synced: true,
+                        creation_lookup_complete: event.event_type == "file_created",
+                    },
+                )?;
+            }
+
+            let actions =
+                Self::events_to_actions(&events, &self.own_device_id, self.sync_preferences);
+            self.execute_actions(&actions).await?;
 
             if let Some(last) = events.last() {
                 let new_id = last.id.to_string();
@@ -167,27 +188,52 @@ impl<'a> Reconciler<'a> {
 
     async fn full_reconcile(&self) -> Result<Option<String>, String> {
         let remote_files = self.fetch_remote_file_list().await?;
+        for remote in &remote_files {
+            self.db.upsert_note_metadata(
+                &remote.file_path,
+                &NoteSyncMetadata {
+                    created_at: remote.created_at.clone(),
+                    created_by: (remote.version == Some(1))
+                        .then(|| remote.last_modified_by.clone())
+                        .flatten(),
+                    last_edited_at: remote.updated_at.clone(),
+                    last_edited_by: remote.last_modified_by.clone(),
+                    last_device_id: remote.last_device_id.clone(),
+                    synced: true,
+                    creation_lookup_complete: remote.version == Some(1),
+                },
+            )?;
+        }
         let local_states = self.db.list_all_sync_states()?;
         let local_disk = self.scan_local_files()?;
 
-        let actions = self.compute_full_actions(&remote_files, &local_states, &local_disk);
+        let actions = Self::compute_full_actions(
+            &remote_files,
+            &local_states,
+            &local_disk,
+            self.sync_preferences,
+        );
 
-        self.execute_actions(&actions).await;
+        self.execute_actions(&actions).await?;
         self.save_reconcile_timestamp()?;
 
         let latest_event_id = self.fetch_latest_event_id().await?;
         Ok(latest_event_id)
     }
 
-    fn events_to_actions(&self, events: &[ChangeEvent]) -> Vec<ReconcileAction> {
+    fn events_to_actions(
+        events: &[ChangeEvent],
+        own_device_id: &str,
+        sync_preferences: &SyncPreferences,
+    ) -> Vec<ReconcileAction> {
         let mut actions = Vec::new();
         let mut seen_paths: HashMap<String, usize> = HashMap::new();
 
         for event in events {
-            if event.device_id == self.own_device_id {
+            if event.device_id == own_device_id {
                 continue;
             }
-            if should_ignore(&event.file_path, self.sync_preferences) {
+            if should_ignore(&event.file_path, sync_preferences) {
                 continue;
             }
 
@@ -242,10 +288,10 @@ impl<'a> Reconciler<'a> {
     }
 
     fn compute_full_actions(
-        &self,
         remote_files: &[RemoteFileInfo],
         local_states: &[SyncState],
         local_disk: &HashMap<String, LocalFileInfo>,
+        sync_preferences: &SyncPreferences,
     ) -> Vec<ReconcileAction> {
         let mut actions = Vec::new();
 
@@ -261,9 +307,20 @@ impl<'a> Reconciler<'a> {
 
         for remote in remote_files {
             if remote.deleted.unwrap_or(false) {
+                if local_disk.contains_key(&remote.file_path) {
+                    if state_map.contains_key(remote.file_path.as_str()) {
+                        actions.push(ReconcileAction::Delete {
+                            path: remote.file_path.clone(),
+                        });
+                    } else {
+                        actions.push(ReconcileAction::Upload {
+                            path: remote.file_path.clone(),
+                        });
+                    }
+                }
                 continue;
             }
-            if should_ignore(&remote.file_path, self.sync_preferences) {
+            if should_ignore(&remote.file_path, sync_preferences) {
                 continue;
             }
 
@@ -305,9 +362,7 @@ impl<'a> Reconciler<'a> {
         }
 
         for (path, _) in local_disk {
-            if !remote_map.contains_key(path.as_str())
-                && !should_ignore(path, self.sync_preferences)
-            {
+            if !remote_map.contains_key(path.as_str()) && !should_ignore(path, sync_preferences) {
                 let db_state = state_map.get(path.as_str());
                 if db_state.is_some() {
                     actions.push(ReconcileAction::Delete { path: path.clone() });
@@ -320,7 +375,7 @@ impl<'a> Reconciler<'a> {
         actions
     }
 
-    async fn execute_actions(&self, actions: &[ReconcileAction]) {
+    async fn execute_actions(&self, actions: &[ReconcileAction]) -> Result<(), String> {
         for action in actions {
             match action {
                 ReconcileAction::Download { path } => {
@@ -347,7 +402,10 @@ impl<'a> Reconciler<'a> {
                                 .app
                                 .emit("sync-conflict", serde_json::json!({ "path": path }));
                         }
-                        Err(e) => self.emit_file_event(path, &format!("error: {}", e)),
+                        Err(e) => {
+                            self.emit_file_event(path, &format!("error: {}", e));
+                            return Err(e);
+                        }
                     }
                 }
                 ReconcileAction::Upload { path } => {
@@ -364,16 +422,19 @@ impl<'a> Reconciler<'a> {
                             self.emit_log("info", &format!("Pushed: {}", path));
                             self.emit_file_event(path, "synced")
                         }
-                        Err(e) => self.emit_file_event(path, &format!("error: {}", e)),
+                        Err(e) => {
+                            self.emit_file_event(path, &format!("error: {}", e));
+                            return Err(e);
+                        }
                     }
                 }
                 ReconcileAction::Delete { path } => {
                     self.emit_file_event(path, "deleting");
                     let full_path = Path::new(self.vault_path).join(path);
                     if full_path.exists() {
-                        let _ = std::fs::remove_file(&full_path);
+                        std::fs::remove_file(&full_path).map_err(|error| error.to_string())?;
                     }
-                    let _ = self.db.delete_sync_state(path);
+                    self.db.delete_sync_state(path)?;
                     self.emit_log("info", &format!("Deleted locally: {}", path));
                     self.emit_file_event(path, "deleted");
                 }
@@ -388,11 +449,15 @@ impl<'a> Reconciler<'a> {
                     );
                     match downloader.rename_local_file(old_path, new_path).await {
                         Ok(()) => self.emit_file_event(new_path, "synced"),
-                        Err(e) => self.emit_file_event(old_path, &format!("error: {}", e)),
+                        Err(e) => {
+                            self.emit_file_event(old_path, &format!("error: {}", e));
+                            return Err(e);
+                        }
                     }
                 }
             }
         }
+        Ok(())
     }
 
     async fn fetch_remote_file_list(&self) -> Result<Vec<RemoteFileInfo>, String> {
@@ -484,6 +549,131 @@ impl<'a> Reconciler<'a> {
         let _ = self.app.emit(
             "sync-log",
             serde_json::json!({ "level": level, "message": message }),
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn remote_file(path: &str, checksum: &str, deleted: bool) -> RemoteFileInfo {
+        RemoteFileInfo {
+            file_path: path.to_string(),
+            checksum: Some(checksum.to_string()),
+            version: Some(2),
+            snapshot_id: None,
+            deleted: Some(deleted),
+            size_bytes: None,
+            updated_at: None,
+            created_at: None,
+            last_modified_by: None,
+            last_device_id: None,
+        }
+    }
+
+    fn sync_state(path: &str, ancestor_hash: &str) -> SyncState {
+        SyncState {
+            file_path: path.to_string(),
+            local_hash: Some(ancestor_hash.to_string()),
+            remote_hash: Some(ancestor_hash.to_string()),
+            ancestor_hash: Some(ancestor_hash.to_string()),
+            local_mtime: None,
+            remote_mtime: None,
+            sync_status: "synced".to_string(),
+            last_synced_at: None,
+            server_version_id: None,
+        }
+    }
+
+    fn local_file(hash: &str) -> LocalFileInfo {
+        LocalFileInfo {
+            hash: hash.to_string(),
+            size: 0,
+        }
+    }
+
+    fn change_event(path: &str, device_id: &str, id: i64) -> ChangeEvent {
+        ChangeEvent {
+            id,
+            vault_id: "vault".to_string(),
+            event_type: "file_updated".to_string(),
+            file_path: path.to_string(),
+            version: Some(id as u64),
+            actor_id: "user-1".to_string(),
+            device_id: device_id.to_string(),
+            metadata: None,
+            created_at: "2026-06-14T12:00:00Z".to_string(),
+        }
+    }
+
+    #[test]
+    fn full_reconcile_classifies_equal_remote_local_deleted_and_missing_files() {
+        let remote = vec![
+            remote_file("same.md", "same", false),
+            remote_file("remote.md", "remote", false),
+            remote_file("pull.md", "remote-new", false),
+            remote_file("push.md", "ancestor", false),
+            remote_file("deleted.md", "old", true),
+        ];
+        let states = vec![
+            sync_state("same.md", "same"),
+            sync_state("pull.md", "ancestor"),
+            sync_state("push.md", "ancestor"),
+            sync_state("deleted.md", "old"),
+            sync_state("removed-remotely.md", "old"),
+        ];
+        let local = HashMap::from([
+            ("same.md".to_string(), local_file("same")),
+            ("pull.md".to_string(), local_file("ancestor")),
+            ("push.md".to_string(), local_file("local-new")),
+            ("deleted.md".to_string(), local_file("old")),
+            ("removed-remotely.md".to_string(), local_file("old")),
+            ("local.md".to_string(), local_file("local")),
+        ]);
+
+        let actions =
+            Reconciler::compute_full_actions(&remote, &states, &local, &SyncPreferences::default());
+
+        assert!(!actions.iter().any(|action| {
+            matches!(action, ReconcileAction::Download { path } if path == "same.md")
+        }));
+        assert!(actions.contains(&ReconcileAction::Download {
+            path: "remote.md".to_string(),
+        }));
+        assert!(actions.contains(&ReconcileAction::Download {
+            path: "pull.md".to_string(),
+        }));
+        assert!(actions.contains(&ReconcileAction::Upload {
+            path: "push.md".to_string(),
+        }));
+        assert!(actions.contains(&ReconcileAction::Delete {
+            path: "deleted.md".to_string(),
+        }));
+        assert!(actions.contains(&ReconcileAction::Delete {
+            path: "removed-remotely.md".to_string(),
+        }));
+        assert!(actions.contains(&ReconcileAction::Upload {
+            path: "local.md".to_string(),
+        }));
+    }
+
+    #[test]
+    fn incremental_reconcile_ignores_own_device_and_keeps_latest_path_event() {
+        let events = vec![
+            change_event("own.md", "device-current", 1),
+            change_event("note.md", "device-other", 2),
+            change_event("note.md", "device-other", 3),
+        ];
+
+        let actions =
+            Reconciler::events_to_actions(&events, "device-current", &SyncPreferences::default());
+
+        assert_eq!(
+            actions,
+            vec![ReconcileAction::Download {
+                path: "note.md".to_string(),
+            }]
         );
     }
 }

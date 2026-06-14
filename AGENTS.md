@@ -156,6 +156,7 @@ bun run tauri build       # Build release binary
 |---------|---------|------------|
 | **ui** | React UI primitives (Button, Input, Command, etc.) | Component functions, CSS class contracts |
 | **core** | Zustand state stores + NoteCache | Stores (vaultStore, editorStore, workspaceStore, uiStore), noteCache |
+| **properties** | Framework-free note property engine | Schemas, YAML codecs, validation, suggestions, system metadata, CM6 extension |
 | **platform** | Abstract platform interface | FileSystem, Dialog, Vault, Storage interfaces + Tauri adapter |
 | **ipc** | Typed IPC wrappers over Tauri | invoke() and event wrappers for commands |
 | **editor** | CodeMirror 6 setup | EditorView, extensions, syntax highlighting |
@@ -253,6 +254,7 @@ The `NoteCache` class (in `@cortex/core`) manages editor file state:
 - **In-memory cache** of file contents and diffs
 - **Auto-save** with 2-second debounce
 - **Snapshots** for undo/redo
+- **Property metadata** is initialized and refreshed through `@cortex/properties` before saves
 - **Lifecycle**: `noteCache.openTab()` on file open, `noteCache.closeTab()` on close
 
 UI doesn't directly access files; it reads/writes through noteCache.
@@ -285,9 +287,20 @@ UI doesn't directly access files; it reads/writes through noteCache.
   registrations win and disposing restores the previous definition. Keep standard aliases intact,
   use `--callout-<type>-color` and `--callout-<type>-bg` for theme defaults, and let explicit plugin
   colors take precedence.
-- `@cortex/renderer` owns Markdown semantics, structured YAML frontmatter parsing, callout models,
-  and reactive Markdown registries. `@cortex/editor` projects those semantics into CodeMirror, and
-  must not create a renderer or reparse table cells inside widgets.
+- `@cortex/properties` owns structured YAML frontmatter parsing, property schemas, note property
+  mutations, body projection helpers, and the metadata-only CodeMirror extension.
+- `select` is the only built-in colored option type. Legacy unavailable property types remain
+  preserved and read-only; do not reinterpret them during schema loads.
+- System note metadata resolves through injected filesystem and sync snapshots. Creation fields and
+  IDs are write-once, while last-edited fields follow the actor and timestamp of the active source.
+  Member and device labels are presentation data and must not replace stored IDs.
+  `@cortex/renderer` owns rendered Markdown semantics and strips frontmatter without rendering a
+  duplicate properties card.
+- Note editors receive only the Markdown body. NoteCache keeps the complete raw note, and desktop
+  recombines body edits with the unchanged frontmatter prefix before writes. Frontmatter must never
+  enter CodeMirror's document, cursor, selection, or coordinate model.
+- `@cortex/editor` projects Markdown semantics into CodeMirror. It must not create a renderer,
+  reparse table cells inside widgets, or reintroduce frontmatter source ranges into note editors.
 - Live Preview uses one block `StateField` and one visible-range `ViewPlugin`. Document changes
   perform one block traversal; visual updates perform one viewport traversal. Selection changes
   rebuild block decorations only when a block changes source/widget mode. Do not override
@@ -469,6 +482,19 @@ Sync logs follow a **single-source-of-truth** model — Rust is the authority fo
 **Never duplicate**: If an event originates in Rust, only Rust logs it. The frontend `onSyncLog` listener bridges Rust logs into `syncLogStore`. Frontend code must NOT add its own log call for the same event.
 
 **Never log tokens or secrets**. Server URLs and vault IDs are safe for debugging self-hosted setups.
+
+### Sync File Authority
+
+- The native watcher is the frontend authority for content that changed on disk. `sync-file-event`
+  updates progress and errors only; it must not call `readFile`, `hashFile`, or refresh NoteCache.
+- Watcher refreshes are debounced and serialized. Keep at most one active vault scan and one trailing
+  scan, and route concurrent changes for an open note through NoteCache's per-path single-flight.
+- `sync.db` is the only source for note sync metadata on the frontend. `Sync.getNoteMetadata`
+  performs a local database read and must never fetch history or contact the server.
+- Rust sync writes replace files atomically before updating `sync.db`. Watcher echoes whose hash
+  already equals `sync_state.local_hash` must not enqueue uploads.
+- Sync queue operations are deduplicated by operation type and path in memory and SQLite. Creation
+  history lookups are low-priority, persisted, and never run during note opening.
 
 ### Sync Ignore Preferences
 Vault-scoped sync ignore preferences live in `<vault>/.cortex/sync-preferences.json`.

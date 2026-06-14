@@ -119,6 +119,10 @@ pub enum SyncCommand {
     RemoteFileChanged {
         path: String,
         version: u64,
+        actor_id: String,
+        device_id: String,
+        edited_at: Option<String>,
+        created: bool,
     },
     RemoteFileDeleted {
         path: String,

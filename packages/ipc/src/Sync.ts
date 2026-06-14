@@ -4,6 +4,7 @@ import type {
 	DeletedFileInfo,
 	InitialSyncProgressEvent,
 	Sync as ISync,
+	NoteSyncMetadata,
 	SyncConflictEvent,
 	SyncFileEvent,
 	SyncPreferences,
@@ -83,6 +84,13 @@ export class Sync implements ISync {
 	): Promise<VersionInfo[]> {
 		return await invoke<VersionInfo[]>("sync_get_version_history", {
 			vaultId,
+			vaultPath,
+			filePath,
+		})
+	}
+
+	async getNoteMetadata(vaultPath: string, filePath: string): Promise<NoteSyncMetadata | null> {
+		return await invoke<NoteSyncMetadata | null>("sync_get_note_metadata", {
 			vaultPath,
 			filePath,
 		})

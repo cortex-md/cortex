@@ -16,6 +16,8 @@ pub struct SseFileEvent {
     pub actor_id: String,
     pub device_id: String,
     #[serde(default)]
+    pub created_at: Option<String>,
+    #[serde(default)]
     pub old_path: Option<String>,
 }
 
@@ -212,6 +214,10 @@ impl SseClient {
                         .send(SyncCommand::RemoteFileChanged {
                             path: event.file_path,
                             version: event.version,
+                            actor_id: event.actor_id,
+                            device_id: event.device_id,
+                            edited_at: event.created_at,
+                            created: event_type == "file_created",
                         })
                         .await;
                 }

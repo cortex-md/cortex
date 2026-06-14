@@ -5,9 +5,11 @@ import ReactDOM from "react-dom/client"
 import App from "./App"
 import { SettingsWindow } from "./features/settings/SettingsWindow"
 import { WebThemeAdapter } from "./features/themes/webThemeAdapter"
+import { initializeDesktopProperties } from "./propertiesRuntime"
 import "./styles.css"
 
 initPlatform(tauriPlatform)
+initializeDesktopProperties()
 initThemeManager("ink", new WebThemeAdapter(), { generateCSSString, generateCSSVariables })
 
 function applyNativeAppearance(snapshot: NativeAppearanceSnapshot) {

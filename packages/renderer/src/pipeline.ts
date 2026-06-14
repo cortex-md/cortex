@@ -9,7 +9,7 @@ import type { Plugin } from "unified"
 import { unified } from "unified"
 import { getCalloutRegistryVersion } from "./callouts"
 import { rehypeCallouts } from "./plugins/callouts"
-import { rehypeInjectFrontmatterCard, remarkStripFrontmatter } from "./plugins/frontmatter"
+import { remarkStripFrontmatter } from "./plugins/frontmatter"
 import { createRehypeSemanticRegistrations } from "./plugins/semanticRegistrations"
 import { rehypeTaskList } from "./plugins/taskList"
 import { rehypeMarkdownUrlPolicy } from "./plugins/urlPolicy"
@@ -157,7 +157,6 @@ export function createRenderer(options: RendererOptions = {}): Renderer {
 		.use(createRehypeSemanticRegistrations(surface))
 		.use(rehypeMarkdownUrlPolicy)
 		.use(rehypeSanitize, markdownSanitizeSchema)
-		.use(rehypeInjectFrontmatterCard)
 		.use(rehypeCallouts)
 		.use(rehypeWikiLinks)
 		.use(rehypeTaskList)

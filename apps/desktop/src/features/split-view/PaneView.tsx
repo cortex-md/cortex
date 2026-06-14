@@ -1,3 +1,4 @@
+import type { TransactionSpec } from "@codemirror/state"
 import type { Pane, Tab } from "@cortex/core"
 import {
 	noteCache,
@@ -19,6 +20,16 @@ import {
 import { useHotkeysStore } from "@cortex/hotkeys"
 import { getPlatform } from "@cortex/platform"
 import { PluginViewRenderer, setEditorViewRef, usePluginStore } from "@cortex/plugin-runtime"
+import {
+	extractFrontmatterBody,
+	type PropertyMap,
+	parseFrontmatter,
+	replaceFrontmatterBody,
+} from "@cortex/properties"
+import {
+	createFrontmatterExtension,
+	updateFrontmatterEditorState,
+} from "@cortex/properties/codemirror"
 import { useSettingsStore } from "@cortex/settings"
 import {
 	Button,
@@ -43,7 +54,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { MenuItem } from "@/utils/context-menu"
 import { NativeMenuActions } from "@/utils/context-menu"
-
+import { NotePropertiesPanel } from "../properties/NotePropertiesPanel"
 import { ConflictBanner } from "../sync/ConflictBanner"
 import { NoteHistoryPanel } from "../sync/NoteHistoryPanel"
 import { TabBar } from "../tabs/TabBar"
@@ -111,14 +122,19 @@ interface TabEditorProps {
 
 interface CMView {
 	state: { doc: { toString(): string; length: number } }
-	dispatch(spec: { changes: { from: number; to: number; insert: string } }): void
+	dispatch(spec: TransactionSpec): void
 }
 
 function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabEditorProps) {
-	const [content, setContent] = useState<string | null>(null)
+	const [rawContent, setRawContent] = useState<string | null>(null)
 	const { markTabDirty } = useWorkspaceStore()
 	const mode = useEditorStore((s) => s.mode)
 	const viewRef = useRef<CMView | null>(null)
+	const rawContentRef = useRef<string | null>(null)
+	const frontmatterStateRef = useRef<{ meta: PropertyMap; error: string | null }>({
+		meta: {},
+		error: null,
+	})
 	const getEditorView = useCallback(
 		() => viewRef.current as import("@codemirror/view").EditorView | null,
 		[],
@@ -164,8 +180,8 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 		[tab.filePath],
 	)
 
-	const clipboardExtensions = useMemo(
-		() => [clipboardImageExtension(handleImagePaste)],
+	const editorExtensions = useMemo(
+		() => [clipboardImageExtension(handleImagePaste), createFrontmatterExtension()],
 		[handleImagePaste],
 	)
 
@@ -178,28 +194,52 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 		return convertFileSrc(absolutePath)
 	}, [])
 
+	const updateProjectedFrontmatter = useCallback((content: string) => {
+		try {
+			const { meta } = parseFrontmatter(content)
+			frontmatterStateRef.current = { meta, error: null }
+		} catch (error) {
+			frontmatterStateRef.current = {
+				meta: {},
+				error: error instanceof Error ? error.message : String(error),
+			}
+		}
+		const view = viewRef.current as import("@codemirror/view").EditorView | null
+		if (view) {
+			updateFrontmatterEditorState(
+				view,
+				frontmatterStateRef.current.meta,
+				frontmatterStateRef.current.error,
+			)
+		}
+	}, [])
+
 	useEffect(() => {
-		noteCache.read(tab.filePath).then(setContent)
-	}, [tab.filePath])
+		rawContentRef.current = null
+		setRawContent(null)
+		noteCache.read(tab.filePath).then((content) => {
+			rawContentRef.current = content
+			setRawContent(content)
+			updateProjectedFrontmatter(content)
+		})
+	}, [tab.filePath, updateProjectedFrontmatter])
 
 	useEffect(() => {
 		const unsubscribe = noteCache.onContentChange(tab.filePath, (_filePath, newContent) => {
-			setContent(newContent)
-			const view = viewRef.current
-			if (!view) return
-			const currentContent = view.state.doc.toString()
-			if (currentContent === newContent) return
-			view.dispatch({
-				changes: { from: 0, to: view.state.doc.length, insert: newContent },
-			})
+			rawContentRef.current = newContent
+			setRawContent(newContent)
+			updateProjectedFrontmatter(newContent)
 		})
 		return unsubscribe
-	}, [tab.filePath])
+	}, [tab.filePath, updateProjectedFrontmatter])
 
 	const handleChange = useCallback(
-		(newContent: string) => {
-			setContent(newContent)
-			noteCache.write(tab.filePath, newContent)
+		(newBody: string) => {
+			const currentRawContent = rawContentRef.current ?? ""
+			const nextRawContent = replaceFrontmatterBody(currentRawContent, newBody)
+			rawContentRef.current = nextRawContent
+			setRawContent(nextRawContent)
+			noteCache.write(tab.filePath, nextRawContent)
 			markTabDirty(tab.id, true)
 		},
 		[tab.filePath, tab.id, markTabDirty],
@@ -212,6 +252,11 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 	const handleViewReady = useCallback(
 		(view: CMView) => {
 			viewRef.current = view
+			updateFrontmatterEditorState(
+				view as import("@codemirror/view").EditorView,
+				frontmatterStateRef.current.meta,
+				frontmatterStateRef.current.error,
+			)
 			if (isActive) setEditorViewRef(view as never)
 		},
 		[isActive],
@@ -250,35 +295,38 @@ function TabEditor({ tab, paneId, isActive, editorConfig, onCursorChange }: TabE
 					>
 						Tab suspended — click to resume
 					</Button>
-				) : content === null ? (
+				) : rawContent === null ? (
 					<div className="flex-1 bg-bg-primary" />
 				) : (
 					<div className="note-document-scroll">
 						<NoteHeader filePath={tab.filePath} />
+						<NotePropertiesPanel filePath={tab.filePath} />
 						<div className="note-document-surface">
 							{mode === "reading" ? (
 								<ReadingView
-									content={content}
+									content={extractFrontmatterBody(rawContent)}
 									scrollMode="parent"
 									onExternalLinkClick={handleExternalLinkClick}
 								/>
 							) : mode === "side-by-side" ? (
 								<SideBySideView
-									content={content}
+									content={extractFrontmatterBody(rawContent)}
 									filePath={tab.filePath}
 									editorConfig={editorConfig}
+									extraExtensions={editorExtensions}
 									scrollMode="parent"
 									onChange={handleChange}
+									onViewReady={handleViewReady}
 									onExternalLinkClick={handleExternalLinkClick}
 								/>
 							) : (
 								<EditorView
-									content={content}
+									content={extractFrontmatterBody(rawContent)}
 									filePath={tab.filePath}
 									editorConfig={editorConfig}
 									livePreview={mode === "live-preview"}
 									resolveImageUrl={resolveImageUrl}
-									extraExtensions={clipboardExtensions}
+									extraExtensions={editorExtensions}
 									scrollMode="parent"
 									onChange={handleChange}
 									onCursorChange={isActive ? onCursorChange : undefined}

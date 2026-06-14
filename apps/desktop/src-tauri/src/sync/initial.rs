@@ -4,8 +4,9 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 
+use crate::atomic_fs::atomic_write_bytes;
 use crate::sync::crypto;
-use crate::sync::db::{SyncDb, SyncState};
+use crate::sync::db::{NoteSyncMetadata, SyncDb, SyncState};
 use crate::sync::http::SyncHttpClient;
 use crate::sync::ignore::{should_ignore, SyncPreferences};
 
@@ -28,11 +29,13 @@ struct RemoteFileInfo {
     deleted: Option<bool>,
     #[allow(dead_code)]
     size_bytes: Option<u64>,
-    #[allow(dead_code)]
     updated_at: Option<String>,
+    created_at: Option<String>,
+    last_modified_by: Option<String>,
+    last_device_id: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum InitialSyncAction {
     Download {
         path: String,
@@ -43,6 +46,9 @@ enum InitialSyncAction {
         path: String,
     },
     Conflict {
+        path: String,
+    },
+    Delete {
         path: String,
     },
 }
@@ -82,16 +88,38 @@ impl<'a> InitialSync<'a> {
         self.emit_progress(0, 0, "listing");
 
         let remote_files = self.fetch_remote_file_list().await?;
+        for remote in &remote_files {
+            self.db.upsert_note_metadata(
+                &remote.file_path,
+                &NoteSyncMetadata {
+                    created_at: remote.created_at.clone(),
+                    created_by: (remote.version == Some(1))
+                        .then(|| remote.last_modified_by.clone())
+                        .flatten(),
+                    last_edited_at: remote.updated_at.clone(),
+                    last_edited_by: remote.last_modified_by.clone(),
+                    last_device_id: remote.last_device_id.clone(),
+                    synced: true,
+                    creation_lookup_complete: remote.version == Some(1),
+                },
+            )?;
+        }
         let local_states = self.db.list_all_sync_states()?;
         let local_disk_files = self.scan_local_files()?;
 
-        let actions = self.compute_actions(&remote_files, &local_states, &local_disk_files);
+        let actions = Self::compute_actions(
+            &remote_files,
+            &local_states,
+            &local_disk_files,
+            self.sync_preferences,
+        );
         let total = actions.len();
 
         self.emit_progress(total, 0, "syncing");
 
         let mut completed = 0;
         let mut batch = Vec::new();
+        let mut first_error = None;
 
         for action in &actions {
             batch.push(action);
@@ -112,6 +140,7 @@ impl<'a> InitialSync<'a> {
                                         &format!("Pull failed: {} — {}", path, e),
                                     );
                                     self.emit_file_event(path, &format!("error: {}", e));
+                                    first_error.get_or_insert(e);
                                 }
                             }
                         }
@@ -128,11 +157,21 @@ impl<'a> InitialSync<'a> {
                                         &format!("Push failed: {} — {}", path, e),
                                     );
                                     self.emit_file_event(path, &format!("error: {}", e));
+                                    first_error.get_or_insert(e);
                                 }
                             }
                         }
                         InitialSyncAction::Conflict { path } => {
                             self.mark_conflict(path)?;
+                        }
+                        InitialSyncAction::Delete { path } => {
+                            let full_path = Path::new(self.vault_path).join(path);
+                            if full_path.exists() {
+                                std::fs::remove_file(&full_path)
+                                    .map_err(|error| error.to_string())?;
+                            }
+                            self.db.delete_sync_state(path)?;
+                            self.emit_file_event(path, "deleted");
                         }
                     }
                     completed += 1;
@@ -142,6 +181,9 @@ impl<'a> InitialSync<'a> {
             }
         }
 
+        if let Some(error) = first_error {
+            return Err(error);
+        }
         self.emit_progress(total, total, "complete");
         let _ = self.app.emit("sync-initial-complete", ());
 
@@ -212,10 +254,10 @@ impl<'a> InitialSync<'a> {
     }
 
     fn compute_actions(
-        &self,
         remote_files: &[RemoteFileInfo],
         local_states: &[SyncState],
         local_disk: &HashMap<String, LocalFileInfo>,
+        sync_preferences: &SyncPreferences,
     ) -> Vec<InitialSyncAction> {
         let mut actions = Vec::new();
 
@@ -231,9 +273,20 @@ impl<'a> InitialSync<'a> {
 
         for remote in remote_files {
             if remote.deleted.unwrap_or(false) {
+                if local_disk.contains_key(&remote.file_path) {
+                    if state_map.contains_key(remote.file_path.as_str()) {
+                        actions.push(InitialSyncAction::Delete {
+                            path: remote.file_path.clone(),
+                        });
+                    } else {
+                        actions.push(InitialSyncAction::Upload {
+                            path: remote.file_path.clone(),
+                        });
+                    }
+                }
                 continue;
             }
-            if should_ignore(&remote.file_path, self.sync_preferences) {
+            if should_ignore(&remote.file_path, sync_preferences) {
                 continue;
             }
 
@@ -278,9 +331,7 @@ impl<'a> InitialSync<'a> {
         }
 
         for (path, _local_info) in local_disk {
-            if !remote_map.contains_key(path.as_str())
-                && !should_ignore(path, self.sync_preferences)
-            {
+            if !remote_map.contains_key(path.as_str()) && !should_ignore(path, sync_preferences) {
                 actions.push(InitialSyncAction::Upload { path: path.clone() });
             }
         }
@@ -289,12 +340,14 @@ impl<'a> InitialSync<'a> {
             let priority_a = match a {
                 InitialSyncAction::Download { .. } => 0,
                 InitialSyncAction::Conflict { .. } => 1,
-                InitialSyncAction::Upload { .. } => 2,
+                InitialSyncAction::Delete { .. } => 2,
+                InitialSyncAction::Upload { .. } => 3,
             };
             let priority_b = match b {
                 InitialSyncAction::Download { .. } => 0,
                 InitialSyncAction::Conflict { .. } => 1,
-                InitialSyncAction::Upload { .. } => 2,
+                InitialSyncAction::Delete { .. } => 2,
+                InitialSyncAction::Upload { .. } => 3,
             };
             priority_a.cmp(&priority_b)
         });
@@ -332,10 +385,7 @@ impl<'a> InitialSync<'a> {
         let remote_hash = blake3::hash(&plaintext).to_hex().to_string();
 
         let full_path = Path::new(self.vault_path).join(file_path);
-        if let Some(parent) = full_path.parent() {
-            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-        }
-        std::fs::write(&full_path, &plaintext).map_err(|e| e.to_string())?;
+        atomic_write_bytes(&full_path, &plaintext)?;
 
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -385,6 +435,20 @@ impl<'a> InitialSync<'a> {
 
         let response_body: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
         let snapshot_id = response_body["snapshot_id"].as_str().map(|s| s.to_string());
+        self.db.upsert_note_metadata(
+            file_path,
+            &NoteSyncMetadata {
+                created_at: response_body["created_at"].as_str().map(String::from),
+                created_by: (response_body["version"].as_u64() == Some(1))
+                    .then(|| response_body["last_modified_by"].as_str().map(String::from))
+                    .flatten(),
+                last_edited_at: response_body["updated_at"].as_str().map(String::from),
+                last_edited_by: response_body["last_modified_by"].as_str().map(String::from),
+                last_device_id: response_body["last_device_id"].as_str().map(String::from),
+                synced: true,
+                creation_lookup_complete: response_body["version"].as_u64() == Some(1),
+            },
+        )?;
 
         let mtime = std::fs::metadata(&full_path)
             .ok()
@@ -465,4 +529,106 @@ fn urlencoded(s: &str) -> String {
         .replace('#', "%23")
         .replace('&', "%26")
         .replace('?', "%3F")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn remote_file(path: &str, checksum: &str, deleted: bool) -> RemoteFileInfo {
+        RemoteFileInfo {
+            file_path: path.to_string(),
+            checksum: Some(checksum.to_string()),
+            version: Some(2),
+            snapshot_id: None,
+            deleted: Some(deleted),
+            size_bytes: None,
+            updated_at: None,
+            created_at: None,
+            last_modified_by: None,
+            last_device_id: None,
+        }
+    }
+
+    fn sync_state(path: &str, ancestor_hash: &str) -> SyncState {
+        SyncState {
+            file_path: path.to_string(),
+            local_hash: Some(ancestor_hash.to_string()),
+            remote_hash: Some(ancestor_hash.to_string()),
+            ancestor_hash: Some(ancestor_hash.to_string()),
+            local_mtime: None,
+            remote_mtime: None,
+            sync_status: "synced".to_string(),
+            last_synced_at: None,
+            server_version_id: None,
+        }
+    }
+
+    fn local_file(hash: &str) -> LocalFileInfo {
+        LocalFileInfo {
+            hash: hash.to_string(),
+            mtime: None,
+            size: 0,
+        }
+    }
+
+    #[test]
+    fn identical_initial_sync_has_no_file_operations() {
+        let remote = vec![remote_file("same.md", "same", false)];
+        let states = vec![sync_state("same.md", "same")];
+        let local = HashMap::from([("same.md".to_string(), local_file("same"))]);
+
+        let actions =
+            InitialSync::compute_actions(&remote, &states, &local, &SyncPreferences::default());
+
+        assert!(actions.is_empty());
+    }
+
+    #[test]
+    fn initial_sync_classifies_remote_local_conflict_and_deleted_files() {
+        let remote = vec![
+            remote_file("remote.md", "remote", false),
+            remote_file("pull.md", "remote-new", false),
+            remote_file("push.md", "ancestor", false),
+            remote_file("conflict.md", "remote-new", false),
+            remote_file("deleted.md", "old", true),
+        ];
+        let states = vec![
+            sync_state("pull.md", "ancestor"),
+            sync_state("push.md", "ancestor"),
+            sync_state("conflict.md", "ancestor"),
+            sync_state("deleted.md", "old"),
+        ];
+        let local = HashMap::from([
+            ("pull.md".to_string(), local_file("ancestor")),
+            ("push.md".to_string(), local_file("local-new")),
+            ("conflict.md".to_string(), local_file("local-new")),
+            ("deleted.md".to_string(), local_file("old")),
+            ("local.md".to_string(), local_file("local")),
+        ]);
+
+        let actions =
+            InitialSync::compute_actions(&remote, &states, &local, &SyncPreferences::default());
+
+        assert!(actions.contains(&InitialSyncAction::Download {
+            path: "remote.md".to_string(),
+            version: 2,
+        }));
+        assert!(actions.contains(&InitialSyncAction::Download {
+            path: "pull.md".to_string(),
+            version: 2,
+        }));
+        assert!(actions.contains(&InitialSyncAction::Upload {
+            path: "push.md".to_string(),
+        }));
+        assert!(actions.contains(&InitialSyncAction::Conflict {
+            path: "conflict.md".to_string(),
+        }));
+        assert!(actions.contains(&InitialSyncAction::Delete {
+            path: "deleted.md".to_string(),
+        }));
+        assert!(actions.contains(&InitialSyncAction::Upload {
+            path: "local.md".to_string(),
+        }));
+    }
 }

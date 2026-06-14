@@ -31,6 +31,7 @@
 		{ "path": "../../packages/plugin-api" },
 		{ "path": "../../packages/plugin-runtime" },
 		{ "path": "../../packages/platform" },
+		{ "path": "../../packages/properties" },
 		{ "path": "../../packages/marketplace" },
 		{ "path": "../../packages/ui" },
 		{ "path": "../../packages/hotkeys" },

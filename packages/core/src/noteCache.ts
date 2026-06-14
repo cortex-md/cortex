@@ -1,4 +1,5 @@
 import { getPlatform } from "@cortex/platform"
+import { prepareNoteForSave } from "@cortex/properties"
 
 export type SnapshotTrigger = "auto" | "manual" | "pre-save" | "pre-sync"
 
@@ -31,6 +32,11 @@ export interface ExternalChangeEvent {
 type ExternalChangeListener = (event: ExternalChangeEvent) => void
 type ContentChangeListener = (filePath: string, content: string) => void
 
+interface ExternalChangeLoad {
+	latestHash: string
+	promise: Promise<void>
+}
+
 const EVICTION_IDLE_MS = 15 * 60 * 1000
 const EVICTION_INTERVAL_MS = 5 * 60 * 1000
 const SNAPSHOT_INTERVAL_MS = 5 * 60 * 1000
@@ -44,6 +50,7 @@ class NoteCache {
 	private snapshotTimers = new Map<string, ReturnType<typeof setInterval>>()
 	private externalChangeListeners: ExternalChangeListener[] = []
 	private contentChangeListeners = new Map<string, Set<ContentChangeListener>>()
+	private externalChangeLoads = new Map<string, ExternalChangeLoad>()
 	private evictionTimer: ReturnType<typeof setInterval> | null = null
 
 	start() {
@@ -167,6 +174,11 @@ class NoteCache {
 		}
 
 		const platform = getPlatform()
+		const preparedContent = await prepareNoteForSave(filePath, entry.content)
+		if (preparedContent !== entry.content) {
+			entry.content = preparedContent
+			this.notifyContentChange(filePath, preparedContent)
+		}
 		this.takeSnapshot(filePath, "pre-save")
 		await platform.fs.writeFile(filePath, entry.content)
 		const hash = await platform.fs.hashFile(filePath)
@@ -265,28 +277,53 @@ class NoteCache {
 			.slice(-SNAPSHOT_MAX_PER_FILE)
 	}
 
-	async handleExternalChange(filePath: string, newHash: string) {
-		const entry = this.entries.get(filePath)
-		if (!entry) return
-		if (newHash === entry.hash) return
+	handleExternalChange(filePath: string, newHash: string): Promise<void> {
+		const existing = this.externalChangeLoads.get(filePath)
+		if (existing) {
+			existing.latestHash = newHash
+			return existing.promise
+		}
+		const load = {
+			latestHash: newHash,
+			promise: Promise.resolve(),
+		}
+		load.promise = this.processExternalChanges(filePath, load).finally(() => {
+			this.externalChangeLoads.delete(filePath)
+		})
+		this.externalChangeLoads.set(filePath, load)
+		return load.promise
+	}
 
-		if (!entry.dirty) {
+	private async processExternalChanges(filePath: string, load: ExternalChangeLoad): Promise<void> {
+		let processedHash: string | null = null
+		while (processedHash !== load.latestHash) {
+			const targetHash: string = load.latestHash
+			const entry = this.entries.get(filePath)
+			if (!entry || targetHash === entry.hash) return
+			if (entry.dirty) {
+				const snapshot = this.takeSnapshot(filePath, "pre-sync")
+				if (snapshot) this.notifyExternalChange({ filePath, kind: "conflict", snapshot })
+				return
+			}
+
 			const platform = getPlatform()
 			const content = await platform.fs.readFile(filePath)
+			const actualHash = await platform.fs.hashFile(filePath)
+			const contentChanged = content !== entry.content
 			entry.content = content
 			entry.diskContent = content
-			entry.hash = newHash
+			entry.hash = actualHash
 			entry.mtime = Date.now()
+			processedHash = targetHash
 
-			this.notifyContentChange(filePath, content)
-			this.notifyExternalChange({
-				filePath,
-				kind: "overwrite",
-				snapshot: { timestamp: Date.now(), content, trigger: "auto" },
-			})
-		} else {
-			const snapshot = this.takeSnapshot(filePath, "pre-sync")!
-			this.notifyExternalChange({ filePath, kind: "conflict", snapshot })
+			if (contentChanged) {
+				this.notifyContentChange(filePath, content)
+				this.notifyExternalChange({
+					filePath,
+					kind: "overwrite",
+					snapshot: { timestamp: Date.now(), content, trigger: "auto" },
+				})
+			}
 		}
 	}
 
@@ -333,6 +370,7 @@ class NoteCache {
 	clear() {
 		this.stop()
 		this.entries.clear()
+		this.externalChangeLoads.clear()
 	}
 }
 

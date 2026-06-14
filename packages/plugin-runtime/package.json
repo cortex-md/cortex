@@ -10,6 +10,7 @@
 		".": "./src/index.ts"
 	},
 	"dependencies": {
+		"@cortex/properties": "workspace:*",
 		"@cortex/renderer": "workspace:*",
 		"cortex-plugin-api": "workspace:*",
 		"@cortex/platform": "workspace:*",

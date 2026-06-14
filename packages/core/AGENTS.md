@@ -323,6 +323,10 @@ export interface SyncState {
 `subscribeEvents()` bridges Rust engine events to Zustand state. It also listens for `sync-log` events from Rust and pipes them into `syncLogStore`. The `onVaultAccessDenied` listener auto-unlinks the vault when a 403 is received.
 Sync preferences are vault-scoped in `.cortex/sync-preferences.json`; `excludedPaths` are gitignore-style patterns that may reference paths not currently present in the vault. Use `normalizeSyncPreferences()` and `normalizeSyncPathPattern()` for migration/input cleanup, and `shouldIgnoreSyncPath()` for UI-only checks that mirror Rust ignore behavior.
 
+`sync-file-event` is state-only. Do not read or hash note files from sync event handlers. The native
+watcher is the authority for disk mutations, while property schema events invalidate the
+framework-free schema subscription without scanning the vault.
+
 **Usage**: `const { engineState, startSync, stopSync } = useSyncStore()`
 
 ### syncLogStore
@@ -377,6 +381,16 @@ const unsub = noteCache.onContentChange(path, (newContent) => {
   // Dispatch CM6 transaction to update editor view
 })
 ```
+
+Before each managed save, NoteCache calls `prepareNoteForSave` from `@cortex/properties` so
+configured IDs, creation metadata, and last-edited metadata remain canonical.
+Filesystem creation metadata is the local fallback. Linked vaults read the device-local sync
+metadata snapshot through the platform abstraction; stores and components must not fetch history
+or members independently to render system properties.
+
+External changes are coordinated per path. Keep one active filesystem read, retain only the newest
+observed hash, and publish content only when bytes changed. Vault watcher bursts use a 200ms
+debounce with one active scan and at most one trailing scan.
 
 **Key features**:
 - Reads from disk on `openTab()`
@@ -439,7 +453,7 @@ Stores **should not directly depend on each other**, but may read state via `get
 ```
 vaultStore (file operations)
   ├─ uses getPlatform() → platform abstraction
-  └─ createFile() auto-generates default frontmatter (created + tags)
+  └─ creates and duplicates notes through @cortex/properties defaults
 
 editorStore (editor state)
   └─ no dependencies
@@ -599,7 +613,8 @@ Stores are tree-shaken at build time, so importing only what you need is efficie
 
 ## Frontmatter Utilities
 
-`@cortex/core` exports centralized frontmatter utilities from `src/utils/frontmatter.ts`:
+`@cortex/properties` owns YAML parsing and targeted frontmatter mutation. `@cortex/core` keeps the
+following compatibility facade for tags and existing plugin metadata consumers:
 
 ```typescript
 import {
@@ -617,11 +632,14 @@ import {
 
 - `parseFrontmatter(content)` — Extracts typed `{ data, body }` from markdown string
 - `createDefaultFrontmatter(options?)` — Generates default YAML block with `created` timestamp and `tags: []`
-- `hasFrontmatter(content)` — Quick regex check
+- `hasFrontmatter(content)` — Checks for a structured YAML frontmatter block
 - `updateFrontmatterField(content, key, value)` — Safely updates a single YAML field
 - `addTagToFrontmatter(content, tag)` / `removeTagFromFrontmatter(content, tag)` — Tag manipulation
 - `extractAllTags(content)` — Returns both YAML frontmatter tags and inline `#hashtags`
 - `extractInlineTags(content)` — Extracts only inline `#hashtags` from body
-- `extractYamlArray(raw)` — Parses YAML-style arrays (inline `[a, b]` or block `- item`)
+- `extractYamlArray(raw)` — Reads an array from parsed YAML
 
-All other packages (`@cortex/search`, `tagsStore`, etc.) should import from here instead of writing inline frontmatter parsers.
+New property and frontmatter behavior belongs in `@cortex/properties`. `tagsStore` may continue to
+use the compatibility facade; other packages should import the canonical properties APIs directly.
+NoteCache always stores complete raw notes. Desktop editors project only the Markdown body and
+recombine edits with the current cached frontmatter prefix before calling `noteCache.write`.

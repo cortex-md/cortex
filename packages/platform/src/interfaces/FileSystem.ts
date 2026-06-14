@@ -6,6 +6,11 @@ export interface FileEntry {
 	mtime?: number
 }
 
+export interface FileMetadata {
+	createdAt: number
+	modifiedAt: number
+}
+
 export interface WatchEvent {
 	path: string
 	kind: "created" | "modified" | "deleted" | "renamed"
@@ -20,12 +25,14 @@ export interface WatchOptions {
 export interface FileSystem {
 	readFile(path: string): Promise<string>
 	writeFile(path: string, content: string): Promise<void>
+	atomicWriteFile(path: string, content: string): Promise<void>
 	writeBinaryFile(path: string, data: number[]): Promise<void>
 	deleteFile(path: string): Promise<void>
 	renameFile(oldPath: string, newPath: string): Promise<void>
 	createDir(path: string): Promise<void>
 	listDir(path: string): Promise<FileEntry[]>
 	hashFile(path: string): Promise<string>
+	getFileMetadata(path: string): Promise<FileMetadata>
 	startWatching(
 		path: string,
 		callback: (event: WatchEvent) => void,

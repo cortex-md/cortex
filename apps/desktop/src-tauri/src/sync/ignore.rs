@@ -335,6 +335,10 @@ pub fn should_ignore(path: &str, prefs: &SyncPreferences) -> bool {
         .or_else(|| normalized.strip_prefix(".cortex/"))
         .unwrap_or(&normalized);
 
+    if cortex_file == "schema/properties.json" {
+        return false;
+    }
+
     if matches!(
         cortex_file,
         "sync-preferences.json" | "sync.db" | "sync.db-wal" | "sync.db-journal" | "sync.db-shm"
@@ -388,6 +392,8 @@ mod tests {
         };
 
         assert!(!should_ignore(".cortex/app.json", &prefs));
+        assert!(!should_ignore(".cortex/schema/properties.json", &prefs));
+        assert!(should_ignore(".cortex/ui-state.json", &prefs));
         assert!(should_ignore(".cortex/sync-preferences.json", &prefs));
         assert!(should_ignore(".cortex/assets/icon.png", &prefs));
     }

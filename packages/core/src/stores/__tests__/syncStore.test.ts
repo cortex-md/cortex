@@ -1,4 +1,5 @@
 import { getPlatform } from "@cortex/platform"
+import { onVaultSchemaChange } from "@cortex/properties"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
 	createDefaultSyncPreferences,
@@ -100,6 +101,12 @@ describe("syncStore preferences", () => {
 		expect(shouldIgnoreSyncPath("attachments/photo.md", preferences)).toBe(false)
 	})
 
+	it("syncs the property schema while keeping property UI state local", () => {
+		const preferences = createDefaultSyncPreferences()
+		expect(shouldIgnoreSyncPath(".cortex/schema/properties.json", preferences)).toBe(false)
+		expect(shouldIgnoreSyncPath(".cortex/ui-state.json", preferences)).toBe(true)
+	})
+
 	it("matches gitignore-style excluded path patterns", () => {
 		const preferences = {
 			...createDefaultSyncPreferences(),
@@ -113,5 +120,49 @@ describe("syncStore preferences", () => {
 		expect(shouldIgnoreSyncPath("dist/app.js", preferences)).toBe(true)
 		expect(shouldIgnoreSyncPath("dist/keep.md", preferences)).toBe(false)
 		expect(shouldIgnoreSyncPath("src/node_modules.md", preferences)).toBe(false)
+	})
+
+	it("uses sync file events for state without re-reading note contents", async () => {
+		const hashFile = vi.fn()
+		let fileListener: ((event: { path: string; status: string }) => void) | undefined
+		const listen = (callback?: (event: never) => void) => {
+			if (callback) return Promise.resolve(vi.fn())
+			return Promise.resolve(vi.fn())
+		}
+		vi.mocked(getPlatform).mockReturnValue({
+			fs: { hashFile },
+			sync: {
+				onStateChanged: listen,
+				onFileEvent: vi.fn().mockImplementation(async (callback) => {
+					fileListener = callback
+					return vi.fn()
+				}),
+				onInitialSyncProgress: listen,
+				onConflict: listen,
+				onInitialSyncComplete: listen,
+				onVekRequired: listen,
+				onSyncLog: listen,
+				onVaultAccessDenied: listen,
+			},
+		} as never)
+		useVaultStore.setState({
+			vault: {
+				uuid: "vault-id",
+				path: "/vault",
+				name: "Vault",
+				fileCount: 1,
+			},
+		})
+		const schemaListener = vi.fn()
+		const unsubscribeSchema = onVaultSchemaChange("/vault", schemaListener)
+
+		await useSyncStore.getState().subscribeEvents()
+		fileListener?.({ path: "note.md", status: "synced" })
+		fileListener?.({ path: ".cortex/schema/properties.json", status: "synced" })
+
+		expect(hashFile).not.toHaveBeenCalled()
+		await vi.waitFor(() => expect(schemaListener).toHaveBeenCalledTimes(1))
+		unsubscribeSchema()
+		useSyncStore.getState().unsubscribeEvents()
 	})
 })

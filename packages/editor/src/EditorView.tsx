@@ -1,4 +1,4 @@
-import { EditorState, type Extension } from "@codemirror/state"
+import { EditorState, type Extension, Transaction } from "@codemirror/state"
 import { EditorView as CMEditorView } from "@codemirror/view"
 import { useEffect, useRef } from "react"
 import {
@@ -69,7 +69,10 @@ export function EditorView({
 					}),
 					...(extraExtensions ?? []),
 					CMEditorView.updateListener.of((update) => {
-						if (update.docChanged) {
+						const remoteUpdate = update.transactions.some((transaction) =>
+							transaction.annotation(Transaction.remote),
+						)
+						if (update.docChanged && !remoteUpdate) {
 							onChangeRef.current(update.state.doc.toString())
 						}
 						if (update.selectionSet || update.docChanged) {
@@ -106,11 +109,12 @@ export function EditorView({
 	useEffect(() => {
 		const view = viewRef.current
 		if (!view) return
-		if (filePath === filePathRef.current) return
-
+		const currentContent = view.state.doc.toString()
+		if (filePath === filePathRef.current && currentContent === content) return
 		filePathRef.current = filePath
 		view.dispatch({
 			changes: { from: 0, to: view.state.doc.length, insert: content },
+			annotations: [Transaction.remote.of(true), Transaction.addToHistory.of(false)],
 		})
 	}, [filePath, content])
 

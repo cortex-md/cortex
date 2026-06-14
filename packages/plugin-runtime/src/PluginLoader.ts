@@ -1,6 +1,7 @@
 import { getPlatform } from "@cortex/platform"
 import type { PluginManifest } from "cortex-plugin-api"
 import { CortexPlugin } from "cortex-plugin-api"
+import { disposePluginPropertyTypes } from "./apis/PropertiesAPI"
 import { validatePluginManifestCapabilities } from "./manifestCapabilities"
 import { createPluginAPI } from "./PluginAPIFactory"
 import { usePluginStore } from "./pluginStore"
@@ -69,6 +70,7 @@ export async function enablePlugin(
 		instances.set(pluginId, { plugin, manifest: record.manifest })
 		store.setPluginStatus(pluginId, "enabled")
 	} catch (error) {
+		disposePluginPropertyTypes(pluginId)
 		store.setPluginStatus(pluginId, "error", String(error))
 		throw error
 	}
@@ -86,6 +88,7 @@ export async function disablePlugin(pluginId: string): Promise<void> {
 	}
 
 	instance.plugin._disposeAll()
+	disposePluginPropertyTypes(pluginId)
 	instances.delete(pluginId)
 	usePluginStore.getState().setPluginStatus(pluginId, "disabled")
 }

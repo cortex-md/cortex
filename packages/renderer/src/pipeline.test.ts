@@ -48,7 +48,7 @@ describe("shared renderer registries", () => {
 		expect(disposed).toContain("<p>:wave:</p>")
 	})
 
-	it("parses structured YAML arrays for the frontmatter card", async () => {
+	it("strips frontmatter without rendering a duplicate properties card", async () => {
 		const html = await getSharedRenderer().render(`---
 title: "A: structured value"
 tags:
@@ -58,9 +58,7 @@ tags:
 
 Body`)
 
-		expect(html).toContain("A: structured value")
-		expect(html).toContain('<span class="frontmatter-tag">markdown</span>')
-		expect(html).toContain('<span class="frontmatter-tag">cortex</span>')
+		expect(html).toBe("<p>Body</p>")
 	})
 
 	it("resolves overlapping inline registrations by priority against the source text", async () => {

@@ -53,6 +53,15 @@ export interface VersionInfo {
 	createdAt: string | null
 }
 
+export interface NoteSyncMetadata {
+	createdAt: string | null
+	createdBy: string | null
+	lastEditedAt: string | null
+	lastEditedBy: string | null
+	lastDeviceId: string | null
+	synced: boolean
+}
+
 export interface DeletedFileInfo {
 	filePath: string
 	version: number
@@ -89,6 +98,7 @@ export interface Sync {
 	resolveConflict(path: string, resolution: ConflictResolution): Promise<void>
 	getConflicts(vaultId: string, vaultPath: string): Promise<ConflictInfo[]>
 	getVersionHistory(vaultId: string, vaultPath: string, filePath: string): Promise<VersionInfo[]>
+	getNoteMetadata(vaultPath: string, filePath: string): Promise<NoteSyncMetadata | null>
 	downloadVersion(
 		vaultId: string,
 		vaultPath: string,

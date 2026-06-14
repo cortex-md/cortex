@@ -19,7 +19,7 @@
 		"check:boundaries": "bun run scripts/check-workspace-boundaries.ts",
 		"typecheck": "tsc -b",
 		"test": "bun run test:frontend && bun run test:rust",
-		"test:frontend": "bun run --cwd packages/core vitest run && bun run --cwd packages/settings vitest run && bun run --cwd packages/editor vitest run && bun run --cwd packages/renderer vitest run && bun run --cwd packages/plugin-runtime vitest run && bun run --cwd packages/marketplace vitest run && bun run --cwd packages/theme-mobile vitest run && bun run --cwd apps/desktop vitest run",
+		"test:frontend": "bun run --cwd packages/properties vitest run && bun run --cwd packages/core vitest run && bun run --cwd packages/settings vitest run && bun run --cwd packages/editor vitest run && bun run --cwd packages/renderer vitest run && bun run --cwd packages/plugin-runtime vitest run && bun run --cwd packages/marketplace vitest run && bun run --cwd packages/theme-mobile vitest run && bun run --cwd apps/desktop vitest run",
 		"test:rust": "cargo test --workspace --manifest-path apps/desktop/src-tauri/Cargo.toml",
 		"test:watch": "vitest",
 		"benchmark:editor": "bun run --cwd packages/editor vitest bench src/__benchmarks__/livePreview.bench.ts",

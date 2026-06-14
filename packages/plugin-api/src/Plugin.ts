@@ -10,6 +10,7 @@ import type {
 	PluginManifest,
 	PluginNotification,
 	PluginNotificationResult,
+	PluginPropertyTypeRegistration,
 	RibbonActionRegistration,
 	SettingsTabRegistration,
 	SidebarItemRegistration,
@@ -59,6 +60,12 @@ export abstract class CortexPlugin {
 
 	registerMarkdownProcessor(processor: MarkdownProcessorRegistration): Disposable {
 		const disposable = this.api.markdown.registerProcessor(processor)
+		this._disposables.add(disposable)
+		return disposable
+	}
+
+	registerPropertyType(registration: PluginPropertyTypeRegistration): Disposable {
+		const disposable = this.api.properties.registerType(registration)
 		this._disposables.add(disposable)
 		return disposable
 	}

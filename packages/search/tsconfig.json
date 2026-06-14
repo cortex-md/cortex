@@ -19,5 +19,5 @@
 		}
 	},
 	"include": ["src"],
-	"references": [{ "path": "../core" }, { "path": "../platform" }]
+	"references": [{ "path": "../platform" }, { "path": "../properties" }]
 }

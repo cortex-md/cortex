@@ -1,3 +1,4 @@
+import type { Extension } from "@codemirror/state"
 import type { EditorView as CMEditorView } from "@codemirror/view"
 import { useCallback, useEffect, useRef } from "react"
 import { EditorView } from "./EditorView"
@@ -8,8 +9,10 @@ interface Props {
 	content: string
 	filePath: string
 	editorConfig?: EditorConfig
+	extraExtensions?: Extension[]
 	scrollMode?: "internal" | "parent"
 	onChange: (content: string) => void
+	onViewReady?: (view: CMEditorView) => void
 	onWikiLinkClick?: (target: string) => void
 	onExternalLinkClick?: (url: string) => void
 }
@@ -18,8 +21,10 @@ export function SideBySideView({
 	content,
 	filePath,
 	editorConfig,
+	extraExtensions,
 	scrollMode = "internal",
 	onChange,
+	onViewReady,
 	onWikiLinkClick,
 	onExternalLinkClick,
 }: Props) {
@@ -52,8 +57,9 @@ export function SideBySideView({
 			if (scrollMode === "internal") {
 				view.scrollDOM.addEventListener("scroll", handleEditorScroll)
 			}
+			onViewReady?.(view)
 		},
-		[handleEditorScroll, scrollMode],
+		[handleEditorScroll, onViewReady, scrollMode],
 	)
 
 	useEffect(() => {
@@ -70,6 +76,7 @@ export function SideBySideView({
 					content={content}
 					filePath={filePath}
 					editorConfig={editorConfig}
+					extraExtensions={extraExtensions}
 					livePreview={false}
 					scrollMode={scrollMode}
 					onChange={onChange}

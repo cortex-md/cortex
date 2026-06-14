@@ -1,11 +1,7 @@
 import { syntaxTree } from "@codemirror/language"
 import type { EditorSelection, EditorState } from "@codemirror/state"
-import {
-	type ParsedCallout,
-	parseCallout,
-	parseCalloutMarker,
-	parseFrontmatter,
-} from "@cortex/renderer"
+import { locateFrontmatter } from "@cortex/properties"
+import { type ParsedCallout, parseCallout, parseCalloutMarker } from "@cortex/renderer"
 
 interface SyntaxNodeLike {
 	name: string
@@ -315,7 +311,7 @@ export function collectMarkdownBlocks(
 	filePath: string,
 ): MarkdownBlock[] {
 	const blocks: MarkdownBlock[] = []
-	const frontmatter = parseFrontmatter(state.doc.toString())
+	const frontmatter = locateFrontmatter(state.doc.toString())
 	if (frontmatter) {
 		const base = createBaseBlock(state, "frontmatter", frontmatter.from, frontmatter.to)
 		blocks.push({ ...base, kind: "frontmatter" })

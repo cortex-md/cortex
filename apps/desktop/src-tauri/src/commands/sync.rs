@@ -2,9 +2,10 @@ use serde::Serialize;
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::mpsc;
 
+use crate::atomic_fs::atomic_write_bytes;
 use crate::sync::conflict::{ConflictInfo, ConflictResolver};
 use crate::sync::crypto;
-use crate::sync::db::SyncDb;
+use crate::sync::db::{NoteSyncMetadata, SyncDb};
 use crate::sync::downloader::{DeletedFileInfo, Downloader, VersionInfo};
 use crate::sync::http::SyncHttpClient;
 use crate::sync::state::{ConflictResolution, SyncCommand};
@@ -91,6 +92,15 @@ pub async fn sync_get_version_history(
 }
 
 #[tauri::command]
+pub async fn sync_get_note_metadata(
+    vault_path: String,
+    file_path: String,
+) -> Result<Option<NoteSyncMetadata>, String> {
+    let db = SyncDb::open(&vault_path)?;
+    db.get_note_metadata(&file_path)
+}
+
+#[tauri::command]
 pub async fn sync_restore_version(
     app: AppHandle,
     vault_id: String,
@@ -107,10 +117,7 @@ pub async fn sync_restore_version(
     let content = downloader.download_version(&file_path, &version).await?;
 
     let full_path = std::path::Path::new(&vault_path).join(&file_path);
-    if let Some(parent) = full_path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    std::fs::write(&full_path, &content).map_err(|e| e.to_string())?;
+    atomic_write_bytes(&full_path, &content)?;
 
     let hash = blake3::hash(&content).to_hex().to_string();
     let now = std::time::SystemTime::now()
@@ -302,4 +309,41 @@ pub async fn sync_unlock_vault_key(
 
     crypto::store_vek(&vault_id, &vek)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[tokio::test]
+    async fn note_metadata_reads_only_the_local_sync_database() {
+        let directory = tempdir().unwrap();
+        let db = SyncDb::open(directory.path().to_str().unwrap()).unwrap();
+        db.upsert_note_metadata(
+            "note.md",
+            &NoteSyncMetadata {
+                created_at: Some("2026-06-14T12:00:00Z".to_string()),
+                created_by: Some("user-1".to_string()),
+                last_edited_at: Some("2026-06-14T12:30:00Z".to_string()),
+                last_edited_by: Some("user-2".to_string()),
+                last_device_id: Some("device-1".to_string()),
+                synced: true,
+                creation_lookup_complete: true,
+            },
+        )
+        .unwrap();
+        drop(db);
+
+        let metadata = sync_get_note_metadata(
+            directory.path().to_string_lossy().into_owned(),
+            "note.md".to_string(),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+
+        assert_eq!(metadata.created_by.as_deref(), Some("user-1"));
+        assert_eq!(metadata.last_edited_by.as_deref(), Some("user-2"));
+    }
 }
